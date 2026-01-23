@@ -16,11 +16,9 @@ When you put everything in `CLAUDE.md`, two things happen:
 
 2. **Instruction drift.** Under long context, Claude "forgets" rules loaded at the start. Not literally, but it stops consulting them as reliably. The rules are still there. The model just drifts.
 
-Better prompts don't fix this. Better architecture does.
-
 ## The Solution
 
-Claude Code has three mechanisms that help, but most projects underuse them:
+Claude Code has three mechanisms that help, but most developers underuse them:
 
 **Skills** are reusable instruction files that load on-demand. Instead of a 500-line `CLAUDE.md` that fades, you have a lean briefing room (~100 lines) plus specialized skills you invoke when needed. Type `/deploy` when deploying, `/api` when working with your API, `/review` when reviewing code. The context stays relevant.
 
@@ -49,7 +47,7 @@ The audit scans your `CLAUDE.md`, any `.claude/rules/` files, and existing skill
 
 ## Building Skills
 
-Skill-building is an ongoing process. You'll always be tweaking. A skill that works today might need adjustment next week as you discover edge cases, add new rules, or realize something drifts when it shouldn't.
+You'll always be tweaking. A skill that works today might need adjustment next week as you discover edge cases, add new rules, or realize something drifts when it shouldn't.
 
 Whether you're refining an existing skill or starting from scratch, just describe what you need:
 
@@ -76,12 +74,22 @@ This analyzes your skills and identifies where agents could help: lookups that n
 
 Not every skill needs agents. But when you notice Claude "forgetting" a rule mid-conversation, an agent can enforce it reliably.
 
+## When to Use Rules
+
+Rules live in `.claude/rules/` and load automatically based on paths or triggers. A rule with `path: src/api/**` only loads when you're working in that directory. A rule with `trigger: deploy` loads when that word appears in your prompt.
+
+This sounds convenient, but it has a cost.
+
+Long lists of rules fade. They load at conversation start and drift just like `CLAUDE.md`. If your rules directory grows into dozens of files, you'll notice the symptoms: Claude runs hot, starts forgetting instructions mid-conversation, or completely ignores what you want to do.
+
+Keep rules lean. Use them for lightweight, always-on guidance that doesn't fit in `CLAUDE.md`. For anything substantial, use skills instead. Skills load on-demand, refresh mid-conversation, and don't bloat every session.
+
 ## Philosophy
 
 | Layer | What It Is | Purpose | Drift-Resistant? |
 |-------|------------|---------|------------------|
 | `CLAUDE.md` | File loaded at conversation start | Universal guidance | No |
-| Rules | Files in `.claude/rules/` | Always-on context (avoid when possible) | No |
+| Rules | Files in `.claude/rules/` | Always-on context (keep lean) | No |
 | Skills | On-demand instruction files | Domain-specific rules | No (but refreshable) |
 | Hooks | Shell scripts before actions | Hard blocks on forbidden actions | Yes |
 | Agents | Subprocesses with isolated context | Validation without drift | Yes |
