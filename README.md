@@ -81,6 +81,7 @@ Not every skill needs agents. But when you notice Claude "forgetting" a rule mid
 | Layer | What It Is | Purpose | Drift-Resistant? |
 |-------|------------|---------|------------------|
 | `CLAUDE.md` | File loaded at conversation start | Universal guidance | No |
+| Rules | Files in `.claude/rules/` | Always-on context (avoid when possible) | No |
 | Skills | On-demand instruction files | Domain-specific rules | No (but refreshable) |
 | Hooks | Shell scripts before actions | Hard blocks on forbidden actions | Yes |
 | Agents | Subprocesses with isolated context | Validation without drift | Yes |
