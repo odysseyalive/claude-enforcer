@@ -56,7 +56,7 @@ Whether you're refining an existing skill or starting from scratch, just describ
 /skill-builder add a rule to my deploy skill: always run tests first
 /skill-builder my api skill is getting too long, help me split it up
 /skill-builder I plan on doing this a lot: [describe task]. Create a skill for it.
-/skill-builder I'm glad that problem got figured out. I never want to deal with that again. Can you make a skill for this?
+/skill-builder I'm glad that problem got figured out. I never want to deal with that again. Can you make a skill for this and hook it into other skills affected by this?
 ```
 
 You don't need to know the structure upfront. Describe the problem, and skill-builder helps you shape it.
