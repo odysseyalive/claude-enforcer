@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: Create, audit, and improve Claude Code skills. Use when building new skills or refactoring existing ones.
+description: "Create, audit, optimize Claude Code skills. Commands: new [name], optimize [skill], agents [skill]"
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -45,9 +45,11 @@ Files to scan:
 - **Should convert to skills:** [yes/no with reasoning]
 
 ## Skills Summary
-| Skill | Lines | Directives | Reference Inline | Hooks | Status |
-|-------|-------|------------|------------------|-------|--------|
-| /skill-1 | X | Y | Z tables | yes/no | OK/NEEDS WORK |
+| Skill | Lines | Description | Directives | Reference Inline | Hooks | Status |
+|-------|-------|-------------|------------|------------------|-------|--------|
+| /skill-1 | X | single/multi | Y | Z tables | yes/no | OK/NEEDS WORK |
+
+**Description column:** Flag `multi` if uses `|` or `>` syntax (needs optimization to single line)
 
 ## Priority Fixes
 1. [Most impactful optimization]
@@ -550,6 +552,106 @@ See [reference.md](reference.md) for IDs and mappings.
 
 ---
 
+## Frontmatter Requirements
+
+**CRITICAL:** The `description:` field is what users see when they type `/skill-name` without arguments. Claude Code only displays the description — not the body of SKILL.md. **Multi-line descriptions get truncated — use a single line.**
+
+### Required Frontmatter Fields
+
+| Field | Required | Purpose |
+|-------|----------|---------|
+| `name` | Yes | Skill identifier (matches folder name) |
+| `description` | Yes | Single-line summary shown in help output |
+| `allowed-tools` | Yes | Tools the skill can use |
+
+### Description Field Pattern
+
+**ALWAYS use a single quoted line.** Include modes/usage inline:
+
+```yaml
+---
+name: study-prep
+description: "Strategic test prep with Readwise integration. Modes: auto, review, teach, quiz, calibrate, vocab, ikanum, translate"
+allowed-tools: Read, Glob, Grep, mcp__readwise-mcp__*
+---
+```
+
+```yaml
+---
+name: text-eval
+description: "Evaluate text for AI tells and voice alignment. Modes: personal, academic, email. Usage: /text-eval [file] [mode]"
+allowed-tools: Read, Grep, Glob, Task
+---
+```
+
+```yaml
+---
+name: cw-pdf-ingest
+description: "Extract CW vocab/grammar from PDFs, update dictionary. Usage: /cw-pdf-ingest [pdf] [--type vocab|story|grammar] [--convert]"
+allowed-tools: Read, Grep, Glob, Edit, Bash
+---
+```
+
+**Single-purpose skills (no modes):**
+```yaml
+---
+name: voice
+description: "Load Francis Meetze's authentic voice profile. Use for all content creation."
+allowed-tools: Read
+---
+```
+
+### When Creating or Updating Skills
+
+**Always verify:**
+
+1. **Frontmatter exists** with `---` delimiters
+2. **`name:` matches folder name**
+3. **`description:` is a single quoted line** (no multi-line `|` syntax)
+4. **Modes/usage included inline** if skill has subcommands
+
+### Audit Check for Frontmatter
+
+When auditing skills, include:
+
+```
+## Frontmatter Check: /skill-name
+
+- Has frontmatter: [yes/no]
+- name matches folder: [yes/no]
+- description is single line: [yes/no]
+- Has modes/subcommands: [yes/no]
+- Modes listed in description: [yes/no/N/A]
+
+Status: [OK / NEEDS UPDATE]
+```
+
+### Fixing Missing or Multi-line Frontmatter
+
+**Before (multi-line — gets truncated):**
+```yaml
+---
+name: my-skill
+description: |
+  Brief description.
+
+  Modes:
+    mode1 - does thing
+    mode2 - does other thing
+---
+```
+
+**After (single line — displays fully):**
+```yaml
+---
+name: my-skill
+description: "Brief description. Modes: mode1, mode2. Usage: /my-skill [mode] [args]"
+allowed-tools: Read, Grep
+---
+```
+
+---
+
 ## Safe Optimization Example
 
 **Before optimization (all in SKILL.md, 100 lines):**
@@ -713,6 +815,13 @@ When auditing, report:
 ```
 ## Audit: /skill-name
 
+**Frontmatter:**
+- Has YAML frontmatter: [yes/no]
+- name matches folder: [yes/no]
+- description is single line: [yes/no] ← CRITICAL (multi-line gets truncated)
+- Has modes/subcommands: [yes/no]
+- Modes listed in description: [yes/no/N/A]
+
 **Directives found:** [count]
 - Are they verbatim user rules? [yes/no]
 - Are they at the top? [yes/no]
@@ -737,6 +846,35 @@ When auditing, report:
 ### Recommendations
 1. [specific action]
 2. [specific action]
+```
+
+### Detecting Multi-line Descriptions
+
+When auditing, check for these patterns that indicate a multi-line description needing optimization:
+
+```yaml
+# BAD - uses | for multi-line (gets truncated)
+description: |
+  Some description here.
+  More text...
+
+# BAD - uses > for folded (gets truncated)
+description: >
+  Some description here.
+
+# GOOD - single quoted line
+description: "Brief desc. Modes: a, b, c. Usage: /skill [args]"
+
+# GOOD - single unquoted line (if no special chars)
+description: Brief description without special characters
+```
+
+**If multi-line detected, recommend:**
+```
+⚠️ FRONTMATTER: Description uses multi-line syntax (gets truncated in help)
+   Current: description: |
+              Long multi-line text...
+   Fix to:  description: "Condensed single line. Modes: x, y, z"
 ```
 
 ---
@@ -981,3 +1119,5 @@ Hooks should use relative paths from project root:
 - **Hook exit code 2 blocks, 0 allows** — Other exit codes are treated as errors but don't block. Always use exactly 2 to block. (2026-01-22)
 
 - **Context mutability is the fundamental problem** — All text-based instructions (CLAUDE.md, rules, skills) can drift under long context. Only external enforcement (hooks, `context: none` agents) is truly immutable. See "Context Mutability & Enforcement Hierarchy" section above. (2026-01-22)
+
+- **Description must be single line** — Claude Code only shows the `description:` field when users type `/skill-name`, and multi-line descriptions get truncated. Use a single quoted line with modes/usage inline: `"Brief desc. Modes: a, b, c. Usage: /skill [args]"`. See "Frontmatter Requirements" section above. (2026-01-24)
