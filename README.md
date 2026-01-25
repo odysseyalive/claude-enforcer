@@ -26,7 +26,7 @@ Claude Code has three mechanisms that help, but most developers underuse them:
 
 **Agents** are subprocesses that start with fresh context. When you need to validate something without the drift of the current conversation, you spawn an agent with `context: none`. It reads your reference files directly, uninfluenced by the long conversation above.
 
-## Install
+## Install / Update
 
 From your Claude Code project root (where `CLAUDE.md` lives):
 
