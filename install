@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# Claude Enforcer Installer
+# Installs the skill-builder skill to your Claude Code project
+#
+# Usage:
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
+#
+
+set -e
+
+REPO_URL="https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main"
+SKILL_DIR=".claude/skills/skill-builder"
+
+echo "Claude Enforcer Installer"
+echo "========================="
+echo
+
+# Check for CLAUDE.md in current directory
+if [ ! -f "CLAUDE.md" ]; then
+    echo "Error: CLAUDE.md not found in current directory."
+    echo
+    echo "This installer must be run from a Claude Code project root."
+    echo "If you haven't initialized Claude Code yet, run:"
+    echo
+    echo "    claude /init"
+    echo
+    echo "Then run this installer again."
+    exit 1
+fi
+
+echo "Found CLAUDE.md in $(pwd)"
+
+# Remove existing skill if present
+if [ -d "$SKILL_DIR" ]; then
+    echo "Removing existing skill-builder installation..."
+    rm -rf "$SKILL_DIR"
+fi
+
+# Create skill directory
+echo "Creating $SKILL_DIR..."
+mkdir -p "$SKILL_DIR"
+
+# Download SKILL.md
+echo "Downloading skill-builder..."
+curl -fsSL "$REPO_URL/skill-builder/SKILL.md" -o "$SKILL_DIR/SKILL.md"
+
+echo
+echo "Installation complete."
+echo
+echo "Usage:"
+echo "    /skill-builder           Full audit of your skill system"
+echo "    /skill-builder audit     Same as above"
+echo "    /skill-builder agents    Analyze agent opportunities"
+echo
