@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: new [name], optimize [skill], agents [skill]"
+description: "Create, audit, optimize Claude Code skills. Commands: list, new [name], optimize [skill], agents [skill]"
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -12,9 +12,66 @@ allowed-tools: Read, Glob, Grep, Write, Edit
 |---------|--------|
 | `/skill-builder` | Full audit of CLAUDE.md + all skills + rules + agents |
 | `/skill-builder audit` | Same as above |
+| `/skill-builder list [skill]` | Show all modes/options for a skill in a table |
 | `/skill-builder new [name]` | Create a new skill from template |
 | `/skill-builder optimize [skill]` | Restructure a specific skill |
 | `/skill-builder agents [skill]` | Analyze and create agents for a skill |
+
+---
+
+## The `list` Mode Requirement
+
+**Every skill with multiple modes MUST support a `list` mode.**
+
+When a user runs `/skill-name list`, output a clean table showing all available modes:
+
+```
+| Mode | Command | Purpose |
+|------|---------|---------|
+| **mode1** | `/skill-name mode1 [args]` | Brief description of what this mode does |
+| **mode2** | `/skill-name mode2 [args]` | Brief description of what this mode does |
+```
+
+### Why This Matters
+
+The `description:` field in frontmatter is limited to one line and gets truncated. Users need a way to discover all available options without reading the full SKILL.md.
+
+### Implementation
+
+Skills with modes should include a `## Usage` section near the top:
+
+```markdown
+## Usage
+
+```
+/skill-name [mode] [args]
+```
+
+### Modes
+
+| Mode | Command | Description |
+|------|---------|-------------|
+| `mode1` | `/skill-name mode1 [args]` | What mode1 does |
+| `mode2` | `/skill-name mode2 [args]` | What mode2 does |
+
+Default mode is `[default]` if not specified.
+```
+
+### Handling `/skill-name list`
+
+When invoked with `list` as the first argument:
+1. Read the skill's SKILL.md
+2. Find the Modes table
+3. Output the table directly to the user
+
+**This is a reserved mode name.** Skills should not use `list` for other purposes.
+
+### Audit Check
+
+When auditing skills, verify:
+- Does the skill have multiple modes? → Must have a Modes table
+- Is the Modes table in a consistent format? → Command + Description columns
+- Does the description mention `list` if applicable? → Add to frontmatter
 
 ---
 
@@ -515,11 +572,31 @@ Prompt: "[specific prompt for this use case]"
 ```markdown
 ---
 name: skill-name
-description: Trigger description
+description: "Brief description. Modes: mode1, mode2, mode3. Usage: /skill-name [mode] [args]"
 allowed-tools: [minimum needed]
 ---
 
 # Skill Name
+
+Brief one-line description of what this skill does.
+
+## Usage
+
+```
+/skill-name [mode] [args]
+```
+
+### Modes
+
+| Mode | Command | Description |
+|------|---------|-------------|
+| `mode1` | `/skill-name mode1 [args]` | What mode1 does |
+| `mode2` | `/skill-name mode2 [args]` | What mode2 does |
+| `mode3` | `/skill-name mode3 [args]` | What mode3 does |
+
+Default mode is `mode1` if not specified.
+
+---
 
 ## Directives
 
@@ -533,11 +610,18 @@ allowed-tools: [minimum needed]
 
 ---
 
-## Workflow
+## Workflow: Mode1
 
 1. Step one
 2. Step two
 3. Step three
+
+---
+
+## Workflow: Mode2
+
+1. Step one
+2. Step two
 
 ---
 
@@ -549,6 +633,8 @@ Before using any ID or value from reference.md:
 
 See [reference.md](reference.md) for IDs and mappings.
 ```
+
+**For single-purpose skills (no modes):** Omit the Usage/Modes section entirely.
 
 ---
 
@@ -821,6 +907,12 @@ When auditing, report:
 - description is single line: [yes/no] ← CRITICAL (multi-line gets truncated)
 - Has modes/subcommands: [yes/no]
 - Modes listed in description: [yes/no/N/A]
+
+**Modes/List Support:**
+- Has multiple modes: [yes/no]
+- Has Modes table: [yes/no/N/A]
+- Table format correct (Mode | Command | Description): [yes/no/N/A]
+- Supports `/skill-name list`: [yes/no/N/A]
 
 **Directives found:** [count]
 - Are they verbatim user rules? [yes/no]
