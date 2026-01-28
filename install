@@ -44,6 +44,7 @@ mkdir -p "$SKILL_DIR"
 # Download SKILL.md
 echo "Downloading skill-builder..."
 curl -fsSL "$REPO_URL/skill-builder/SKILL.md" -o "$SKILL_DIR/SKILL.md"
+curl -fsSL "$REPO_URL/skill-builder/reference.md" -o "$SKILL_DIR/reference.md"
 
 echo
 echo "Installation complete."

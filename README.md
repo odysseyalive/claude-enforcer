@@ -39,8 +39,14 @@ If you haven't initialized Claude Code yet, run `claude /init` first.
 ## Usage
 
 ```
-/skill-builder audit     # Audit your skill system
-/skill-builder agents    # Analyze agent opportunities
+/skill-builder                  # Full audit of CLAUDE.md + all skills + rules + agents
+/skill-builder audit            # Same as above
+/skill-builder skills           # List all local skills available in this project
+/skill-builder list [skill]     # Show all modes/options for a skill
+/skill-builder new [name]       # Create a new skill from template
+/skill-builder optimize [skill] # Restructure a specific skill
+/skill-builder agents [skill]   # Analyze and create agents for a skill
+/skill-builder hooks [skill]    # Inventory existing hooks + identify new opportunities
 ```
 
 The audit scans your `CLAUDE.md`, any `.claude/rules/` files, and existing skills. It identifies what can be extracted, what needs enforcement, and where context drift is likely to cause problems.
