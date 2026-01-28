@@ -1,0 +1,210 @@
+# Skill File Structure & Templates
+
+## Skill File Structure
+
+```
+.claude/skills/my-skill/
+├── SKILL.md           # Directives + workflow (keep short)
+├── reference.md       # IDs, tables, mappings (externalizable)
+├── hooks/
+│   └── validate.sh    # Enforcement scripts
+└── agents/            # Optional specialized subagents
+```
+
+## SKILL.md Template
+
+```markdown
+---
+name: skill-name
+description: "Brief description. Modes: mode1, mode2, mode3. Usage: /skill-name [mode] [args]"
+allowed-tools: [minimum needed]
+---
+
+# Skill Name
+
+Brief one-line description of what this skill does.
+
+## Usage
+
+```
+/skill-name [mode] [args]
+```
+
+### Modes
+
+| Mode | Command | Description |
+|------|---------|-------------|
+| `mode1` | `/skill-name mode1 [args]` | What mode1 does |
+| `mode2` | `/skill-name mode2 [args]` | What mode2 does |
+| `mode3` | `/skill-name mode3 [args]` | What mode3 does |
+
+Default mode is `mode1` if not specified.
+
+---
+
+## Directives
+
+> **[User's exact rule, verbatim]**
+
+*— Added YYYY-MM-DD, source: [where this came from]*
+
+> **[Another directive]**
+
+*— Added YYYY-MM-DD, source: [where this came from]*
+
+---
+
+## Workflow: Mode1
+
+1. Step one
+2. Step two
+3. Step three
+
+---
+
+## Workflow: Mode2
+
+1. Step one
+2. Step two
+
+---
+
+## Grounding
+
+Before using any ID or value from reference.md:
+1. Read reference.md
+2. State: "I will use [VALUE] for [PURPOSE], found under [SECTION]"
+
+See [reference.md](reference.md) for IDs and mappings.
+```
+
+**For single-purpose skills (no modes):** Omit the Usage/Modes section entirely.
+
+---
+
+## Frontmatter Requirements
+
+**CRITICAL:** The `description:` field is what users see when they type `/skill-name` without arguments. Claude Code only displays the description — not the body of SKILL.md. **Multi-line descriptions get truncated — use a single line.**
+
+### Required Frontmatter Fields
+
+| Field | Required | Purpose |
+|-------|----------|---------|
+| `name` | Yes | Skill identifier (matches folder name) |
+| `description` | Yes | Single-line summary shown in help output |
+| `allowed-tools` | Yes | Tools the skill can use |
+
+### Description Field Pattern
+
+**ALWAYS use a single quoted line.** Include modes/usage inline:
+
+```yaml
+---
+name: study-prep
+description: "Strategic test prep with Readwise integration. Modes: auto, review, teach, quiz, calibrate, vocab, ikanum, translate"
+allowed-tools: Read, Glob, Grep, mcp__readwise-mcp__*
+---
+```
+
+```yaml
+---
+name: text-eval
+description: "Evaluate text for AI tells and voice alignment. Modes: personal, academic, email. Usage: /text-eval [file] [mode]"
+allowed-tools: Read, Grep, Glob, Task
+---
+```
+
+```yaml
+---
+name: cw-pdf-ingest
+description: "Extract CW vocab/grammar from PDFs, update dictionary. Usage: /cw-pdf-ingest [pdf] [--type vocab|story|grammar] [--convert]"
+allowed-tools: Read, Grep, Glob, Edit, Bash
+---
+```
+
+**Single-purpose skills (no modes):**
+```yaml
+---
+name: deploy
+description: "Deploy application to staging or production environments."
+allowed-tools: Bash, Read
+---
+```
+
+### When Creating or Updating Skills
+
+**Always verify:**
+
+1. **Frontmatter exists** with `---` delimiters
+2. **`name:` matches folder name**
+3. **`description:` is a single quoted line** (no multi-line `|` syntax)
+4. **Modes/usage included inline** if skill has subcommands
+
+### Audit Check for Frontmatter
+
+When auditing skills, include:
+
+```
+## Frontmatter Check: /skill-name
+
+- Has frontmatter: [yes/no]
+- name matches folder: [yes/no]
+- description is single line: [yes/no]
+- Has modes/subcommands: [yes/no]
+- Modes listed in description: [yes/no/N/A]
+
+Status: [OK / NEEDS UPDATE]
+```
+
+### Fixing Missing or Multi-line Frontmatter
+
+**Before (multi-line — gets truncated):**
+```yaml
+---
+name: my-skill
+description: |
+  Brief description.
+
+  Modes:
+    mode1 - does thing
+    mode2 - does other thing
+---
+```
+
+**After (single line — displays fully):**
+```yaml
+---
+name: my-skill
+description: "Brief description. Modes: mode1, mode2. Usage: /my-skill [mode] [args]"
+allowed-tools: Read, Grep
+---
+```
+
+### Detecting Multi-line Descriptions
+
+When auditing, check for these patterns that indicate a multi-line description needing optimization:
+
+```yaml
+# BAD - uses | for multi-line (gets truncated)
+description: |
+  Some description here.
+  More text...
+
+# BAD - uses > for folded (gets truncated)
+description: >
+  Some description here.
+
+# GOOD - single quoted line
+description: "Brief desc. Modes: a, b, c. Usage: /skill [args]"
+
+# GOOD - single unquoted line (if no special chars)
+description: Brief description without special characters
+```
+
+**If multi-line detected, recommend:**
+```
+⚠️ FRONTMATTER: Description uses multi-line syntax (gets truncated in help)
+   Current: description: |
+              Long multi-line text...
+   Fix to:  description: "Condensed single line. Modes: x, y, z"
+```

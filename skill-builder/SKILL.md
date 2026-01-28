@@ -260,13 +260,13 @@ When a user gives you a rule, store it verbatim in a `## Directives` section:
 
 ## Enforcement Mechanisms
 
-See [reference.md](reference.md) > Enforcement Mechanisms for hook JSON examples, permission patterns, and subagent YAML.
+See [references/enforcement.md](references/enforcement.md) for hook JSON examples, permission patterns, subagent YAML, and context mutability theory.
 
 ---
 
 ## Agents
 
-See [reference.md](reference.md) > Agents for all 4 agent templates, opportunity detection table, creating agents workflow, and agent file structure.
+See [references/agents.md](references/agents.md) for all 4 agent templates, opportunity detection table, creating agents workflow, and agent file structure.
 
 ---
 
@@ -376,7 +376,7 @@ exit 0
 
 ## Skill File Structure & Templates
 
-See [reference.md](reference.md) > Skill File Structure for directory layout, SKILL.md template, and frontmatter requirements with YAML examples.
+See [references/templates.md](references/templates.md) for directory layout, SKILL.md template, and frontmatter requirements with YAML examples.
 
 ---
 
@@ -419,7 +419,7 @@ exit 0
 
 ## Optimization Targets
 
-See [reference.md](reference.md) > Optimization Targets for the full table of what can/can't be moved.
+See [references/optimization-examples.md](references/optimization-examples.md) for the full table of what can/can't be moved and a before/after example.
 
 ---
 
@@ -582,14 +582,20 @@ Everything else lives in skills.
 
 ## Portability / Transmutability
 
-See [reference.md](reference.md) > Portability / Transmutability for install instructions and conversion examples.
+See [references/portability.md](references/portability.md) for install instructions and conversion examples.
 
 ---
 
 ## Grounding
 
 Before using any template, example, or pattern from reference material:
-1. Read reference.md
-2. State: "I will use [TEMPLATE/PATTERN] from reference.md under [SECTION]"
+1. Read the relevant file from `references/`
+2. State: "I will use [TEMPLATE/PATTERN] from references/[file] under [SECTION]"
 
-See [reference.md](reference.md) for templates, examples, and patterns.
+Reference files:
+- [references/enforcement.md](references/enforcement.md) — Hook JSON, permissions, context mutability
+- [references/agents.md](references/agents.md) — Agent templates, opportunity detection, creation workflow
+- [references/templates.md](references/templates.md) — Skill directory layout, SKILL.md template, frontmatter
+- [references/optimization-examples.md](references/optimization-examples.md) — Before/after examples, optimization targets
+- [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion
+- [references/patterns.md](references/patterns.md) — Lessons learned
