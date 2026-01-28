@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: list, new [name], optimize [skill], agents [skill]"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new [name], optimize [skill], agents [skill]"
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -12,10 +12,48 @@ allowed-tools: Read, Glob, Grep, Write, Edit
 |---------|--------|
 | `/skill-builder` | Full audit of CLAUDE.md + all skills + rules + agents |
 | `/skill-builder audit` | Same as above |
+| `/skill-builder skills` | List all local skills available in this project |
 | `/skill-builder list [skill]` | Show all modes/options for a skill in a table |
 | `/skill-builder new [name]` | Create a new skill from template |
 | `/skill-builder optimize [skill]` | Restructure a specific skill |
 | `/skill-builder agents [skill]` | Analyze and create agents for a skill |
+
+---
+
+## The `skills` Command
+
+**List all local skills available in this project.**
+
+When invoked with `/skill-builder skills`:
+
+1. Glob for all `.claude/skills/*/SKILL.md` files
+2. Read each skill's frontmatter to extract name and description
+3. Output a table of all available skills
+
+### Output Format
+
+```
+| Skill | Description |
+|-------|-------------|
+| /deploy | Deploy application to staging or production |
+| /api-client | API client integration and authentication |
+| /db-migrate | Database migration management |
+...
+```
+
+### Implementation
+
+```bash
+# Find all skills
+.claude/skills/*/SKILL.md
+```
+
+For each skill file:
+1. Read the frontmatter
+2. Extract `name` and `description` fields
+3. Format as table row: `| /[name] | [description] |`
+
+Sort alphabetically by skill name.
 
 ---
 
@@ -329,7 +367,7 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 |---------|------------|---------|
 | "Read reference.md before..." | **ID Lookup Agent** | Get category ID before categorizing |
 | "Verify that..." | **Validator Agent** | Check all required fields before submit |
-| "Evaluate for..." | **Evaluation Agent** | Check for AI tells (already used in /text-eval, /image-eval) |
+| "Evaluate for..." | **Evaluation Agent** | Check output quality, validate formatting |
 | "Match X to Y" | **Matcher Agent** | Match payee to category |
 | "If unclear, ask" | **Triage Agent** | Determine if user input is needed |
 
@@ -442,7 +480,7 @@ You evaluate content against criteria WITHOUT knowledge of how it was created.
 4. Be specific with line numbers and quotes
 ```
 
-**When to create:** Output quality matters and creator bias could mask issues. Already implemented in `/text-eval` and `/image-eval`.
+**When to create:** Output quality matters and creator bias could mask issues.
 
 #### 4. Matcher Agent
 
@@ -681,9 +719,9 @@ allowed-tools: Read, Grep, Glob, Edit, Bash
 **Single-purpose skills (no modes):**
 ```yaml
 ---
-name: voice
-description: "Load Francis Meetze's authentic voice profile. Use for all content creation."
-allowed-tools: Read
+name: deploy
+description: "Deploy application to staging or production environments."
+allowed-tools: Bash, Read
 ---
 ```
 
@@ -743,7 +781,7 @@ allowed-tools: Read, Grep
 **Before optimization (all in SKILL.md, 100 lines):**
 
 ```markdown
-# YNAB Skill
+# Budget Skill
 
 ## Rules
 - Never use Uncategorized account
@@ -751,7 +789,7 @@ allowed-tools: Read, Grep
 
 ## Workflow
 1. Get uncategorized transactions
-2. Match payee to category
+2. Match vendor to category
 3. Apply via API
 
 ## Category IDs
@@ -761,10 +799,10 @@ allowed-tools: Read, Grep
 | Dining | 8c606c51-11d9-41ca-9d15-cb86b25069ce |
 [... 50 more rows ...]
 
-## Payee Mappings
-| Payee | Category |
-|-------|----------|
-| Fred Meyer | Groceries |
+## Vendor Mappings
+| Vendor | Category |
+|--------|----------|
+| Whole Foods | Groceries |
 [... 30 more rows ...]
 ```
 
@@ -772,7 +810,7 @@ allowed-tools: Read, Grep
 
 `SKILL.md`:
 ```markdown
-# YNAB Skill
+# Budget Skill
 
 ## Directives
 
@@ -784,7 +822,7 @@ allowed-tools: Read, Grep
 ## Workflow
 
 1. Get uncategorized transactions
-2. Match payee to category
+2. Match vendor to category
 3. Apply via API
 
 ## Grounding
@@ -796,7 +834,7 @@ See [reference.md](reference.md) for IDs and mappings.
 
 `reference.md`:
 ```markdown
-# YNAB Reference
+# Budget Reference
 
 ## Category IDs
 | Category | ID |
@@ -805,10 +843,10 @@ See [reference.md](reference.md) for IDs and mappings.
 | Dining | 8c606c51-11d9-41ca-9d15-cb86b25069ce |
 [... 50 more rows - COPIED VERBATIM ...]
 
-## Payee Mappings
-| Payee | Category |
-|-------|----------|
-| Fred Meyer | Groceries |
+## Vendor Mappings
+| Vendor | Category |
+|--------|----------|
+| Whole Foods | Groceries |
 [... 30 more rows - COPIED VERBATIM ...]
 ```
 
@@ -1008,7 +1046,7 @@ wc -l CLAUDE.md  # Line count
 **Step 2: Identify extraction candidates**
 
 Scan for:
-- Sections with domain-specific rules (Zoho, YNAB, etc.)
+- Sections with domain-specific rules (API integrations, budgeting, etc.)
 - Inline tables with IDs/accounts
 - Procedures longer than 10 lines
 - Rules that only apply to specific tasks
@@ -1131,7 +1169,7 @@ When imported to a new account, run: `/skill-builder audit`
 
 **Before (in CLAUDE.md):**
 ```markdown
-## Zoho Rules
+## API Integration Rules
 - Always use the helper script for tokens: `./scripts/api-token.sh`
 - Never call OAuth endpoint directly for each request
 - Organization ID is always 123456789
@@ -1139,7 +1177,7 @@ When imported to a new account, run: `/skill-builder audit`
 ### Account IDs
 | Account | ID |
 |---------|-----|
-| Checking | 12345 |
+| Primary | 12345 |
 ```
 
 **After (as skill):**
@@ -1151,7 +1189,7 @@ When imported to a new account, run: `/skill-builder audit`
 > **Always use the helper script for tokens: `./scripts/api-token.sh`**
 > **Never call OAuth endpoint directly for each request.**
 
-*— Migrated from CLAUDE.md, Zoho Rules section*
+*— Migrated from CLAUDE.md, API Integration Rules section*
 
 ## Grounding
 
@@ -1162,14 +1200,14 @@ See [reference.md](reference.md) for IDs.
 
 `reference.md`:
 ```markdown
-# Zoho Reference
+# API Reference
 
 Organization ID: 123456789
 
 ## Account IDs
 | Account | ID |
 |---------|-----|
-| Checking | 12345 |
+| Primary | 12345 |
 ```
 
 ---
@@ -1185,7 +1223,7 @@ Hooks should use relative paths from project root:
       "matcher": "Bash",
       "hooks": [{
         "type": "command",
-        "command": "$CLAUDE_PROJECT_DIR/.claude/skills/zoho/hooks/validate.sh"
+        "command": "$CLAUDE_PROJECT_DIR/.claude/skills/api-client/hooks/validate.sh"
       }]
     }]
   }
@@ -1202,7 +1240,7 @@ Hooks should use relative paths from project root:
 
 - **Hooks for hard rules, agents for judgment** — Hooks are fast and free (no tokens) but can only grep. Agents can reason but cost tokens and time. Use hooks for "never use ID X", use agents for "find the right ID for Y". (2026-01-22)
 
-- **Context isolation for evaluation** — `/text-eval` and `/image-eval` use `context: none` agents so the evaluator isn't biased by the conversation that created the content. This pattern works well for any quality check. (2026-01-22)
+- **Context isolation for evaluation** — Evaluation skills should use `context: none` agents so the evaluator isn't biased by the conversation that created the content. This pattern works well for any quality check. (2026-01-22)
 
 - **Grounding statements aren't enough** — Adding "state which ID you will use" to a skill helps but doesn't guarantee Claude reads reference.md. An ID Lookup Agent with `context: none` guarantees the ID comes from the file, not from memory. (2026-01-22)
 
