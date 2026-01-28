@@ -37,6 +37,12 @@ if [ -d "$SKILL_DIR" ]; then
     rm -rf "$SKILL_DIR"
 fi
 
+# Remove legacy reference.md if present
+if [ -f "$SKILL_DIR/reference.md" ]; then
+    echo "Removing legacy reference.md..."
+    rm -f "$SKILL_DIR/reference.md"
+fi
+
 # Create skill directory
 echo "Creating $SKILL_DIR..."
 mkdir -p "$SKILL_DIR/references"
@@ -52,7 +58,8 @@ echo
 echo "Installation complete."
 echo
 echo "Usage:"
-echo "    /skill-builder           Full audit of your skill system"
-echo "    /skill-builder audit     Same as above"
-echo "    /skill-builder agents    Analyze agent opportunities"
+echo "    /skill-builder                    Full audit (display mode)"
+echo "    /skill-builder optimize [skill]   Show optimization plan (--execute to apply)"
+echo "    /skill-builder agents [skill]     Show agent opportunities (--execute to create)"
+echo "    /skill-builder hooks [skill]      Show hooks inventory (--execute to create)"
 echo

@@ -1,7 +1,7 @@
 ---
 name: skill-builder
 description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new [name], optimize [skill], agents [skill], hooks [skill]"
-allowed-tools: Read, Glob, Grep, Write, Edit
+allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Skill Builder
@@ -10,14 +10,14 @@ allowed-tools: Read, Glob, Grep, Write, Edit
 
 | Command | Action |
 |---------|--------|
-| `/skill-builder` | Full audit of CLAUDE.md + all skills + rules + agents |
+| `/skill-builder` | Full audit: runs optimize + agents + hooks in display mode for all skills |
 | `/skill-builder audit` | Same as above |
 | `/skill-builder skills` | List all local skills available in this project |
 | `/skill-builder list [skill]` | Show all modes/options for a skill in a table |
 | `/skill-builder new [name]` | Create a new skill from template |
-| `/skill-builder optimize [skill]` | Restructure a specific skill |
-| `/skill-builder agents [skill]` | Analyze and create agents for a skill |
-| `/skill-builder hooks [skill]` | Inventory existing hooks + identify new opportunities |
+| `/skill-builder optimize [skill]` | Display optimization plan for a skill (add `--execute` to apply) |
+| `/skill-builder agents [skill]` | Display agent opportunities for a skill (add `--execute` to create) |
+| `/skill-builder hooks [skill]` | Display hooks inventory + opportunities (add `--execute` to create) |
 | `/skill-builder dev [command]` | Run any command with skill-builder itself included |
 
 ---
@@ -129,9 +129,30 @@ When auditing skills, verify:
 
 ---
 
-## Full Audit Workflow
+## Display/Execute Mode Convention
 
-**When invoked without arguments, run the full audit:**
+**All sub-commands (`optimize`, `agents`, `hooks`) operate in two modes:**
+
+| Mode | Behavior | Flag |
+|------|----------|------|
+| **Display** (default) | Read-only plan of what would change | *(none)* |
+| **Execute** | Apply changes to files | `--execute` |
+
+### Rules
+
+1. **Default is always display mode.** Running `/skill-builder optimize my-skill` shows what *would* change without modifying anything.
+2. **`--execute` triggers modifications.** Running `/skill-builder optimize my-skill --execute` applies the changes.
+3. **Audit always calls sub-commands in display mode**, then offers the user a choice of which to execute.
+4. **Execution requires a task plan.** When `--execute` is invoked, the command MUST:
+   - First produce a numbered task list using TaskCreate — one task per discrete action
+   - Execute each task sequentially, marking progress via TaskUpdate
+   - This ensures context can be refreshed mid-execution without losing track, no tasks get forgotten during long context windows, and the user can see progress and resume if interrupted
+
+---
+
+## Audit Command
+
+**When invoked without arguments or with `audit`, run the full audit as an orchestrator.**
 
 ### Step 1: Gather Metrics
 
@@ -142,11 +163,9 @@ Files to scan:
 - .claude/skills/*/SKILL.md
 ```
 
-### Step 2: Generate Report
+### Step 2: CLAUDE.md & Rules Analysis
 
 ```markdown
-# Skill System Audit Report
-
 ## CLAUDE.md
 - **Lines:** [X] (target: < 150)
 - **Extraction candidates:** [list sections that could move to skills]
@@ -154,39 +173,74 @@ Files to scan:
 ## Rules Files
 - **Found:** [count] files in .claude/rules/
 - **Should convert to skills:** [yes/no with reasoning]
+```
 
+### Step 3: Skills Summary Table
+
+```markdown
 ## Skills Summary
 | Skill | Lines | Description | Directives | Reference Inline | Hooks | Status |
 |-------|-------|-------------|------------|------------------|-------|--------|
 | /skill-1 | X | single/multi | Y | Z tables | yes/no | OK/NEEDS WORK |
 
 **Description column:** Flag `multi` if uses `|` or `>` syntax (needs optimization to single line)
+```
 
-## Priority Fixes
-1. [Most impactful optimization]
-2. [Second priority]
-3. [Third priority]
+### Step 4: Run Sub-Commands in Display Mode
+
+For each skill found:
+1. Run **optimize** in display mode → collect optimization findings
+2. Run **agents** in display mode → collect agent opportunities
+3. Run **hooks** in display mode → collect hooks inventory and opportunities
+
+### Step 5: Aggregate Report
+
+Combine all sub-command outputs into a single report:
+
+```markdown
+# Skill System Audit Report
+
+## CLAUDE.md
+[from Step 2]
+
+## Rules Files
+[from Step 2]
+
+## Skills Summary
+[from Step 3]
+
+## Optimization Findings
+[aggregated from optimize display mode per skill]
 
 ## Agent Opportunities
 | Skill | Agent Type | Purpose | Priority |
 |-------|------------|---------|----------|
 | /skill-1 | id-lookup | Enforce grounding for IDs | High |
-| /skill-2 | validator | Pre-flight validation | Medium |
+[from agents display mode per skill]
+
+## Hooks Status
+[aggregated from hooks display mode]
 
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]
+
+## Priority Fixes
+1. [Most impactful optimization]
+2. [Second priority]
+3. [Third priority]
 ```
 
-### Step 3: Offer Actions
+### Step 6: Offer Execution
 
 After presenting the report, ask:
-> "Which would you like me to do first?"
-> 1. Optimize [highest priority item]
-> 2. Show detailed audit for a specific skill
-> 3. Create missing reference.md files
-> 4. Set up enforcement hooks
-> 5. Create agents for [skill with highest agent opportunity]
-> 6. Full optimization (reference.md + hooks + agents) for a skill
+> "Which sub-commands should I execute?"
+> 1. `optimize --execute` for [skill(s)]
+> 2. `agents --execute` for [skill(s)]
+> 3. `hooks --execute` for [skill(s)]
+> 4. All of the above for [skill]
+> 5. Skip — just review for now
+
+When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
 
 ---
 
@@ -264,17 +318,138 @@ See [references/enforcement.md](references/enforcement.md) for hook JSON example
 
 ---
 
-## Agents
+## Optimize Command
 
-See [references/agents.md](references/agents.md) for all 4 agent templates, opportunity detection table, creating agents workflow, and agent file structure.
+**Restructure a specific skill for optimal context efficiency.**
+
+### Display Mode (default)
+
+When running `/skill-builder optimize [skill]`:
+
+1. **Read the skill's SKILL.md** and any associated files
+2. **Run per-skill audit checklist:**
+
+```
+## Audit: /skill-name
+
+**Frontmatter:**
+- Has YAML frontmatter: [yes/no]
+- name matches folder: [yes/no]
+- description is single line: [yes/no] ← CRITICAL (multi-line gets truncated)
+- Has modes/subcommands: [yes/no]
+- Modes listed in description: [yes/no/N/A]
+
+**Modes/List Support:**
+- Has multiple modes: [yes/no]
+- Has Modes table: [yes/no/N/A]
+- Table format correct (Mode | Command | Description): [yes/no/N/A]
+- Supports `/skill-name list`: [yes/no/N/A]
+
+**Directives found:** [count]
+- Are they verbatim user rules? [yes/no]
+- Are they at the top? [yes/no]
+
+**Reference material inline:** [count] tables/lists
+- Should move to reference.md? [yes/no]
+
+**Enforcement:**
+- allowed-tools: [current]
+- hooks: [present/missing]
+- agents: [present/missing]
+- Directives enforceable by hooks? [yes/no/partial]
+
+**Line count:** [X] (target: < 150 excluding reference.md)
+```
+
+3. **Identify optimization targets** per `references/optimization-examples.md`
+4. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)
+
+```markdown
+### Proposed Changes
+1. [e.g., Move accounts table (lines 45-80) to reference.md]
+2. [e.g., Fix frontmatter description to single line]
+3. [e.g., Add grounding requirement for reference.md]
+
+**Estimated result:** [X] → [Y] lines
+```
+
+### Execute Mode (`--execute`)
+
+When running `/skill-builder optimize [skill] --execute`:
+
+1. Run display mode analysis first
+2. **Generate task list from findings** using TaskCreate — one task per discrete action (e.g., "Move accounts table to reference.md", "Fix frontmatter description to single line")
+3. Execute each task sequentially, marking complete via TaskUpdate as it goes
+4. Report before/after line counts
+
+**Grounding:** `references/optimization-examples.md`, `references/templates.md`
+
+---
+
+## Optimization Targets
+
+See [references/optimization-examples.md](references/optimization-examples.md) for the full table of what can/can't be moved and a before/after example.
+
+---
+
+## Agents Command
+
+**Analyze and create agents for a skill.**
+
+### Display Mode (default)
+
+When running `/skill-builder agents [skill]`:
+
+1. **Read the skill's SKILL.md** — understand its directives, workflows, and enforcement gaps
+2. **Read `references/agents.md`** — load the 4 agent templates and opportunity detection table
+3. **Evaluate each agent type** against the skill:
+
+| Agent Type | Trigger Condition | Applies? |
+|------------|-------------------|----------|
+| **ID Lookup** | Skill references IDs, accounts, or external identifiers that must be validated | [yes/no + reasoning] |
+| **Validator** | Skill has pre-flight checks or complex validation rules | [yes/no + reasoning] |
+| **Evaluation** | Skill produces output that needs quality assessment | [yes/no + reasoning] |
+| **Matcher** | Skill requires matching inputs to categories or patterns | [yes/no + reasoning] |
+
+4. **Report which agents would help and why:**
+
+```markdown
+## Agent Opportunities for /skill-name
+
+| Agent Type | Recommended | Purpose | Priority |
+|------------|-------------|---------|----------|
+| ID Lookup | Yes | Validate account IDs against reference.md | High |
+| Validator | No | No complex validation rules found | — |
+| Evaluation | Yes | Assess output quality for reports | Medium |
+| Matcher | No | No pattern matching needed | — |
+
+### Recommended Agents
+1. **ID Lookup Agent** — [specific purpose for this skill]
+2. **Evaluation Agent** — [specific purpose for this skill]
+```
+
+### Execute Mode (`--execute`)
+
+When running `/skill-builder agents [skill] --execute`:
+
+1. Run display mode analysis first
+2. **Generate task list from findings** using TaskCreate — one task per agent to create (e.g., "Create ID Lookup agent for /budget", "Create Validator agent for /deploy")
+3. Execute each task sequentially, marking complete via TaskUpdate as it goes
+4. Each task: create the agent file in `.claude/skills/[skill]/agents/`, following templates from `references/agents.md`
+
+**Grounding:** `references/agents.md`
 
 ---
 
 ## Hooks Command
 
+**Inventory existing hooks and identify new enforcement opportunities.**
+
 When running `/skill-builder hooks` (all skills) or `/skill-builder hooks [skill]` (specific skill):
 
-### Step 1: Inventory Existing Hooks
+### Display Mode (default)
+
+#### Step 1: Inventory Existing Hooks
 
 Scan for hook scripts and their wiring:
 
@@ -284,7 +459,7 @@ Scan for hook scripts and their wiring:
 3. Cross-reference: which scripts are wired, which are orphaned
 ```
 
-### Step 2: Validate Existing Hooks
+#### Step 2: Validate Existing Hooks
 
 For each hook script found:
 
@@ -297,7 +472,7 @@ For each hook script found:
 | **Permission** | Script is executable (`chmod +x`) |
 | **Error output** | Writes block reason to stderr (`>&2`) |
 
-### Step 3: Identify New Opportunities
+#### Step 3: Identify New Opportunities
 
 Scan each skill's SKILL.md for directive patterns that can be enforced with hooks:
 
@@ -314,7 +489,7 @@ Scan each skill's SKILL.md for directive patterns that can be enforced with hook
 - "If unclear, ask" → context-dependent
 - "Match X to Y" → reasoning required
 
-### Step 4: Generate Report
+#### Step 4: Generate Report
 
 ```markdown
 # Hooks Audit Report
@@ -343,23 +518,17 @@ Scan each skill's SKILL.md for directive patterns that can be enforced with hook
 3. [Fix exit code in script Z]
 ```
 
-### Step 5: Offer Actions
+### Execute Mode (`--execute`)
 
-After presenting the report, ask:
-> "Which hooks should I create?"
-> 1. Create [highest priority hook]
-> 2. Wire orphaned hooks
-> 3. Fix validation issues
-> 4. Create all recommended hooks
+When running `/skill-builder hooks [skill] --execute`:
 
-### Creating a Hook Script
-
-When creating a new hook:
-
-1. **Create the script** in `.claude/skills/[skill]/hooks/[name].sh`
-2. **Make executable:** `chmod +x [script]`
-3. **Wire in settings.local.json** under `hooks.PreToolUse`
-4. **Test** by running a command that should be blocked
+1. Run display mode analysis first (Steps 1-4 above)
+2. **Generate task list from findings** using TaskCreate — one task per discrete action (e.g., "Create no-uncategorized.sh hook", "Wire hook in settings.local.json", "Fix exit code in validate-org-id.sh")
+3. Execute each task sequentially, marking complete via TaskUpdate as it goes
+4. Each task for new hooks:
+   - Create the script in `.claude/skills/[skill]/hooks/[name].sh`
+   - Make executable: `chmod +x [script]`
+   - Wire in settings.local.json under `hooks.PreToolUse`
 
 **Template for grep-block hooks:**
 ```bash
@@ -371,6 +540,8 @@ if echo "$INPUT" | grep -q "FORBIDDEN_VALUE"; then
 fi
 exit 0
 ```
+
+**Grounding:** `references/enforcement.md`
 
 ---
 
@@ -413,60 +584,6 @@ if echo "$INPUT" | grep -q "12345678"; then
   exit 2
 fi
 exit 0
-```
-
----
-
-## Optimization Targets
-
-See [references/optimization-examples.md](references/optimization-examples.md) for the full table of what can/can't be moved and a before/after example.
-
----
-
-## Auditing Existing Skills
-
-When auditing, report:
-
-```
-## Audit: /skill-name
-
-**Frontmatter:**
-- Has YAML frontmatter: [yes/no]
-- name matches folder: [yes/no]
-- description is single line: [yes/no] ← CRITICAL (multi-line gets truncated)
-- Has modes/subcommands: [yes/no]
-- Modes listed in description: [yes/no/N/A]
-
-**Modes/List Support:**
-- Has multiple modes: [yes/no]
-- Has Modes table: [yes/no/N/A]
-- Table format correct (Mode | Command | Description): [yes/no/N/A]
-- Supports `/skill-name list`: [yes/no/N/A]
-
-**Directives found:** [count]
-- Are they verbatim user rules? [yes/no]
-- Are they at the top? [yes/no]
-
-**Reference material inline:** [count] tables/lists
-- Should move to reference.md? [yes/no]
-
-**Enforcement:**
-- allowed-tools: [current]
-- hooks: [present/missing]
-- agents: [present/missing]
-- Directives enforceable by hooks? [yes/no/partial]
-
-**Agent opportunities:**
-- Grounding enforcement needed? [yes/no] → ID Lookup Agent
-- Complex validation needed? [yes/no] → Validator Agent
-- Output evaluation needed? [yes/no] → Evaluation Agent
-- Input matching needed? [yes/no] → Matcher Agent
-
-**Line count:** [X] (target: < 150 excluding reference.md)
-
-### Recommendations
-1. [specific action]
-2. [specific action]
 ```
 
 ---
