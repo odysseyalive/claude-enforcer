@@ -123,3 +123,27 @@ Hooks should use relative paths from project root:
 ```
 
 `$CLAUDE_PROJECT_DIR` resolves to the project root, making hooks portable.
+
+---
+
+## Hook Scoping
+
+Hooks fire globally on every matching tool invocation. The `matcher` field only supports tool names, not file paths. Hooks must **self-scope** by parsing JSON stdin to check whether the target file is within their domain.
+
+### When to Scope
+
+Style/content hooks (writing rules, voice rules, formatting rules) should skip `.claude/` infrastructure files. These hooks enforce output quality for project content, not skill machinery.
+
+### Scope Check Pattern
+
+Add this block after `INPUT=$(cat)` and before the content check:
+
+```bash
+# Scope check: skip .claude/ infrastructure files
+FILE_PATH=$(echo "$INPUT" | grep -oP '"file_path"\s*:\s*"[^"]*"' | head -1 | sed 's/.*"file_path"\s*:\s*"//;s/"$//')
+if echo "$FILE_PATH" | grep -q '\.claude/'; then
+  exit 0
+fi
+```
+
+Uses grep/sed instead of jq to avoid a dependency. Extracts `file_path` from the JSON tool input and exits early if the file is under `.claude/`.

@@ -50,7 +50,7 @@ mkdir -p "$SKILL_DIR/references"
 # Download SKILL.md and reference files
 echo "Downloading skill-builder..."
 curl -fsSL "$REPO_URL/skill-builder/SKILL.md" -o "$SKILL_DIR/SKILL.md"
-for ref in agents enforcement optimization-examples patterns portability templates; do
+for ref in agents enforcement optimization-examples patterns portability procedures templates; do
     curl -fsSL "$REPO_URL/skill-builder/references/${ref}.md" -o "$SKILL_DIR/references/${ref}.md"
 done
 
