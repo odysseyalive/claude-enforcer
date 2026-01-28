@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new [name], optimize [skill], agents [skill]"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new [name], optimize [skill], agents [skill], hooks [skill]"
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -17,6 +17,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit
 | `/skill-builder new [name]` | Create a new skill from template |
 | `/skill-builder optimize [skill]` | Restructure a specific skill |
 | `/skill-builder agents [skill]` | Analyze and create agents for a skill |
+| `/skill-builder hooks [skill]` | Inventory existing hooks + identify new opportunities |
 
 ---
 
@@ -590,6 +591,110 @@ Prompt: "[specific prompt for this use case]"
     ├── id-lookup.md   # Grounding enforcement
     ├── validator.md   # Complex validation
     └── matcher.md     # Category matching
+```
+
+---
+
+## Hooks Command
+
+When running `/skill-builder hooks` (all skills) or `/skill-builder hooks [skill]` (specific skill):
+
+### Step 1: Inventory Existing Hooks
+
+Scan for hook scripts and their wiring:
+
+```
+1. Glob for .claude/skills/**/hooks/*.sh
+2. Read .claude/settings.local.json → hooks section
+3. Cross-reference: which scripts are wired, which are orphaned
+```
+
+### Step 2: Validate Existing Hooks
+
+For each hook script found:
+
+| Check | What to Verify |
+|-------|----------------|
+| **Wired** | Listed in settings.local.json `hooks` section |
+| **Matcher** | Correct tool matcher (Bash, Edit, etc.) |
+| **Exit codes** | Uses `exit 2` to block, `exit 0` to allow |
+| **Reads stdin** | Captures `INPUT=$(cat)` for tool input |
+| **Permission** | Script is executable (`chmod +x`) |
+| **Error output** | Writes block reason to stderr (`>&2`) |
+
+### Step 3: Identify New Opportunities
+
+Scan each skill's SKILL.md for directive patterns that can be enforced with hooks:
+
+| Directive Pattern | Hook Type | Example |
+|-------------------|-----------|---------|
+| "Never use X" / "Never assign to X" | **Grep-block** | Block forbidden IDs/values |
+| "Always use script Y" | **Require-pattern** | Block direct API calls, require helper |
+| "Never call Z directly" | **Grep-block** | Block forbidden endpoints |
+| "Must include X" | **Require-pattern** | Ensure required fields present |
+| "Never exceed N" | **Threshold** | Block values above limit |
+
+**Skip these** (need agents, not hooks):
+- "Choose the best X" → judgment call
+- "If unclear, ask" → context-dependent
+- "Match X to Y" → reasoning required
+
+### Step 4: Generate Report
+
+```markdown
+# Hooks Audit Report
+
+## Existing Hooks
+
+| Script | Skill | Matcher | Wired | Status |
+|--------|-------|---------|-------|--------|
+| no-uncategorized.sh | /budget | Bash | Yes | OK |
+| validate-org-id.sh | /api-client | Bash | Yes | OK |
+| orphaned-script.sh | /skill | — | No | ORPHANED |
+
+## Wiring Issues
+- [List any scripts not in settings.json]
+- [List any settings.json entries pointing to missing scripts]
+
+## New Opportunities
+
+| Skill | Directive | Hook Type | Priority |
+|-------|-----------|-----------|----------|
+| /skill-name | "Never use Uncategorized" | Grep-block | High |
+
+## Recommended Actions
+1. [Wire orphaned script X]
+2. [Create hook for directive Y in /skill-name]
+3. [Fix exit code in script Z]
+```
+
+### Step 5: Offer Actions
+
+After presenting the report, ask:
+> "Which hooks should I create?"
+> 1. Create [highest priority hook]
+> 2. Wire orphaned hooks
+> 3. Fix validation issues
+> 4. Create all recommended hooks
+
+### Creating a Hook Script
+
+When creating a new hook:
+
+1. **Create the script** in `.claude/skills/[skill]/hooks/[name].sh`
+2. **Make executable:** `chmod +x [script]`
+3. **Wire in settings.local.json** under `hooks.PreToolUse`
+4. **Test** by running a command that should be blocked
+
+**Template for grep-block hooks:**
+```bash
+#!/bin/bash
+INPUT=$(cat)
+if echo "$INPUT" | grep -q "FORBIDDEN_VALUE"; then
+  echo "BLOCKED: [reason] per [skill] directive" >&2
+  exit 2
+fi
+exit 0
 ```
 
 ---
