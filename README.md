@@ -103,6 +103,46 @@ Keep rules lean. Use them for lightweight, always-on guidance that doesn't fit i
 
 The goal: soft guidance where drift is acceptable, hard enforcement where it isn't.
 
+## Optimization Structure
+
+When a skill grows past ~100 lines, it starts carrying weight that doesn't belong in every conversation. Lookup tables, API endpoint docs, category mappings: useful when referenced, wasteful when loaded by default.
+
+The `optimize` command splits a bloated skill into two files:
+
+```
+┌─────────────────────┐         ┌─────────────────────┐
+│      SKILL.md       │         │      SKILL.md       │
+│  (100+ lines)       │         │  (lean, ~30 lines)  │
+│                     │         │                     │
+│  ■ Directives       │         │  ■ Directives       │
+│  ■ Workflows        │  ───►   │  ■ Workflows        │
+│  ■ ID Tables        │         │  ■ Grounding links   │
+│  ■ Mappings         │         └─────────────────────┘
+│  ■ API docs         │                    │
+│  ■ Examples         │         ┌─────────────────────┐
+│                     │         │    reference.md      │
+└─────────────────────┘         │  ■ ID Tables        │
+                                │  ■ Mappings         │
+                                │  ■ API docs         │
+                                │  ■ Examples         │
+                                └─────────────────────┘
+```
+
+### What stays, what moves
+
+| Content | Stays in SKILL.md | Moves to reference.md |
+|---------|:-:|:-:|
+| Directives (user rules) | ✓ | |
+| Workflows | ✓ | |
+| Decision logic | ✓ | |
+| ID/account tables | | ✓ |
+| API endpoint docs | | ✓ |
+| Category mappings | | ✓ |
+
+The lean SKILL.md keeps **grounding links** that point into `reference.md`. When the skill needs a table or mapping, it tells Claude to read from the reference file rather than carrying the data inline. This keeps the skill's context footprint small while the full data remains one file-read away.
+
+One rule stays absolute through all of this: **directives are sacred**. When a user writes an instruction, optimization never rewords it. The original phrasing is preserved verbatim with its source and date. Restructuring moves content around. It never rewrites what the user said.
+
 ## Learn More
 
 - [Context Is the Interface](https://odysseyalive.com/focus/context-is-the-interface) — The insight behind this approach
