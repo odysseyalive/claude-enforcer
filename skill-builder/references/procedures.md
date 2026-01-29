@@ -132,6 +132,12 @@ When running `/skill-builder optimize [skill]`:
 **Reference material inline:** [count] tables/lists
 - Should move to reference.md? [yes/no]
 
+**Reference file status:**
+- reference.md exists: [yes/no]
+- Line count: [X]
+- H2 sections: [count] (each >20 lines: [yes/no])
+- Split recommendation: [SPLIT into references/ | KEEP single file]
+
 **Enforcement:**
 - allowed-tools: [current]
 - hooks: [present/missing]
@@ -161,8 +167,18 @@ When running `/skill-builder optimize [skill]`:
      - Steps that appear unnecessary but exist to create a checkpoint or pause point
    - Record all structural invariants in the audit output under "Structural Invariants"
    - These items are **excluded from all optimization targets** — they must not appear in proposed changes
-4. **Identify optimization targets** per `references/optimization-examples.md`, excluding all structural invariants found in step 3
-5. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)
+4. **Evaluate reference splitting** (if reference.md exists):
+   - Parse all h2 sections in reference.md; record heading, line count, content domain
+   - Check thresholds: file >100 lines AND 3+ h2 sections AND each section >20 lines → recommend split
+   - For each section, assign an enforcement priority:
+     - IDs/accounts → **HIGH** (hook + agent)
+     - Mappings/categories → **HIGH** (agent)
+     - Constraints/limits → **MEDIUM** (hook)
+     - API docs → **LOW** (hook for deprecated endpoints)
+     - Examples/theory → **NONE**
+   - If under threshold, note "Reference file: KEEP single file" and proceed
+5. **Identify optimization targets** per `references/optimization-examples.md`, excluding all structural invariants found in step 3
+6. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)
    - Each proposed change must note: "Structural invariant check: CLEAR" or explain why it does not affect any invariant
 
 ```markdown
@@ -181,7 +197,14 @@ When running `/skill-builder optimize [skill] --execute`:
 1. Run display mode analysis first
 2. **Generate task list from findings** using TaskCreate — one task per discrete action (e.g., "Move accounts table to reference.md", "Fix frontmatter description to single line")
 3. Execute each task sequentially, marking complete via TaskUpdate as it goes
-4. Report before/after line counts
+4. **If reference splitting was recommended:**
+   a. Create `references/` directory
+   b. Split each h2 section into its own file (content copied **verbatim**) using domain-based filenames: `ids.md`, `mappings.md`, `constraints.md`, `api.md`, `examples.md`, `theory.md`. Fallback: h2 heading lowercased and hyphenated.
+   c. Update grounding links in SKILL.md to point to individual files in `references/`
+   d. Verify no orphaned references (every grounding link resolves to a file)
+   e. Delete original `reference.md` only after verification passes
+   f. Generate enforcement recommendations per split file (hook, agent, or none based on priority from step 4)
+5. Report before/after line counts
 
 **Grounding:** `references/optimization-examples.md`, `references/templates.md`
 
@@ -355,11 +378,12 @@ exit 0
 
 When user gives a new rule for an existing skill:
 
-1. **Extract exact wording** — Quote their instruction verbatim
-2. **Add to Directives section** — With date and source
-3. **Create enforcement hook** — If rule can be validated programmatically
-4. **Test the hook** — Ensure it blocks violations
-5. **Update settings.json** — Wire up the hook
+1. **Classify before placing** — Is this a directive or a guideline? A directive is a rule born from real experience: "never do X," "always do Y," a hard constraint that came from a specific failure or insight. A guideline is general approach advice. If the new content describes a rule the author learned the hard way, or a constraint that should never be skipped, it's a directive. Route it to the `## Directives` block at the top of the skill, not into a numbered guideline list. Do not wait for the user to ask whether it belongs there. If the skill already has a `## Directives` section, new directives go there immediately. If it doesn't have one yet and this is the first directive, create the section.
+2. **Extract exact wording** — Quote their instruction verbatim
+3. **Add to Directives section** — With date and source
+4. **Create enforcement hook** — If rule can be validated programmatically
+5. **Test the hook** — Ensure it blocks violations
+6. **Update settings.json** — Wire up the hook
 
 **Example conversation:**
 

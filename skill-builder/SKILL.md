@@ -241,6 +241,8 @@ See [references/enforcement.md](references/enforcement.md) for hook JSON example
 
 Reads the skill's SKILL.md, runs a per-skill audit checklist (frontmatter, directives, reference material, enforcement, line count), identifies optimization targets, and lists proposed changes. In execute mode, generates a task list and applies changes sequentially.
 
+**Reference splitting:** When a skill's `reference.md` exceeds 100 lines with 3+ h2 sections (each >20 lines), the optimizer proposes splitting into a `references/` directory with domain-specific files. Each split file becomes an **enforcement boundary** — hooks and agents can attach per-file, enabling granular drift resistance. See `references/procedures.md` § "Evaluate Reference Splitting" for thresholds and enforcement priority heuristics.
+
 **Grounding:** Read [references/procedures.md](references/procedures.md) § "Optimize Command Procedure" before executing. Also consult `references/optimization-examples.md` and `references/templates.md`.
 
 ---

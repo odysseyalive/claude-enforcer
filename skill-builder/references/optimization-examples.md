@@ -120,3 +120,114 @@ See [reference.md](reference.md) for IDs and mappings.
 - Removing content that enforces a directive through structure (see enforcement.md § "Behavior Preservation")
 - Consolidating steps that have data flow dependencies between them
 - Treating declaration (SKILL.md) + implementation (agent file) as duplication
+
+---
+
+## Reference Splitting Example
+
+When a skill's `reference.md` exceeds 100 lines with 3+ h2 sections (each >20 lines), split into a `references/` directory. Each file becomes an enforcement boundary.
+
+**Before (single `reference.md`, 142 lines):**
+
+```markdown
+# Budget Reference
+
+## Account IDs
+| Account | ID |
+|---------|-----|
+| Checking | a1b2c3d4-... |
+| Savings | e5f6g7h8-... |
+[... 30 rows ...]
+
+## Category Mappings
+| Vendor | Category |
+|--------|----------|
+| Whole Foods | Groceries |
+[... 40 rows ...]
+
+## Budget Constraints
+| Category | Monthly Limit | Alert Threshold |
+|----------|--------------|-----------------|
+| Dining | $500 | 80% |
+[... 30 rows ...]
+```
+
+**After (3 domain files in `references/`):**
+
+`references/ids.md`:
+```markdown
+# Account IDs
+<!-- Enforcement: HIGH — hook (block unknown IDs) + agent (validate lookups) -->
+
+| Account | ID |
+|---------|-----|
+| Checking | a1b2c3d4-... |
+| Savings | e5f6g7h8-... |
+[... 30 rows — COPIED VERBATIM ...]
+```
+
+`references/mappings.md`:
+```markdown
+# Category Mappings
+<!-- Enforcement: HIGH — agent (validate vendor→category matches) -->
+
+| Vendor | Category |
+|--------|----------|
+| Whole Foods | Groceries |
+[... 40 rows — COPIED VERBATIM ...]
+```
+
+`references/constraints.md`:
+```markdown
+# Budget Constraints
+<!-- Enforcement: MEDIUM — hook (block over-limit allocations) -->
+
+| Category | Monthly Limit | Alert Threshold |
+|----------|--------------|-----------------|
+| Dining | $500 | 80% |
+[... 30 rows — COPIED VERBATIM ...]
+```
+
+**Updated grounding section in SKILL.md (before → after):**
+
+Before:
+```markdown
+## Grounding
+
+Before using any ID or value from reference.md:
+1. Read reference.md
+2. State: "I will use [VALUE] for [PURPOSE], found under [SECTION]"
+
+See [reference.md](reference.md) for IDs and mappings.
+```
+
+After:
+```markdown
+## Grounding
+
+Before using any ID, mapping, or constraint:
+1. Read the relevant file from `references/`
+2. State: "I will use [VALUE] for [PURPOSE], found in references/[file] under [SECTION]"
+
+Reference files:
+- [references/ids.md](references/ids.md) — Account IDs
+- [references/mappings.md](references/mappings.md) — Vendor→category mappings
+- [references/constraints.md](references/constraints.md) — Budget limits and thresholds
+```
+
+**Migration steps:**
+
+1. Create `references/` directory
+2. Split each h2 section verbatim into its domain file
+3. Add enforcement attribution comment to each file
+4. Update grounding links in SKILL.md
+5. Verify all grounding links resolve
+6. Delete original `reference.md`
+
+**Enforcement opportunities per file:**
+
+| File | Domain | Priority | Mechanism |
+|------|--------|----------|-----------|
+| `ids.md` | IDs/accounts | HIGH | Hook (block unknown IDs) + Agent (validate lookups) |
+| `mappings.md` | Vendor→category | HIGH | Agent (validate matches) |
+| `constraints.md` | Budget limits | MEDIUM | Hook (block over-limit values) |

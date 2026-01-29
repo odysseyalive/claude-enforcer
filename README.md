@@ -116,11 +116,11 @@ The `optimize` command splits a bloated skill into two files:
 │                     │         │                     │
 │  ■ Directives       │         │  ■ Directives       │
 │  ■ Workflows        │  ───►   │  ■ Workflows        │
-│  ■ ID Tables        │         │  ■ Grounding links   │
+│  ■ ID Tables        │         │  ■ Grounding links  │
 │  ■ Mappings         │         └─────────────────────┘
 │  ■ API docs         │                    │
 │  ■ Examples         │         ┌─────────────────────┐
-│                     │         │    reference.md      │
+│                     │         │    reference.md     │
 └─────────────────────┘         │  ■ ID Tables        │
                                 │  ■ Mappings         │
                                 │  ■ API docs         │
@@ -140,6 +140,27 @@ The `optimize` command splits a bloated skill into two files:
 | Category mappings | | ✓ |
 
 The lean SKILL.md keeps **grounding links** that point into `reference.md`. When the skill needs a table or mapping, it tells Claude to read from the reference file rather than carrying the data inline. This keeps the skill's context footprint small while the full data remains one file-read away.
+
+### When reference.md outgrows a single file
+
+Sometimes the reference file itself gets heavy. A budget skill might accumulate 30 rows of account IDs, 40 vendor mappings, and 30 budget constraints. At that point, a single `reference.md` becomes the same problem you just solved in SKILL.md: too much loaded at once.
+
+When `reference.md` crosses 100 lines with three or more substantial sections, the optimizer proposes splitting it into a `references/` directory:
+
+```
+.claude/skills/my-skill/
+├── SKILL.md
+├── references/
+│   ├── ids.md            # Account/entity IDs
+│   ├── mappings.md       # Vendor→category mappings
+│   └── constraints.md    # Limits and thresholds
+├── hooks/
+└── agents/
+```
+
+Each split file becomes an **enforcement boundary**. A hook can watch for unknown account IDs by reading only `ids.md`. An agent can validate vendor mappings against `mappings.md` without loading constraints it doesn't need. The granularity that made skills useful at the SKILL.md level now extends into the reference layer.
+
+Content is copied verbatim during the split. No rewriting, no condensing. The grounding section in SKILL.md updates to point at individual files instead of a single `reference.md`, and the original is deleted only after every link resolves cleanly.
 
 One rule stays absolute through all of this: **directives are sacred**. When a user writes an instruction, optimization never rewords it. The original phrasing is preserved verbatim with its source and date. Restructuring moves content around. It never rewrites what the user said.
 

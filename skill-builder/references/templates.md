@@ -82,6 +82,91 @@ See [reference.md](reference.md) for IDs and mappings.
 
 ---
 
+## Reference File Templates
+
+### Single-File Pattern (< 100 lines)
+
+Use a single `reference.md` when the file is under 100 lines or has fewer than 3 substantial h2 sections:
+
+```
+.claude/skills/my-skill/
+├── SKILL.md
+└── reference.md       # All IDs, tables, mappings in one file
+```
+
+Grounding in SKILL.md:
+```markdown
+## Grounding
+
+Before using any ID or value from reference.md:
+1. Read reference.md
+2. State: "I will use [VALUE] for [PURPOSE], found under [SECTION]"
+
+See [reference.md](reference.md) for IDs and mappings.
+```
+
+### Multi-File Pattern (> 100 lines, 3+ h2 sections each >20 lines)
+
+Split into a `references/` directory with domain-specific files. Each file is an **enforcement boundary** where hooks and agents can attach independently:
+
+```
+.claude/skills/my-skill/
+├── SKILL.md
+├── references/
+│   ├── ids.md          # Account/entity IDs
+│   ├── mappings.md     # Category/vendor mappings
+│   └── constraints.md  # Limits, thresholds, rules
+├── hooks/
+│   └── validate.sh
+└── agents/
+    └── *.md
+```
+
+### Per-File Template
+
+Each reference file includes an enforcement attribution footer:
+
+```markdown
+# [Domain Title]
+<!-- Enforcement: [HIGH|MEDIUM|LOW|NONE] — [mechanism description] -->
+
+## [Section Heading]
+
+[Content copied verbatim from original reference.md]
+
+---
+*Split from reference.md by skill-builder optimize. Enforcement boundary: [hook|agent|none].*
+```
+
+### Grounding Update Template
+
+When splitting, update the grounding section from single-file to multi-file:
+
+```markdown
+## Grounding
+
+Before using any ID, mapping, or constraint:
+1. Read the relevant file from `references/`
+2. State: "I will use [VALUE] for [PURPOSE], found in references/[file] under [SECTION]"
+
+Reference files:
+- [references/ids.md](references/ids.md) — [description]
+- [references/mappings.md](references/mappings.md) — [description]
+- [references/constraints.md](references/constraints.md) — [description]
+```
+
+### Enforcement Opportunities by File Type
+
+| File Domain | Priority | Hook Opportunity | Agent Opportunity |
+|-------------|----------|------------------|-------------------|
+| IDs/accounts | HIGH | Block unknown IDs in tool input | Validate ID lookups against file |
+| Mappings/categories | HIGH | — | Validate input→output matches |
+| Constraints/limits | MEDIUM | Block values exceeding thresholds | — |
+| API docs | LOW | Block deprecated endpoint calls | — |
+| Examples/theory | NONE | — | — |
+
+---
+
 ## Frontmatter Requirements
 
 **CRITICAL:** The `description:` field is what users see when they type `/skill-name` without arguments. Claude Code only displays the description — not the body of SKILL.md. **Multi-line descriptions get truncated — use a single line.**
