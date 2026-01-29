@@ -116,3 +116,7 @@ See [reference.md](reference.md) for IDs and mappings.
 - Summarizing directives
 - Removing "redundant" steps
 - Changing the order of operations
+- Reorganizing agent workflow phases, blocking gates, or pre-conditions
+- Removing content that enforces a directive through structure (see enforcement.md § "Behavior Preservation")
+- Consolidating steps that have data flow dependencies between them
+- Treating declaration (SKILL.md) + implementation (agent file) as duplication

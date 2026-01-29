@@ -138,11 +138,32 @@ When running `/skill-builder optimize [skill]`:
 - agents: [present/missing]
 - Directives enforceable by hooks? [yes/no/partial]
 
+**Structural Invariants:** [count found]
+- [list each invariant: what it is, which directive it enforces, why it cannot be changed]
+
 **Line count:** [X] (target: < 150 excluding reference.md)
 ```
 
-3. **Identify optimization targets** per `references/optimization-examples.md`
-4. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)
+3. **Scan for structural invariants** (BEFORE identifying optimization targets):
+   - Read all agent files, reference files, and any files cross-referenced by SKILL.md
+   - For each directive, trace its enforcement path: how does the skill's architecture prevent this directive from being violated?
+   - Flag content that enforces directives through structure rather than text. This includes but is not limited to:
+     - Sequential phases or steps where ordering matters
+     - Blocking gates or pre-conditions ("step X must complete before step Y")
+     - Data flow dependencies (step A populates a structure that step B requires)
+     - Content that appears in both SKILL.md and an agent file (declaration + implementation, not duplication)
+     - Intermediate state or session variables that connect phases
+     - Task tool spawn templates in agent files (these are executable specifications)
+   - Also flag content that is **at risk of being misidentified as an optimization target**:
+     - Verbose workflow descriptions that encode ordering constraints
+     - Repeated phrasing across files that serves cross-referencing rather than redundancy
+     - Agent file content that mirrors SKILL.md directives (the agent file is the enforcement mechanism)
+     - Steps that appear unnecessary but exist to create a checkpoint or pause point
+   - Record all structural invariants in the audit output under "Structural Invariants"
+   - These items are **excluded from all optimization targets** — they must not appear in proposed changes
+4. **Identify optimization targets** per `references/optimization-examples.md`, excluding all structural invariants found in step 3
+5. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)
+   - Each proposed change must note: "Structural invariant check: CLEAR" or explain why it does not affect any invariant
 
 ```markdown
 ### Proposed Changes

@@ -186,6 +186,7 @@ Optimization is RESTRUCTURING, not REWRITING. The skill must behave identically 
 - Changing step order "for efficiency"
 - Removing "redundant" content
 - Summarizing user directives
+- Reorganizing workflow structure that enforces directives (see enforcement.md § "Behavior Preservation")
 
 **The test:** If the original author reviewed the optimized skill, they should say "this does exactly what mine did, just organized differently."
 

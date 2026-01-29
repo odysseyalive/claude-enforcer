@@ -45,6 +45,84 @@ Prefer: Lean CLAUDE.md (~100-150 lines) + on-demand skills + hooks for critical 
 
 ---
 
+## Behavior Preservation in Optimization
+
+Refactoring is defined as restructuring code (or in our case, skill files) **without changing observable behavior** (Fowler, *Refactoring* 2nd ed.). This is the foundational constraint. If an optimization changes what the skill *does* — even if it makes the file shorter, cleaner, or "better organized" — it is not optimization. It is breakage.
+
+### The Behavior Preservation Test
+
+Before applying any proposed change to a skill or agent file, ask:
+
+> **"Does the skill produce identical results and enforce identical constraints after this change?"**
+
+If the answer is no, or even uncertain, the change must not be made.
+
+### Structural Invariants
+
+Some content in skill files looks like it could be optimized (consolidated, moved, shortened) but actually serves a **structural purpose**. Changing it would alter the skill's behavior. These are **structural invariants** — the load-bearing walls of a skill's architecture.
+
+#### How to Recognize Structural Invariants
+
+| Pattern | Why It's Load-Bearing |
+|---------|----------------------|
+| Sequential workflow phases with blocking gates | Phase ordering enforces that step N completes before step N+1 can run. Reordering or merging phases removes the gate. |
+| Pre-conditions on a workflow step | A step that says "X must be true before this runs" is enforced by the steps that come before it. Removing those steps removes the enforcement. |
+| Directive in SKILL.md + enforcement in agent file | The directive states the rule; the agent workflow structurally prevents violation. Both are necessary — they serve different purposes. |
+| Data flow dependencies between steps | Step A populates a structure that Step B reads from. Consolidating A and B may eliminate the structure, removing the constraint. |
+| Repeated content across SKILL.md and agent files | Often not duplication — SKILL.md declares *what*, the agent file implements *how*. Removing the "duplicate" removes one half of the contract. |
+| Intermediate state tracking (session variables, counters) | Tracks progress and feeds into later steps or the session summary. Removing it breaks downstream reporting or gating. |
+
+#### The Rule
+
+**If removing or reorganizing a piece of content would make it *possible* to skip a directive, bypass a constraint, or change the order of operations, that content is a structural invariant and must not be changed.**
+
+### Pre-Change Verification Procedure
+
+Before proposing any optimization that touches workflow structure, agent files, or content referenced by directives:
+
+1. **List all directives** in the parent SKILL.md
+2. **Trace enforcement paths** — for each directive, identify which workflow steps, pre-conditions, or data flows enforce it
+3. **Evaluate the proposed change** against each enforcement path
+4. **If the change would break any path** → do not propose it
+5. **If uncertain** → do not propose it. Flag it for manual review instead.
+
+### Proactive Invariant Scanning
+
+The optimizer must not wait for breakage to discover structural invariants. It must **proactively scan** for them before proposing any changes. The danger is that structural invariants often look like the exact things an optimizer wants to clean up:
+
+#### Content At Risk of Being Misidentified
+
+| What the Optimizer Sees | What It Actually Is | Why It's Dangerous to Touch |
+|-------------------------|--------------------|-----------------------------|
+| Long, verbose workflow in an agent file | Sequential phases with ordering constraints | Shortening it may remove a blocking gate |
+| Same concept described in SKILL.md and agent file | Declaration (what) + implementation (how) | Removing the "duplicate" leaves either the rule without enforcement or the enforcement without a rule |
+| Task tool spawn template with inline prompt | Executable specification for an agent call | Moving or simplifying it may change what the agent does |
+| Blocking annotations like `[BLOCKING]` | Phase gates that prevent step-skipping | Removing the label removes the instruction to wait |
+| Pre-conditions like "X must be true before this step" | Structural enforcement of a directive | Removing it makes the directive advisory instead of enforced |
+| Session state variables (counters, lookup caches, tracking lists) | Data flow connectors between phases | Removing them disconnects phases from each other and from the summary |
+| Steps that seem to "just announce" something to the user | Checkpoints that create observable behavior the user relies on | Removing them changes what the user sees and when |
+| Intermediate data structures populated by one step and consumed by another | The mechanism that makes ordering matter | Consolidating the steps may eliminate the structure |
+
+#### The Core Risk
+
+**Structural invariants are invisible when you're looking for optimization targets.** They don't look like directives (they're not quoted user rules). They don't look like reference data (they're not tables of IDs). They look like verbose, repetitive, overly-detailed workflow prose — exactly what an optimizer is trained to consolidate.
+
+That is why the scan must happen **before** optimization targets are identified, not after. If you identify targets first and filter invariants second, the invariants have already been mentally categorized as "things to change" and the filter becomes a formality. Scan first, exclude first, then look for what's left.
+
+### What This Means for the Optimize Command
+
+The optimize command protects directives (verbatim text), workflows (step order), and now **structural invariants** (content that enforces directives through architecture). The audit checklist includes a "Structural Invariants" section that must be populated before any optimization targets are proposed.
+
+| Looks Like | Actually Is | Action |
+|------------|-------------|--------|
+| "Duplicated" content between SKILL.md and agent file | Declaration (SKILL.md) + implementation (agent) | Leave both |
+| "Verbose" multi-phase workflow | Sequential gates that enforce ordering constraints | Never merge or reorder phases |
+| "Redundant" pre-conditions or blocking annotations | Structural enforcement of a directive | Never remove |
+| Agent file "repeating" a Task tool template from SKILL.md | The executable specification of how to spawn an agent | Belongs in the agent file; SKILL.md may summarize but agent file is authoritative |
+| Intermediate variables or session state | Data flow that connects phases and feeds the session summary | Never remove |
+
+---
+
 ## Enforcement Mechanisms
 
 ### 1. PreToolUse Hooks (Strongest)
