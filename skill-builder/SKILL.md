@@ -18,6 +18,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 | `/skill-builder optimize [skill]` | Display optimization plan for a skill (add `--execute` to apply) |
 | `/skill-builder agents [skill]` | Display agent opportunities for a skill (add `--execute` to create) |
 | `/skill-builder hooks [skill]` | Display hooks inventory + opportunities (add `--execute` to create) |
+| `/skill-builder optimize claude.md` | Optimize CLAUDE.md by extracting domain content into skills |
 | `/skill-builder dev [command]` | Run any command with skill-builder itself included |
 
 ---
@@ -156,6 +157,8 @@ When auditing skills, verify:
 
 Gathers metrics from CLAUDE.md, rules files, and all skills. Runs optimize + agents + hooks in display mode for each skill. Aggregates into a single report with priority fixes. Offers execution choices.
 
+**Bootstrap mode:** If no skills are found (no `.claude/skills/*/SKILL.md` files exist), the audit switches to bootstrap mode. Instead of reporting "no skills found," it runs the CLAUDE.md Optimization Procedure as its primary action — analyzing CLAUDE.md for extraction candidates, proposing new skills to create, and offering to execute the extraction. This is the expected first-run experience for new installations.
+
 **Grounding:** Read [references/procedures.md](references/procedures.md) § "Audit Command Procedure" before executing.
 
 ---
@@ -244,6 +247,16 @@ Reads the skill's SKILL.md, runs a per-skill audit checklist (frontmatter, direc
 **Reference splitting:** When a skill's `reference.md` exceeds 100 lines with 3+ h2 sections (each >20 lines), the optimizer proposes splitting into a `references/` directory with domain-specific files. Each split file becomes an **enforcement boundary** — hooks and agents can attach per-file, enabling granular drift resistance. See `references/procedures.md` § "Evaluate Reference Splitting" for thresholds and enforcement priority heuristics.
 
 **Grounding:** Read [references/procedures.md](references/procedures.md) § "Optimize Command Procedure" before executing. Also consult `references/optimization-examples.md` and `references/templates.md`.
+
+---
+
+## Optimize claude.md Command
+
+**When invoked with `optimize claude.md`, run the CLAUDE.md Optimization Procedure directly.**
+
+This is a standalone command that targets CLAUDE.md itself rather than a skill. It analyzes CLAUDE.md for extraction candidates, proposes new skills, and in execute mode creates them. This is equivalent to what the audit does in bootstrap mode, but can be run explicitly at any time — even when skills already exist.
+
+**Grounding:** Read [references/procedures.md](references/procedures.md) § "CLAUDE.md Optimization Procedure" before executing.
 
 ---
 

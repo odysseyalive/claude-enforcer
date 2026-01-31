@@ -29,6 +29,21 @@ Files to scan:
 - **Should convert to skills:** [yes/no with reasoning]
 ```
 
+### Step 2.5: Bootstrap Check (No Skills Found)
+
+If no `.claude/skills/*/SKILL.md` files exist (excluding skill-builder itself):
+
+**Switch to bootstrap mode.** Do NOT report "no skills found" and stop. Instead:
+
+1. Report that no skills exist yet — this is a fresh project
+2. Run the **CLAUDE.md Optimization Procedure** (see § "CLAUDE.md Optimization Procedure" below) as the primary action
+3. Analyze CLAUDE.md for extraction candidates (domain-specific sections, inline tables, procedures >10 lines, rules that only apply to specific tasks)
+4. Propose new skills to create from extraction candidates
+5. Present the CLAUDE.md optimization report with proposed skill extractions
+6. Offer execution: "Should I extract these sections into skills?"
+
+Skip Steps 3–5 (they require existing skills) and go directly to Step 6 with the CLAUDE.md-focused execution choices.
+
 ### Step 3: Skills Summary Table
 
 ```markdown
@@ -101,6 +116,8 @@ When the user selects execution targets, generate a **combined task list** via T
 ## Optimize Command Procedure
 
 **Restructure a specific skill for optimal context efficiency.**
+
+**Special case:** If the target is `claude.md` (e.g., `/skill-builder optimize claude.md`), skip this procedure and run the **CLAUDE.md Optimization Procedure** instead (see § "CLAUDE.md Optimization Procedure" below).
 
 ### Display Mode (default)
 
