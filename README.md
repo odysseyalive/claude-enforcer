@@ -47,7 +47,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 **3.** Open Claude Code and run your first audit:
 
 ```
-/skill-builder
+/skill-builder audit
 ```
 
 ## Usage
