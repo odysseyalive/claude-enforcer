@@ -26,15 +26,29 @@ Claude Code has three mechanisms that help, but most developers underuse them:
 
 **Agents** are subprocesses that start with fresh context. When you need to validate something without the drift of the current conversation, you spawn an agent with `context: none`. It reads your reference files directly, uninfluenced by the long conversation above.
 
-## Install / Update
+## Requirements
 
-From your Claude Code project root (where `CLAUDE.md` lives):
+Claude Code **v2.1.3 or later**. Skills became user-invocable in v2.1.3 (January 2026). Earlier versions will refuse to run `/skill-builder` directly. Check with `claude --version` and update with `claude update` if needed.
+
+## Install
+
+**1.** Initialize Claude Code (if you haven't already):
+
+```bash
+claude /init
+```
+
+**2.** Install the skill-builder:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 ```
 
-If you haven't initialized Claude Code yet, run `claude /init` first.
+**3.** Open Claude Code and run your first audit:
+
+```
+/skill-builder
+```
 
 ## Usage
 
