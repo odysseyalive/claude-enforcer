@@ -19,7 +19,24 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 | `/skill-builder agents [skill]` | Display agent opportunities for a skill (add `--execute` to create) |
 | `/skill-builder hooks [skill]` | Display hooks inventory + opportunities (add `--execute` to create) |
 | `/skill-builder optimize claude.md` | Optimize CLAUDE.md by extracting domain content into skills |
+| `/skill-builder update` | Re-run the installer to update skill-builder to the latest version |
 | `/skill-builder dev [command]` | Run any command with skill-builder itself included |
+
+---
+
+## The `update` Command
+
+**Re-run the installer to update skill-builder to the latest version.**
+
+When invoked with `/skill-builder update`:
+
+1. Execute the installer script:
+   ```bash
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
+   ```
+2. Report the result to the user
+
+This fetches and runs the latest installer from the repository, which will update all skill-builder files to the current version.
 
 ---
 

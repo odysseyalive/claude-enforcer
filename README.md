@@ -61,6 +61,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 /skill-builder optimize [skill] # Restructure a specific skill
 /skill-builder agents [skill]   # Analyze and create agents for a skill
 /skill-builder hooks [skill]    # Inventory existing hooks + identify new opportunities
+/skill-builder update           # Update skill-builder to the latest version
 ```
 
 The audit scans your `CLAUDE.md`, any `.claude/rules/` files, and existing skills. It identifies what can be extracted, what needs enforcement, and where context drift is likely to cause problems.
