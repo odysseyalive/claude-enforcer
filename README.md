@@ -38,7 +38,7 @@ Claude Code **v2.1.3 or later**. Skills became user-invocable in v2.1.3 (January
 claude /init
 ```
 
-**2.** Install the skill-builder:
+**2.** Install/Update skill-builder:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
