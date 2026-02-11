@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new [name], optimize [skill], agents [skill], hooks [skill]"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline"
 allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
@@ -12,6 +12,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 |---------|--------|
 | `/skill-builder` | Full audit: runs optimize + agents + hooks in display mode for all skills |
 | `/skill-builder audit` | Same as above |
+| `/skill-builder audit --quick` | Lightweight audit: frontmatter + line counts + priority fixes only |
 | `/skill-builder skills` | List all local skills available in this project |
 | `/skill-builder list [skill]` | Show all modes/options for a skill in a table |
 | `/skill-builder new [name]` | Create a new skill from template |
@@ -20,6 +21,8 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 | `/skill-builder hooks [skill]` | Display hooks inventory + opportunities (add `--execute` to create) |
 | `/skill-builder optimize claude.md` | Optimize CLAUDE.md by extracting domain content into skills |
 | `/skill-builder update` | Re-run the installer to update skill-builder to the latest version |
+| `/skill-builder verify` | Health check: validate all skills, hooks, and wiring (headless-compatible) |
+| `/skill-builder inline [skill] [directive]` | Quick-add a directive to a skill without full audit |
 | `/skill-builder dev [command]` | Run any command with skill-builder itself included |
 
 ---
@@ -133,6 +136,52 @@ When auditing skills, verify:
 
 ---
 
+## The `verify` Command
+
+**Non-destructive health check for the entire skill system. Headless-compatible.**
+
+When invoked with `/skill-builder verify`:
+
+1. **Scan all skills** — glob `.claude/skills/*/SKILL.md`
+2. **For each skill, validate:**
+   - Frontmatter exists with `---` delimiters
+   - `name` matches folder name
+   - `description` is single-line (no `|` or `>` syntax)
+   - `allowed-tools` is present
+   - Line count is under 150 (excluding reference files)
+   - If skill has modes, a Modes table exists
+3. **Validate hooks:**
+   - All `.sh` files in `hooks/` are executable (`chmod +x`)
+   - All hook scripts are wired in `.claude/settings.local.json`
+   - All wired hooks point to scripts that exist
+4. **Validate agents:**
+   - All `.md` files in `agents/` have valid frontmatter
+   - Agent files are referenced in parent SKILL.md
+5. **Output a pass/fail summary:**
+
+```
+## Skill System Health Check
+
+| Check | Status |
+|-------|--------|
+| Skills found | 5 |
+| Frontmatter valid | 5/5 PASS |
+| Line targets met | 4/5 WARN (/budget: 172 lines) |
+| Hooks wired | 3/3 PASS |
+| Hooks executable | 3/3 PASS |
+| Agents referenced | 2/2 PASS |
+
+Overall: PASS (1 warning)
+```
+
+6. **Exit behavior:** If all checks pass, report PASS. If any FAIL, list failures. This command never modifies files — it only reads and reports.
+
+**Headless usage:** `claude -p "/skill-builder verify"` — suitable for CI, pre-commit, or batch checks.
+
+**Grounding:** Read [references/procedures.md](references/procedures.md) § "Verify Command Procedure" before executing.
+
+---
+
 ## Self-Exclusion Rule
 
 **The skill-builder skill MUST be excluded from all actions (audit, optimize, agents, hooks, skills list) unless the command is prefixed with `dev`.**
@@ -165,6 +214,7 @@ When auditing skills, verify:
    - First produce a numbered task list using TaskCreate, one task per discrete action
    - Execute each task sequentially, marking progress via TaskUpdate
    - This ensures context can be refreshed mid-execution without losing track, no tasks get forgotten during long context windows, and the user can see progress and resume if interrupted
+5. **Scope discipline during execution.** Execute ONLY the tasks in the task list. Do not add bonus tasks, expand scope, or create deliverables not in the original plan. If execution reveals a new opportunity, note it in the completion report — do not act on it. The task list is the contract.
 
 ---
 
@@ -287,7 +337,7 @@ See [references/optimization-examples.md](references/optimization-examples.md) f
 
 **Analyze and create agents for a skill.**
 
-Reads the skill's SKILL.md, evaluates 4 agent types (ID Lookup, Validator, Evaluation, Matcher) against it, and reports which would help and why. In execute mode, creates agent files from templates.
+Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evaluation, Matcher, Voice Validator) against it, and reports which would help and why. In execute mode, creates agent files from templates.
 
 **Grounding:** Read [references/procedures.md](references/procedures.md) § "Agents Command Procedure" before executing. Also consult `references/agents.md`.
 
@@ -314,6 +364,36 @@ See [references/templates.md](references/templates.md) for directory layout, SKI
 Extract exact wording verbatim, add to Directives section with date and source, create enforcement hook if possible, test and wire.
 
 **Grounding:** Read [references/procedures.md](references/procedures.md) § "Adding Directives Procedure" for the full workflow and examples.
+
+---
+
+## Inline Directive Capture
+
+**Quick-add a directive to a skill without running a full audit cycle.**
+
+When invoked with `/skill-builder inline [skill] [directive text]`:
+
+1. Read the target skill's SKILL.md
+2. Add the directive verbatim to the `## Directives` section (create the section if it doesn't exist)
+3. Add date and source attribution
+4. If the directive is programmable (contains "never," "always," or a specific value to check), suggest a hook — but don't create it unless asked
+5. Report what was added
+
+**Example:**
+```
+/skill-builder inline writing Never use the phrase "in conclusion" in any article.
+```
+
+Adds to `.claude/skills/writing/SKILL.md`:
+```markdown
+> **Never use the phrase "in conclusion" in any article.**
+
+*— Added 2026-02-11, source: user instruction (inline)*
+```
+
+**Why this exists:** Supports mid-session learning. When you notice a pattern violation during a writing or editing session, capture it immediately as a directive without context-switching to a full audit. The directive is preserved for all future invocations.
+
+**Grounding:** Read [references/procedures.md](references/procedures.md) § "Inline Directive Procedure" before executing.
 
 ---
 

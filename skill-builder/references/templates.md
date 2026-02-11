@@ -80,6 +80,62 @@ See [reference.md](reference.md) for IDs and mappings.
 
 **For single-purpose skills (no modes):** Omit the Usage/Modes section entirely.
 
+### Content-Creation Skill Template
+
+For skills that produce written content (articles, posts, captions, descriptions). Includes voice directive placeholders and voice validation integration.
+
+```markdown
+---
+name: skill-name
+description: "Brief description. Usage: /skill-name [args]"
+allowed-tools: Read, Glob, Grep, Edit, Write, Task
+---
+
+# Skill Name
+
+Brief one-line description of what this skill does.
+
+---
+
+## Directives
+
+> **[Voice/style directive — e.g., "Never produce overbuilt, constructed, or AI-sounding prose."]**
+> **[Tone directive — e.g., "All drafts must be conversational and natural."]**
+
+*— Added YYYY-MM-DD, source: [where this came from]*
+
+---
+
+## Workflow
+
+1. [Content creation steps]
+2. [...]
+3. **Voice validation** — Before presenting any draft to the user, spawn the voice-validator agent (see below)
+4. Fix any violations found, then present the clean draft
+
+---
+
+## Voice Validation (Enforced via Agent)
+
+After generating any draft content, spawn the voice-validator agent:
+
+Task tool with subagent_type: "general-purpose"
+Prompt: "Read directives from .claude/skills/[skill]/SKILL.md § Directives.
+        Then read [content file]. Evaluate every sentence against the voice
+        directives. Report violations with line numbers and quoted text.
+        If no violations, say PASS."
+
+If agent reports violations, fix them before presenting to user.
+
+---
+
+## Grounding
+
+[If applicable — reference files for IDs, style guides, etc.]
+```
+
+**When to use this template:** The `new` command should use this template when the user's description or skill name suggests content creation (writing, articles, posts, editorial, newsletter, social media, captions, copy).
+
 ---
 
 ## Reference File Templates

@@ -113,6 +113,126 @@ When the user selects execution targets, generate a **combined task list** via T
 
 ---
 
+## Verify Command Procedure
+
+**Non-destructive health check. Never modifies files.**
+
+### Step 1: Discover Skills
+
+```bash
+Glob: .claude/skills/*/SKILL.md
+```
+
+### Step 2: Per-Skill Validation
+
+For each skill found:
+
+| Check | How | Pass Condition |
+|-------|-----|----------------|
+| Frontmatter exists | Look for `---` delimiters at top of file | Present |
+| `name` matches folder | Compare `name:` field to parent directory name | Match |
+| Single-line description | Check `description:` doesn't use `\|` or `>` YAML syntax | Single line |
+| `allowed-tools` present | Check frontmatter field exists | Present |
+| Line count | Count lines in SKILL.md (exclude reference files) | < 150 |
+| Modes table | If skill has 2+ modes, check for Modes table | Present if needed |
+
+### Step 3: Hook Validation
+
+```bash
+Glob: .claude/skills/**/hooks/*.sh
+Read: .claude/settings.local.json → hooks section
+```
+
+For each hook script:
+- Is it executable? (`ls -la` check)
+- Is it wired in settings.local.json?
+
+For each wired hook in settings.local.json:
+- Does the script file exist?
+
+### Step 4: Agent Validation
+
+```bash
+Glob: .claude/skills/**/agents/*.md
+```
+
+For each agent file:
+- Does it have valid frontmatter?
+- Is it referenced (by name or filename) in the parent SKILL.md?
+
+### Step 5: Summary Output
+
+```
+## Skill System Health Check
+
+| Check | Status |
+|-------|--------|
+| Skills found | [N] |
+| Frontmatter valid | [N]/[N] [PASS/FAIL] |
+| Line targets met | [N]/[N] [PASS/WARN] (details if warn) |
+| Hooks wired | [N]/[N] [PASS/FAIL] |
+| Hooks executable | [N]/[N] [PASS/FAIL] |
+| Agents referenced | [N]/[N] [PASS/FAIL] |
+
+Overall: [PASS / PASS with warnings / FAIL]
+```
+
+**If any FAIL:** List each failure with the skill name and specific issue.
+**If all PASS:** Report clean health.
+
+---
+
+## Quick Audit Procedure (`audit --quick`)
+
+**Lightweight audit for iterative workflows. Skips deep structural analysis.**
+
+When invoked with `audit --quick`:
+
+### Step 1: Scan All Skills
+
+Glob for `.claude/skills/*/SKILL.md`. For each skill, check ONLY:
+
+```
+| Skill | Lines | Frontmatter OK | Hooks Wired | Issues |
+|-------|-------|----------------|-------------|--------|
+| /skill-1 | 45 | Yes | Yes | — |
+| /skill-2 | 210 | No (multi-line desc) | No | OVER LINE TARGET, BAD FRONTMATTER |
+```
+
+**Checks (per skill):**
+- Frontmatter exists with single-line description
+- `name` matches folder
+- Line count vs 150-line target
+- Hooks in `hooks/` are wired in settings.local.json
+- Agent files exist and are referenced in SKILL.md
+
+### Step 2: Check CLAUDE.md
+
+```
+CLAUDE.md: [X] lines (target: < 150) — [OK / OVER TARGET]
+```
+
+### Step 3: Output Priority Fixes
+
+List only HIGH-priority issues in a numbered list:
+
+```
+## Priority Fixes
+1. /skill-2: Frontmatter description is multi-line (gets truncated)
+2. /skill-2: 210 lines — exceeds 150-line target, needs optimization
+3. /skill-3: Hook validate.sh exists but is not wired in settings.local.json
+```
+
+### Step 4: Offer Immediate Execution
+
+For each fix, offer direct execution:
+
+> Fix these now? (y/n per item, or "all")
+
+No sub-command display-mode pass. No structural invariant scanning. No narrative report. Just findings and fixes.
+
+---
+
 ## Optimize Command Procedure
 
 **Restructure a specific skill for optimal context efficiency.**
@@ -167,7 +287,22 @@ When running `/skill-builder optimize [skill]`:
 **Line count:** [X] (target: < 150 excluding reference.md)
 ```
 
-3. **Scan for structural invariants** (BEFORE identifying optimization targets):
+3. **Detect skill domain** — classify the skill before deeper analysis:
+
+   **Content-creation skill indicators** (any 2+ of these):
+   - Directives mentioning: voice, tone, style, prose, writing, conversational, overbuilt, promotional, natural, plain language
+   - Workflow produces: articles, posts, drafts, descriptions, captions, newsletters, emails
+   - Tools include: text-eval, voice, writing skills referenced
+   - Output files are predominantly `.md`, `.mdx`, or text content
+
+   **If content-creation skill detected:**
+   - Flag in audit output: `Domain: CONTENT CREATION`
+   - Recommend Voice Validator agent (HIGH priority) if not already present
+   - Recommend voice directive placeholder if Directives section has no voice/style rules
+   - If a `text-eval` or `voice` skill exists in the project, recommend integration
+
+   **API/DevOps skills** (default): proceed with standard optimization.
+
    - Read all agent files, reference files, and any files cross-referenced by SKILL.md
    - For each directive, trace its enforcement path: how does the skill's architecture prevent this directive from being violated?
    - Flag content that enforces directives through structure rather than text. This includes but is not limited to:
@@ -184,7 +319,7 @@ When running `/skill-builder optimize [skill]`:
      - Steps that appear unnecessary but exist to create a checkpoint or pause point
    - Record all structural invariants in the audit output under "Structural Invariants"
    - These items are **excluded from all optimization targets** — they must not appear in proposed changes
-4. **Evaluate reference splitting** (if reference.md exists):
+5. **Evaluate reference splitting** (if reference.md exists):
    - Parse all h2 sections in reference.md; record heading, line count, content domain
    - Check thresholds: file >100 lines AND 3+ h2 sections AND each section >20 lines → recommend split
    - For each section, assign an enforcement priority:
@@ -194,8 +329,8 @@ When running `/skill-builder optimize [skill]`:
      - API docs → **LOW** (hook for deprecated endpoints)
      - Examples/theory → **NONE**
    - If under threshold, note "Reference file: KEEP single file" and proceed
-5. **Identify optimization targets** per `references/optimization-examples.md`, excluding all structural invariants found in step 3
-6. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)
+6. **Identify optimization targets** per `references/optimization-examples.md`, excluding all structural invariants found in step 4
+7. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)
    - Each proposed change must note: "Structural invariant check: CLEAR" or explain why it does not affect any invariant
 
 ```markdown
@@ -236,7 +371,7 @@ When running `/skill-builder optimize [skill] --execute`:
 When running `/skill-builder agents [skill]`:
 
 1. **Read the skill's SKILL.md** — understand its directives, workflows, and enforcement gaps
-2. **Read `references/agents.md`** — load the 4 agent templates and opportunity detection table
+2. **Read `references/agents.md`** — load the 5 agent templates and opportunity detection table
 3. **Evaluate each agent type** against the skill:
 
 | Agent Type | Trigger Condition | Applies? |
@@ -245,6 +380,7 @@ When running `/skill-builder agents [skill]`:
 | **Validator** | Skill has pre-flight checks or complex validation rules | [yes/no + reasoning] |
 | **Evaluation** | Skill produces output that needs quality assessment | [yes/no + reasoning] |
 | **Matcher** | Skill requires matching inputs to categories or patterns | [yes/no + reasoning] |
+| **Voice Validator** | Skill produces written content AND has voice/style directives (tone rules, forbidden phrasing, writing constraints) | [yes/no + reasoning] |
 
 4. **Report which agents would help and why:**
 
@@ -319,10 +455,15 @@ Scan each skill's SKILL.md for directive patterns that can be enforced with hook
 | "Must include X" | **Require-pattern** | Ensure required fields present |
 | "Never exceed N" | **Threshold** | Block values above limit |
 
-**Skip these** (need agents, not hooks):
-- "Choose the best X" → judgment call
-- "If unclear, ask" → context-dependent
-- "Match X to Y" → reasoning required
+**Cannot be hooks — recommend agents instead:**
+- "Choose the best X" → judgment call → **Matcher Agent**
+- "If unclear, ask" → context-dependent → **Triage Agent**
+- "Match X to Y" → reasoning required → **Matcher Agent**
+- "Never produce overbuilt/AI prose" → style judgment → **Voice Validator Agent**
+- "Conversational tone" / "No promotional language" → voice enforcement → **Voice Validator Agent**
+- "Plain language" / "Natural writing" → style constraint → **Voice Validator Agent**
+
+These MUST appear in the hooks report under a **"Needs Agent, Not Hook"** section (see report template below) so the recommendation isn't lost.
 
 **Scoping requirement:** Hooks that enforce writing/voice style rules must skip `.claude/` infrastructure files. Style hooks apply to project content output, not skill machinery. Use the scope check pattern from the grep-block template above.
 
@@ -349,10 +490,20 @@ Scan each skill's SKILL.md for directive patterns that can be enforced with hook
 |-------|-----------|-----------|----------|
 | /skill-name | "Never use Uncategorized" | Grep-block | High |
 
+## Needs Agent, Not Hook
+
+| Skill | Directive | Recommended Agent | Why Not a Hook |
+|-------|-----------|-------------------|----------------|
+| /skill-name | "Never produce overbuilt prose" | Voice Validator | Requires judgment, not pattern matching |
+| /skill-name | "Match vendor to category" | Matcher | Requires reasoning about best fit |
+
+*Run `/skill-builder agents [skill]` to create these.*
+
 ## Recommended Actions
 1. [Wire orphaned script X]
 2. [Create hook for directive Y in /skill-name]
 3. [Fix exit code in script Z]
+4. [Create Voice Validator agent for /skill-name (see above)]
 ```
 
 ### Execute Mode (`--execute`)
@@ -425,6 +576,68 @@ if echo "$INPUT" | grep -q "12345678"; then
   exit 2
 fi
 exit 0
+```
+
+---
+
+## Inline Directive Procedure
+
+**Quick-add a directive to a skill. No audit, no display/execute split.**
+
+When invoked with `/skill-builder inline [skill] [directive text]`:
+
+### Step 1: Validate Target Skill
+
+```bash
+Glob: .claude/skills/[skill]/SKILL.md
+```
+
+If skill doesn't exist, report error: "Skill /[skill] not found. Create it first with `/skill-builder new [skill]`."
+
+### Step 2: Read Current SKILL.md
+
+Read the skill's SKILL.md. Find the `## Directives` section.
+
+- If section exists: note its location for insertion
+- If section doesn't exist: it will be created after the frontmatter/title, before the first workflow section
+
+### Step 3: Add Directive
+
+Insert the directive verbatim:
+
+```markdown
+> **[exact text from user, verbatim]**
+
+*— Added [today's date], source: user instruction (inline)*
+```
+
+**Rules:**
+- Quote the user's exact words — never reword
+- Place in the `## Directives` section
+- If the section is new, create it with the `## Directives` heading
+
+### Step 4: Suggest Enforcement (Optional)
+
+Scan the directive for enforceable patterns:
+
+| Pattern | Suggestion |
+|---------|------------|
+| "Never [verb] [specific value]" | "This could be a grep-block hook. Create it? (y/n)" |
+| "Always [verb]" | "This could be a require-pattern hook. Create it? (y/n)" |
+| "Never exceed [number]" | "This could be a threshold hook. Create it? (y/n)" |
+| Voice/style rule | "This needs a Voice Validator agent. Create it? (y/n)" |
+| Judgment call | "This requires an agent, not a hook. Run `/skill-builder agents [skill]` to evaluate." |
+
+Do NOT create the hook/agent unless the user says yes. Just suggest.
+
+### Step 5: Report
+
+```
+Added directive to /[skill]:
+> "[first 60 chars of directive]..."
+
+Location: .claude/skills/[skill]/SKILL.md § Directives
+Enforcement suggestion: [hook type / agent type / none]
 ```
 
 ---

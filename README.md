@@ -55,16 +55,23 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 ```
 /skill-builder                  # Full audit of CLAUDE.md + all skills + rules + agents
 /skill-builder audit            # Same as above
+/skill-builder audit --quick    # Lightweight: frontmatter + line counts + priority fixes
+/skill-builder verify           # Health check: validate all skills, hooks, wiring
 /skill-builder skills           # List all local skills available in this project
 /skill-builder list [skill]     # Show all modes/options for a skill
 /skill-builder new [name]       # Create a new skill from template
 /skill-builder optimize [skill] # Restructure a specific skill
 /skill-builder agents [skill]   # Analyze and create agents for a skill
 /skill-builder hooks [skill]    # Inventory existing hooks + identify new opportunities
+/skill-builder inline [skill] [directive]  # Quick-add a directive to a skill
 /skill-builder update           # Update skill-builder to the latest version
 ```
 
 The audit scans your `CLAUDE.md`, any `.claude/rules/` files, and existing skills. It identifies what can be extracted, what needs enforcement, and where context drift is likely to cause problems.
+
+The `--quick` flag runs a lightweight version: frontmatter checks, line counts, hook wiring validation, and a priority fix list. No deep structural analysis. Use it for iterative work sessions where a full audit would slow you down.
+
+The `verify` command is a non-destructive health check that validates all skills, hooks, and wiring without modifying anything. It's headless-compatible: `claude -p "/skill-builder verify"` works for CI or pre-commit checks.
 
 ## Building Skills
 
@@ -82,6 +89,17 @@ Whether you're refining an existing skill or starting from scratch, just describ
 
 You don't need to know the structure upfront. Describe the problem, and skill-builder helps you shape it.
 
+## Capturing Directives Mid-Session
+
+Sometimes you notice a pattern violation while you're working — Claude uses a forbidden phrase, drifts from your voice, or makes a mistake you want to prevent permanently. You don't want to stop and run a full audit. You just want to capture the rule.
+
+```
+/skill-builder inline writing Never use the phrase "in conclusion" in any article.
+/skill-builder inline deploy Always run the test suite before pushing to production.
+```
+
+This adds the directive verbatim to the target skill with a date and source attribution. If the directive is programmable (contains "never" or "always" with a specific value), skill-builder suggests a hook but won't create one unless you ask.
+
 ## Analyzing Agent Opportunities
 
 Sometimes a skill needs more than instructions. It needs a checkpoint.
@@ -92,7 +110,9 @@ Agents are subprocesses that validate something before Claude acts. They start f
 /skill-builder agents
 ```
 
-This analyzes your skills and identifies where agents could help: lookups that need to come from a file instead of memory, validations that should happen before an API call, evaluations that benefit from a second opinion.
+This analyzes your skills and identifies where agents could help: lookups that need to come from a file instead of memory, validations that should happen before an API call, evaluations that benefit from a second opinion, and voice/style enforcement for content-creation skills.
+
+For skills that produce written content, skill-builder can recommend a **Voice Validator** agent. This agent runs with `context: none`, evaluating drafts against your voice directives without inheriting the conversational bias that created the text. It catches overbuilt prose, promotional language, and style violations before they reach you.
 
 Not every skill needs agents. But when you notice Claude "forgetting" a rule mid-conversation, an agent can enforce it reliably.
 

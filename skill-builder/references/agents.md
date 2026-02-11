@@ -22,6 +22,8 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 | "Evaluate for..." | **Evaluation Agent** | Check output quality, validate formatting |
 | "Match X to Y" | **Matcher Agent** | Match payee to category |
 | "If unclear, ask" | **Triage Agent** | Determine if user input is needed |
+| "Never produce overbuilt/AI prose" | **Voice Validator Agent** | Validate draft against voice directives |
+| "Conversational tone" / "No promotional language" | **Voice Validator Agent** | Catch style violations before user sees them |
 
 ## Agent Templates
 
@@ -173,6 +175,66 @@ Recommendation: Ask user to choose
 ```
 
 **When to create:** Skill involves matching user input to predefined categories (payees to expense categories, files to projects, etc.).
+
+### 5. Voice/Style Validator Agent (Content Enforcement)
+
+**Purpose:** Evaluate generated content against voice/style directives without inheriting conversational bias.
+
+```markdown
+---
+name: voice-validator
+description: Validate content against voice and style directives
+allowed-tools: Read, Grep, Glob
+context: none
+---
+
+# Voice/Style Validator Agent
+
+You evaluate written content against voice and style directives. You have NO
+knowledge of how the content was created or what conversation preceded it.
+
+## Rules
+1. Read the skill's directives section FIRST
+2. Read the content to evaluate
+3. Flag every sentence that violates a directive — quote it and cite which directive
+4. Do NOT rewrite — only identify violations
+5. If no violations found, say "PASS: Content aligns with voice directives"
+
+## Response Format
+```
+PASS: Content aligns with voice directives
+```
+or
+```
+VIOLATIONS FOUND: [count]
+
+1. Line [N]: "[quoted sentence]"
+   Violates: "[quoted directive]"
+   Issue: [specific problem — e.g., promotional language, stacked adjectives, constructed phrasing]
+
+2. Line [N]: "[quoted sentence]"
+   ...
+
+Summary: [count] violations across [count] directives
+```
+```
+
+**When to create:** Skill produces written content (articles, posts, descriptions, captions) AND has voice/style directives (tone rules, forbidden phrasing, writing constraints). Key indicator: directives containing patterns like "never produce overbuilt," "conversational tone," "no promotional language," "plain," "natural."
+
+**Implementation in parent skill:**
+```markdown
+## Voice Validation (Enforced via Agent)
+
+After generating any draft content, spawn the voice-validator agent:
+
+Task tool with subagent_type: "general-purpose"
+Prompt: "Read directives from .claude/skills/[skill]/SKILL.md § Directives.
+        Then read [content file]. Evaluate every sentence against the voice
+        directives. Report violations with line numbers and quoted text.
+        If no violations, say PASS."
+
+If agent reports violations, fix them before presenting to user.
+```
 
 ## Creating Agents for a Skill
 
