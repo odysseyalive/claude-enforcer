@@ -215,7 +215,7 @@ Overall: PASS (1 warning)
    - Execute each task sequentially, marking progress via TaskUpdate
    - This ensures context can be refreshed mid-execution without losing track, no tasks get forgotten during long context windows, and the user can see progress and resume if interrupted
 5. **Scope discipline during execution.** Execute ONLY the tasks in the task list. Do not add bonus tasks, expand scope, or create deliverables not in the original plan. If execution reveals a new opportunity, note it in the completion report — do not act on it. The task list is the contract.
-6. **Post-action chaining.** Commands that modify a skill (`new`, `inline`) automatically chain into a scoped mini-audit for the affected skill — running optimize, agents, and hooks in display mode, then offering execution choices. Use `--no-chain` to suppress.
+6. **Post-action chaining.** Any action that modifies a skill (`new`, `inline`, adding directives) automatically chains into a scoped mini-audit for the affected skill — running optimize, agents, and hooks in display mode, then offering execution choices. Use `--no-chain` to suppress.
 
 ---
 
@@ -362,7 +362,7 @@ See [references/templates.md](references/templates.md) for directory layout, SKI
 
 ## Adding Directives to Existing Skills
 
-Extract exact wording verbatim, add to Directives section with date and source, create enforcement hook if possible, test and wire.
+Extract exact wording verbatim, add to Directives section with date and source, then chain into a scoped review for enforcement opportunities.
 
 **Grounding:** Read [references/procedures.md](references/procedures.md) § "Adding Directives Procedure" for the full workflow and examples.
 

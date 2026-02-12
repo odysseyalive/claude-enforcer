@@ -604,9 +604,7 @@ When user gives a new rule for an existing skill:
 1. **Classify before placing** — Is this a directive or a guideline? A directive is a rule born from real experience: "never do X," "always do Y," a hard constraint that came from a specific failure or insight. A guideline is general approach advice. If the new content describes a rule the author learned the hard way, or a constraint that should never be skipped, it's a directive. Route it to the `## Directives` block at the top of the skill, not into a numbered guideline list. Do not wait for the user to ask whether it belongs there. If the skill already has a `## Directives` section, new directives go there immediately. If it doesn't have one yet and this is the first directive, create the section.
 2. **Extract exact wording** — Quote their instruction verbatim
 3. **Add to Directives section** — With date and source
-4. **Create enforcement hook** — If rule can be validated programmatically
-5. **Test the hook** — Ensure it blocks violations
-6. **Update settings.json** — Wire up the hook
+4. **Run Post-Action Chain** — Run the **Post-Action Chain Procedure** (see § "Post-Action Chain Procedure") for the affected skill. The chain's hooks display mode will detect enforceable patterns and recommend hooks or agents; the user can then choose to execute.
 
 **Example conversation:**
 
@@ -622,16 +620,7 @@ Your action:
 *— Added 2026-01-22, source: user instruction*
 ```
 
-Then create hook `.claude/skills/budget/hooks/no-uncategorized.sh`:
-```bash
-#!/bin/bash
-INPUT=$(cat)
-if echo "$INPUT" | grep -q "12345678"; then
-  echo "BLOCKED: Uncategorized account (12345678) is forbidden per user directive" >&2
-  exit 2
-fi
-exit 0
-```
+Then the Post-Action Chain runs a scoped review — the hooks display mode detects the specific ID `12345678` as a grep-block hook candidate, the agents display mode evaluates whether a Matcher agent applies, and the user is offered execution choices.
 
 ---
 
@@ -690,7 +679,7 @@ Run the **Post-Action Chain Procedure** (see § "Post-Action Chain Procedure" be
 
 **Reusable scoped mini-audit triggered after commands that modify a skill (`new`, `inline`).**
 
-Called by: New Command Procedure (Step 5), Inline Directive Procedure (Step 5).
+Called by: New Command Procedure (Step 5), Adding Directives Procedure (Step 4), Inline Directive Procedure (Step 5).
 
 ### Pre-Check: `--no-chain` Flag
 
