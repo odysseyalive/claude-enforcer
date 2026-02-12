@@ -542,6 +542,61 @@ exit 0
 
 ---
 
+## New Command Procedure
+
+**Create a new skill from template, then auto-chain a scoped review.**
+
+When invoked with `/skill-builder new [name]`:
+
+### Step 1: Validate Name
+
+- Check that `[name]` uses lowercase alphanumeric + hyphens only (e.g., `my-skill`)
+- Check that `.claude/skills/[name]/SKILL.md` does NOT already exist
+- If skill already exists, report error: "Skill /[name] already exists. Use `/skill-builder optimize [name]` to restructure it."
+- If name format is invalid, report error: "Skill names must be lowercase alphanumeric with hyphens (e.g., `my-skill`)."
+
+### Step 2: Detect Domain
+
+Classify the skill before selecting a template:
+
+**Content-creation skill indicators** (any 2+ of these in the name or user context):
+- Name suggests writing/content: `writing`, `blog`, `newsletter`, `email`, `content`, `copy`, `voice`, `editorial`
+- User describes output as: articles, posts, drafts, descriptions, captions, newsletters, emails
+- User mentions: tone, voice, style, prose
+
+**If content-creation detected:** use content-creation template variant (includes Voice Validator agent placeholder and voice directive placeholder).
+
+**Otherwise:** use standard template.
+
+### Step 3: Create Skill Files
+
+Using templates from `references/templates.md`:
+
+1. Create directory: `.claude/skills/[name]/`
+2. Create `SKILL.md` from template with:
+   - Frontmatter: `name`, `description` (single-line), `allowed-tools`
+   - `## Directives` section (empty, ready for population)
+   - Grounding link to reference.md
+3. Create `reference.md` (minimal placeholder)
+4. If content-creation domain: add voice directive placeholder and note about Voice Validator agent
+
+### Step 4: Report Creation
+
+```
+Created skill /[name]:
+  .claude/skills/[name]/SKILL.md ([X] lines)
+  .claude/skills/[name]/reference.md ([Y] lines)
+  Domain: [standard / content-creation]
+```
+
+### Step 5: Run Post-Action Chain
+
+Run the **Post-Action Chain Procedure** (see § "Post-Action Chain Procedure" below) for the newly created skill.
+
+**Grounding:** `references/templates.md`
+
+---
+
 ## Adding Directives Procedure
 
 When user gives a new rule for an existing skill:
@@ -582,7 +637,7 @@ exit 0
 
 ## Inline Directive Procedure
 
-**Quick-add a directive to a skill. No audit, no display/execute split.**
+**Quick-add a directive to a skill, then run a scoped review for optimization and enforcement opportunities.**
 
 When invoked with `/skill-builder inline [skill] [directive text]`:
 
@@ -616,29 +671,83 @@ Insert the directive verbatim:
 - Place in the `## Directives` section
 - If the section is new, create it with the `## Directives` heading
 
-### Step 4: Suggest Enforcement (Optional)
-
-Scan the directive for enforceable patterns:
-
-| Pattern | Suggestion |
-|---------|------------|
-| "Never [verb] [specific value]" | "This could be a grep-block hook. Create it? (y/n)" |
-| "Always [verb]" | "This could be a require-pattern hook. Create it? (y/n)" |
-| "Never exceed [number]" | "This could be a threshold hook. Create it? (y/n)" |
-| Voice/style rule | "This needs a Voice Validator agent. Create it? (y/n)" |
-| Judgment call | "This requires an agent, not a hook. Run `/skill-builder agents [skill]` to evaluate." |
-
-Do NOT create the hook/agent unless the user says yes. Just suggest.
-
-### Step 5: Report
+### Step 4: Report
 
 ```
 Added directive to /[skill]:
 > "[first 60 chars of directive]..."
 
 Location: .claude/skills/[skill]/SKILL.md § Directives
-Enforcement suggestion: [hook type / agent type / none]
 ```
+
+### Step 5: Run Post-Action Chain
+
+Run the **Post-Action Chain Procedure** (see § "Post-Action Chain Procedure" below) for the target skill. The chain's hooks display mode will automatically detect enforceable patterns in the new directive and recommend hooks or agents as appropriate.
+
+---
+
+## Post-Action Chain Procedure
+
+**Reusable scoped mini-audit triggered after commands that modify a skill (`new`, `inline`).**
+
+Called by: New Command Procedure (Step 5), Inline Directive Procedure (Step 5).
+
+### Pre-Check: `--no-chain` Flag
+
+If the invoking command included `--no-chain`, skip this entire procedure. Report:
+
+```
+Skipping post-action review (--no-chain). Run `/skill-builder optimize [skill]` manually to review.
+```
+
+### Step 1: Run Sub-Commands in Display Mode
+
+For the single affected skill, run each sub-command in display mode (read-only):
+
+1. **Optimize** — per § "Optimize Command Procedure", display mode. Collect optimization findings.
+2. **Agents** — per § "Agents Command Procedure", display mode. Collect agent opportunities.
+3. **Hooks** — per § "Hooks Command Procedure", display mode. Collect hooks inventory and opportunities.
+
+### Step 2: Present Scoped Report
+
+```markdown
+## Post-Action Review: /[skill]
+
+### Optimization Findings
+[from optimize display mode — proposed changes, line count, reference splitting recommendation]
+
+### Agent Opportunities
+| Agent Type | Recommended | Purpose | Priority |
+|------------|-------------|---------|----------|
+[from agents display mode]
+
+### Hooks Status
+[from hooks display mode — existing hooks, new opportunities, needs-agent-not-hook items]
+
+### Priority Fixes
+1. [Most impactful action]
+2. [Second priority]
+3. [Third priority]
+```
+
+If all three sub-commands find nothing actionable, report:
+
+```
+Post-action review: No optimization, agent, or hook opportunities found for /[skill]. Skill is clean.
+```
+
+### Step 3: Offer Execution Choices
+
+If any opportunities were found, ask:
+
+> "Which actions should I execute?"
+> 1. `optimize --execute` for /[skill]
+> 2. `agents --execute` for /[skill]
+> 3. `hooks --execute` for /[skill]
+> 4. All of the above for /[skill]
+> 5. Skip — just review for now
+
+When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
 
 ---
 

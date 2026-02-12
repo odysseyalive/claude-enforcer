@@ -15,14 +15,14 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 | `/skill-builder audit --quick` | Lightweight audit: frontmatter + line counts + priority fixes only |
 | `/skill-builder skills` | List all local skills available in this project |
 | `/skill-builder list [skill]` | Show all modes/options for a skill in a table |
-| `/skill-builder new [name]` | Create a new skill from template |
+| `/skill-builder new [name]` | Create a new skill from template, then review for optimization/enforcement |
 | `/skill-builder optimize [skill]` | Display optimization plan for a skill (add `--execute` to apply) |
 | `/skill-builder agents [skill]` | Display agent opportunities for a skill (add `--execute` to create) |
 | `/skill-builder hooks [skill]` | Display hooks inventory + opportunities (add `--execute` to create) |
 | `/skill-builder optimize claude.md` | Optimize CLAUDE.md by extracting domain content into skills |
 | `/skill-builder update` | Re-run the installer to update skill-builder to the latest version |
 | `/skill-builder verify` | Health check: validate all skills, hooks, and wiring (headless-compatible) |
-| `/skill-builder inline [skill] [directive]` | Quick-add a directive to a skill without full audit |
+| `/skill-builder inline [skill] [directive]` | Quick-add a directive to a skill, then review for optimization/enforcement |
 | `/skill-builder dev [command]` | Run any command with skill-builder itself included |
 
 ---
@@ -215,6 +215,7 @@ Overall: PASS (1 warning)
    - Execute each task sequentially, marking progress via TaskUpdate
    - This ensures context can be refreshed mid-execution without losing track, no tasks get forgotten during long context windows, and the user can see progress and resume if interrupted
 5. **Scope discipline during execution.** Execute ONLY the tasks in the task list. Do not add bonus tasks, expand scope, or create deliverables not in the original plan. If execution reveals a new opportunity, note it in the completion report — do not act on it. The task list is the contract.
+6. **Post-action chaining.** Commands that modify a skill (`new`, `inline`) automatically chain into a scoped mini-audit for the affected skill — running optimize, agents, and hooks in display mode, then offering execution choices. Use `--no-chain` to suppress.
 
 ---
 
@@ -369,15 +370,17 @@ Extract exact wording verbatim, add to Directives section with date and source, 
 
 ## Inline Directive Capture
 
-**Quick-add a directive to a skill without running a full audit cycle.**
+**Quick-add a directive to a skill, then run a scoped review for optimization and enforcement opportunities.**
 
 When invoked with `/skill-builder inline [skill] [directive text]`:
 
 1. Read the target skill's SKILL.md
 2. Add the directive verbatim to the `## Directives` section (create the section if it doesn't exist)
 3. Add date and source attribution
-4. If the directive is programmable (contains "never," "always," or a specific value to check), suggest a hook — but don't create it unless asked
-5. Report what was added
+4. Report what was added
+5. Chain into a scoped mini-audit: run optimize, agents, and hooks in display mode for the affected skill, then offer execution choices
+
+Use `--no-chain` to skip the post-action review (e.g., `/skill-builder inline writing --no-chain Never use jargon`).
 
 **Example:**
 ```
@@ -391,9 +394,31 @@ Adds to `.claude/skills/writing/SKILL.md`:
 *— Added 2026-02-11, source: user instruction (inline)*
 ```
 
-**Why this exists:** Supports mid-session learning. When you notice a pattern violation during a writing or editing session, capture it immediately as a directive without context-switching to a full audit. The directive is preserved for all future invocations.
+Then automatically reviews the skill for enforcement opportunities — the hooks display mode detects the "Never use" pattern and recommends a grep-block hook, the agents display mode evaluates whether a Voice Validator applies, etc.
+
+**Why this exists:** Supports mid-session learning. When you notice a pattern violation during a writing or editing session, capture it immediately as a directive. The post-action chain ensures enforcement opportunities are surfaced automatically, without requiring a separate audit cycle.
 
 **Grounding:** Read [references/procedures.md](references/procedures.md) § "Inline Directive Procedure" before executing.
+
+---
+
+## New Command
+
+**Create a new skill from template, then automatically review for optimization and enforcement opportunities.**
+
+When invoked with `/skill-builder new [name]`:
+
+1. Validate the skill name (lowercase alphanumeric + hyphens, must not already exist)
+2. Detect domain — content-creation vs standard (based on name and user context)
+3. Create skill files from template (SKILL.md + reference.md)
+4. Report what was created
+5. Chain into a scoped mini-audit: run optimize, agents, and hooks in display mode for the new skill, then offer execution choices
+
+Use `--no-chain` to skip the post-action review (e.g., `/skill-builder new my-skill --no-chain`).
+
+**Why this exists:** Creating a skill is just the first step. The post-action chain immediately surfaces what hooks could enforce its directives, what agents could validate its output, and what structural optimizations apply — without requiring the user to remember to run a separate audit.
+
+**Grounding:** Read [references/procedures.md](references/procedures.md) § "New Command Procedure" before executing.
 
 ---
 
