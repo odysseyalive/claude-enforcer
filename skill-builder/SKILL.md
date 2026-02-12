@@ -38,8 +38,7 @@ When invoked with `/skill-builder update`:
    bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
    ```
 2. Report the result to the user
-
-This fetches and runs the latest installer from the repository, which will update all skill-builder files to the current version.
+3. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill definition loaded. Starting a new conversation ensures all changes take effect.
 
 ---
 
