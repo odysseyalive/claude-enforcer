@@ -1,0 +1,106 @@
+## Audit Command Procedure
+
+**When invoked without arguments or with `audit`, run the full audit as an orchestrator.**
+
+### Step 1: Gather Metrics
+
+```
+Files to scan:
+- CLAUDE.md
+- .claude/rules/*.md (if exists)
+- .claude/skills/*/SKILL.md
+```
+
+### Step 2: CLAUDE.md & Rules Analysis
+
+```markdown
+## CLAUDE.md
+- **Lines:** [X] (target: < 150)
+- **Extraction candidates:** [list sections that could move to skills]
+
+## Rules Files
+- **Found:** [count] files in .claude/rules/
+- **Should convert to skills:** [yes/no with reasoning]
+```
+
+### Step 2.5: Bootstrap Check (No Skills Found)
+
+If no `.claude/skills/*/SKILL.md` files exist (excluding skill-builder itself):
+
+**Switch to bootstrap mode.** Do NOT report "no skills found" and stop. Instead:
+
+1. Report that no skills exist yet — this is a fresh project
+2. Run the **CLAUDE.md Optimization Procedure** (see [claude-md.md](claude-md.md)) as the primary action
+3. Analyze CLAUDE.md for extraction candidates (domain-specific sections, inline tables, procedures >10 lines, rules that only apply to specific tasks)
+4. Propose new skills to create from extraction candidates
+5. Present the CLAUDE.md optimization report with proposed skill extractions
+6. Offer execution: "Should I extract these sections into skills?"
+
+Skip Steps 3–5 (they require existing skills) and go directly to Step 6 with the CLAUDE.md-focused execution choices.
+
+### Step 3: Skills Summary Table
+
+```markdown
+## Skills Summary
+| Skill | Lines | Description | Directives | Reference Inline | Hooks | Status |
+|-------|-------|-------------|------------|------------------|-------|--------|
+| /skill-1 | X | single/multi | Y | Z tables | yes/no | OK/NEEDS WORK |
+
+**Description column:** Flag `multi` if uses `|` or `>` syntax (needs optimization to single line)
+```
+
+### Step 4: Run Sub-Commands in Display Mode
+
+For each skill found:
+1. Run **optimize** in display mode → collect optimization findings
+2. Run **agents** in display mode → collect agent opportunities
+3. Run **hooks** in display mode → collect hooks inventory and opportunities
+
+### Step 5: Aggregate Report
+
+Combine all sub-command outputs into a single report:
+
+```markdown
+# Skill System Audit Report
+
+## CLAUDE.md
+[from Step 2]
+
+## Rules Files
+[from Step 2]
+
+## Skills Summary
+[from Step 3]
+
+## Optimization Findings
+[aggregated from optimize display mode per skill]
+
+## Agent Opportunities
+| Skill | Agent Type | Purpose | Priority |
+|-------|------------|---------|----------|
+| /skill-1 | id-lookup | Enforce grounding for IDs | High |
+[from agents display mode per skill]
+
+## Hooks Status
+[aggregated from hooks display mode]
+
+## Directives Inventory
+[List all directives found across all skills - ensures nothing is lost]
+
+## Priority Fixes
+1. [Most impactful optimization]
+2. [Second priority]
+3. [Third priority]
+```
+
+### Step 6: Offer Execution
+
+After presenting the report, ask:
+> "Which sub-commands should I execute?"
+> 1. `optimize --execute` for [skill(s)]
+> 2. `agents --execute` for [skill(s)]
+> 3. `hooks --execute` for [skill(s)]
+> 4. All of the above for [skill]
+> 5. Skip — just review for now
+
+When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.

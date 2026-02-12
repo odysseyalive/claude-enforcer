@@ -47,92 +47,19 @@ This fetches and runs the latest installer from the repository, which will updat
 
 **List all local skills available in this project.**
 
-When invoked with `/skill-builder skills`:
+Globs for all `.claude/skills/*/SKILL.md`, reads frontmatter, outputs a table of skill names and descriptions.
 
-1. Glob for all `.claude/skills/*/SKILL.md` files
-2. Read each skill's frontmatter to extract name and description
-3. Output a table of all available skills
-
-### Output Format
-
-```
-| Skill | Description |
-|-------|-------------|
-| /deploy | Deploy application to staging or production |
-| /api-client | API client integration and authentication |
-| /db-migrate | Database migration management |
-...
-```
-
-### Implementation
-
-```bash
-# Find all skills
-.claude/skills/*/SKILL.md
-```
-
-For each skill file:
-1. Read the frontmatter
-2. Extract `name` and `description` fields
-3. Format as table row: `| /[name] | [description] |`
-
-Sort alphabetically by skill name.
+**Grounding:** Read [references/procedures/skills.md](references/procedures/skills.md) before executing.
 
 ---
 
 ## The `list` Mode Requirement
 
-**Every skill with multiple modes MUST support a `list` mode.**
+**Every skill with multiple modes MUST support a `list` mode.** This is a reserved mode name.
 
-When a user runs `/skill-name list`, output a clean table showing all available modes:
+When invoked with `list`, read the skill's SKILL.md, find the Modes table, and output it directly. When auditing, verify multi-mode skills have a Modes table in consistent format.
 
-```
-| Mode | Command | Purpose |
-|------|---------|---------|
-| **mode1** | `/skill-name mode1 [args]` | Brief description of what this mode does |
-| **mode2** | `/skill-name mode2 [args]` | Brief description of what this mode does |
-```
-
-### Why This Matters
-
-The `description:` field in frontmatter is limited to one line and gets truncated. Users need a way to discover all available options without reading the full SKILL.md.
-
-### Implementation
-
-Skills with modes should include a `## Usage` section near the top:
-
-```markdown
-## Usage
-
-```
-/skill-name [mode] [args]
-```
-
-### Modes
-
-| Mode | Command | Description |
-|------|---------|-------------|
-| `mode1` | `/skill-name mode1 [args]` | What mode1 does |
-| `mode2` | `/skill-name mode2 [args]` | What mode2 does |
-
-Default mode is `[default]` if not specified.
-```
-
-### Handling `/skill-name list`
-
-When invoked with `list` as the first argument:
-1. Read the skill's SKILL.md
-2. Find the Modes table
-3. Output the table directly to the user
-
-**This is a reserved mode name.** Skills should not use `list` for other purposes.
-
-### Audit Check
-
-When auditing skills, verify:
-- Does the skill have multiple modes? → Must have a Modes table
-- Is the Modes table in a consistent format? → Command + Description columns
-- Does the description mention `list` if applicable? → Add to frontmatter
+**Grounding:** Read [references/procedures/list.md](references/procedures/list.md) before executing.
 
 ---
 
@@ -140,45 +67,11 @@ When auditing skills, verify:
 
 **Non-destructive health check for the entire skill system. Headless-compatible.**
 
-When invoked with `/skill-builder verify`:
-
-1. **Scan all skills** — glob `.claude/skills/*/SKILL.md`
-2. **For each skill, validate:**
-   - Frontmatter exists with `---` delimiters
-   - `name` matches folder name
-   - `description` is single-line (no `|` or `>` syntax)
-   - `allowed-tools` is present
-   - Line count is under 150 (excluding reference files)
-   - If skill has modes, a Modes table exists
-3. **Validate hooks:**
-   - All `.sh` files in `hooks/` are executable (`chmod +x`)
-   - All hook scripts are wired in `.claude/settings.local.json`
-   - All wired hooks point to scripts that exist
-4. **Validate agents:**
-   - All `.md` files in `agents/` have valid frontmatter
-   - Agent files are referenced in parent SKILL.md
-5. **Output a pass/fail summary:**
-
-```
-## Skill System Health Check
-
-| Check | Status |
-|-------|--------|
-| Skills found | 5 |
-| Frontmatter valid | 5/5 PASS |
-| Line targets met | 4/5 WARN (/budget: 172 lines) |
-| Hooks wired | 3/3 PASS |
-| Hooks executable | 3/3 PASS |
-| Agents referenced | 2/2 PASS |
-
-Overall: PASS (1 warning)
-```
-
-6. **Exit behavior:** If all checks pass, report PASS. If any FAIL, list failures. This command never modifies files — it only reads and reports.
+Scans all skills, validates frontmatter, line counts, hook wiring, and agent references. Outputs a pass/fail summary. Never modifies files.
 
 **Headless usage:** `claude -p "/skill-builder verify"` — suitable for CI, pre-commit, or batch checks.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "Verify Command Procedure" before executing.
+**Grounding:** Read [references/procedures/verify.md](references/procedures/verify.md) before executing.
 
 ---
 
@@ -193,6 +86,8 @@ Overall: PASS (1 warning)
 - `/skill-builder dev optimize skill-builder` → allowed
 
 **Detection:** If the first argument after the command is `dev`, strip it and proceed with self-inclusion enabled. Otherwise, skip any skill whose name is `skill-builder` when iterating skills, and refuse if `skill-builder` is explicitly named as a target.
+
+**Post-dev check:** After any `dev` command that modifies skill-builder files, verify that the `install` script still covers all files. Glob `skill-builder/**/*.md`, compare against the files downloaded in the installer's loop, and flag any new/renamed/removed files that the installer doesn't handle. This prevents drift between the repo and what users receive on install.
 
 ---
 
@@ -227,7 +122,7 @@ Gathers metrics from CLAUDE.md, rules files, and all skills. Runs optimize + age
 
 **Bootstrap mode:** If no skills are found (no `.claude/skills/*/SKILL.md` files exist), the audit switches to bootstrap mode. Instead of reporting "no skills found," it runs the CLAUDE.md Optimization Procedure as its primary action — analyzing CLAUDE.md for extraction candidates, proposing new skills to create, and offering to execute the extraction. This is the expected first-run experience for new installations.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "Audit Command Procedure" before executing.
+**Grounding:** Read [references/procedures/audit.md](references/procedures/audit.md) before executing.
 
 ---
 
@@ -279,24 +174,9 @@ When a user says "Never use Uncategorized accounts," those exact words stay in t
 
 ## The Sacred Directive Pattern
 
-When a user gives you a rule, store it verbatim in a `## Directives` section:
+When a user gives you a rule, store it verbatim in a `## Directives` section with exact wording, source, and date. Place at TOP of skill file. NEVER summarize or reword. Enforce with hooks when possible.
 
-```markdown
-## Directives
-
-> **NEVER assign a transaction or expense to Uncategorized or Other Expenses.**
-> Every transaction must go to a specific, meaningful expense category.
-> If a transaction doesn't clearly match a known category, stop and ask.
-
-*— Added 2026-01-15, source: user instruction*
-```
-
-**Rules for directives:**
-1. Quote the user's exact words
-2. Add source and date
-3. Place at TOP of skill file
-4. NEVER summarize or reword for brevity
-5. Enforce with hooks when possible
+**Grounding:** Read [references/templates.md](references/templates.md) § "SKILL.md Template" and [references/procedures/directives.md](references/procedures/directives.md) for format and workflow.
 
 ---
 
@@ -312,9 +192,9 @@ See [references/enforcement.md](references/enforcement.md) for hook JSON example
 
 Reads the skill's SKILL.md, runs a per-skill audit checklist (frontmatter, directives, reference material, enforcement, line count), identifies optimization targets, and lists proposed changes. In execute mode, generates a task list and applies changes sequentially.
 
-**Reference splitting:** When a skill's `reference.md` exceeds 100 lines with 3+ h2 sections (each >20 lines), the optimizer proposes splitting into a `references/` directory with domain-specific files. Each split file becomes an **enforcement boundary** — hooks and agents can attach per-file, enabling granular drift resistance. See `references/procedures.md` § "Evaluate Reference Splitting" for thresholds and enforcement priority heuristics.
+**Reference splitting:** When a skill's `reference.md` exceeds 100 lines with 3+ h2 sections (each >20 lines), the optimizer proposes splitting into a `references/` directory with domain-specific files. Each split file becomes an **enforcement boundary** — hooks and agents can attach per-file, enabling granular drift resistance. See [references/procedures/optimize.md](references/procedures/optimize.md) § "Evaluate Reference Splitting" for thresholds and enforcement priority heuristics.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "Optimize Command Procedure" before executing. Also consult `references/optimization-examples.md` and `references/templates.md`.
+**Grounding:** Read [references/procedures/optimize.md](references/procedures/optimize.md) before executing. Also consult `references/optimization-examples.md` and `references/templates.md`.
 
 ---
 
@@ -324,7 +204,7 @@ Reads the skill's SKILL.md, runs a per-skill audit checklist (frontmatter, direc
 
 This is a standalone command that targets CLAUDE.md itself rather than a skill. It analyzes CLAUDE.md for extraction candidates, proposes new skills, and in execute mode creates them. This is equivalent to what the audit does in bootstrap mode, but can be run explicitly at any time — even when skills already exist.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "CLAUDE.md Optimization Procedure" before executing.
+**Grounding:** Read [references/procedures/claude-md.md](references/procedures/claude-md.md) before executing.
 
 ---
 
@@ -340,7 +220,7 @@ See [references/optimization-examples.md](references/optimization-examples.md) f
 
 Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evaluation, Matcher, Voice Validator) against it, and reports which would help and why. In execute mode, creates agent files from templates.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "Agents Command Procedure" before executing. Also consult `references/agents.md`.
+**Grounding:** Read [references/procedures/agents.md](references/procedures/agents.md) before executing. Also consult `references/agents.md`.
 
 ---
 
@@ -350,7 +230,7 @@ Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evalu
 
 Scans for hook scripts and wiring in settings.local.json, validates existing hooks (wired, matcher, exit codes, stdin, permissions, stderr, scoping), identifies new opportunities from directive patterns, and generates a report. In execute mode, creates scripts and wires them. Style/content hooks must self-scope to skip `.claude/` infrastructure files.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "Hooks Command Procedure" before executing. Also consult `references/enforcement.md`.
+**Grounding:** Read [references/procedures/hooks.md](references/procedures/hooks.md) before executing. Also consult `references/enforcement.md`.
 
 ---
 
@@ -364,41 +244,17 @@ See [references/templates.md](references/templates.md) for directory layout, SKI
 
 Extract exact wording verbatim, add to Directives section with date and source, then chain into a scoped review for enforcement opportunities.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "Adding Directives Procedure" for the full workflow and examples.
+**Grounding:** Read [references/procedures/directives.md](references/procedures/directives.md) for the full workflow and examples.
 
 ---
 
 ## Inline Directive Capture
 
-**Quick-add a directive to a skill, then run a scoped review for optimization and enforcement opportunities.**
+**Quick-add a directive to a skill without running a full audit cycle.**
 
-When invoked with `/skill-builder inline [skill] [directive text]`:
+When invoked with `/skill-builder inline [skill] [directive text]`, reads the target SKILL.md, adds the directive verbatim to the `## Directives` section with date/source, and suggests enforcement if the directive is programmable. Supports mid-session learning.
 
-1. Read the target skill's SKILL.md
-2. Add the directive verbatim to the `## Directives` section (create the section if it doesn't exist)
-3. Add date and source attribution
-4. Report what was added
-5. Chain into a scoped mini-audit: run optimize, agents, and hooks in display mode for the affected skill, then offer execution choices
-
-Use `--no-chain` to skip the post-action review (e.g., `/skill-builder inline writing --no-chain Never use jargon`).
-
-**Example:**
-```
-/skill-builder inline writing Never use the phrase "in conclusion" in any article.
-```
-
-Adds to `.claude/skills/writing/SKILL.md`:
-```markdown
-> **Never use the phrase "in conclusion" in any article.**
-
-*— Added 2026-02-11, source: user instruction (inline)*
-```
-
-Then automatically reviews the skill for enforcement opportunities — the hooks display mode detects the "Never use" pattern and recommends a grep-block hook, the agents display mode evaluates whether a Voice Validator applies, etc.
-
-**Why this exists:** Supports mid-session learning. When you notice a pattern violation during a writing or editing session, capture it immediately as a directive. The post-action chain ensures enforcement opportunities are surfaced automatically, without requiring a separate audit cycle.
-
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "Inline Directive Procedure" before executing.
+**Grounding:** Read [references/procedures/inline.md](references/procedures/inline.md) before executing.
 
 ---
 
@@ -418,7 +274,7 @@ Use `--no-chain` to skip the post-action review (e.g., `/skill-builder new my-sk
 
 **Why this exists:** Creating a skill is just the first step. The post-action chain immediately surfaces what hooks could enforce its directives, what agents could validate its output, and what structural optimizations apply — without requiring the user to remember to run a separate audit.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "New Command Procedure" before executing.
+**Grounding:** Read [references/procedures/new.md](references/procedures/new.md) before executing.
 
 ---
 
@@ -426,7 +282,7 @@ Use `--no-chain` to skip the post-action review (e.g., `/skill-builder new my-sk
 
 CLAUDE.md loads into EVERY conversation. Keep it lean. Move domain-specific content to skills.
 
-**Grounding:** Read [references/procedures.md](references/procedures.md) § "CLAUDE.md Optimization Procedure" for the full workflow, extraction rules, and target structure.
+**Grounding:** Read [references/procedures/claude-md.md](references/procedures/claude-md.md) for the full workflow, extraction rules, and target structure.
 
 ---
 
@@ -449,4 +305,4 @@ Reference files:
 - [references/optimization-examples.md](references/optimization-examples.md) — Before/after examples, optimization targets
 - [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion
 - [references/patterns.md](references/patterns.md) — Lessons learned
-- [references/procedures.md](references/procedures.md) — Detailed step-by-step procedures for all commands
+- [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, etc.)
