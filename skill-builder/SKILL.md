@@ -37,6 +37,10 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 
 *— Added 2026-02-22, source: user directive*
 
+> **"When deploying a Team, one of the team member's persona is a research assistant who will always use the preferred web search and page fetch tools to research the issue online. Other team members may also make requests from the research assistant to help augment the outcome."**
+
+*— Added 2026-02-23, source: user directive*
+
 ---
 
 ## The `update` Command
@@ -230,6 +234,8 @@ See [references/optimization-examples.md](references/optimization-examples.md) f
 **Analyze and create agents for a skill.**
 
 Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evaluation, Matcher, Voice Validator) against it, and reports which would help and why. Routes each recommendation to either **individual agents** (isolated evaluation with independent opinions) or **agent teams** (collaborative execution with shared task lists). Every agent gets a unique persona — no exceptions.
+
+**Mandatory research assistant in teams:** When routing recommends an agent team, a research assistant teammate is always included. This teammate uses WebSearch, WebFetch, and Jina MCP tools to gather online information, and other teammates can send research requests to it. The research assistant is mandatory infrastructure and is not counted against the agent panel's recommendations.
 
 **Mandatory agent situations:** When the analysis identifies non-obvious decisions where guessing is involved, agents are flagged as mandatory per directive. The report includes a "Mandatory Agent Situations" section listing these.
 

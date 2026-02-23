@@ -70,12 +70,23 @@ Agent teams use Claude Code's experimental team mode (`CLAUDE_CODE_EXPERIMENTAL_
 **Architecture:**
 ```
 Lead (coordinator)
+  ├── Research Assistant (mandatory — web search + page fetch) ←→ messages ←→ all
   ├── Teammate A (persona: frontend architect) ←→ messages ←→ Teammate B
   ├── Teammate B (persona: API designer) ←→ messages ←→ Teammate C
   └── Teammate C (persona: test engineer) ←→ messages ←→ Teammate A
       ↓
 Shared task list + inter-agent messaging → coordinated output
 ```
+
+### Mandatory Research Assistant Teammate
+
+Every agent team MUST include a research assistant teammate. This is a structural requirement, not optional.
+
+- **Persona:** Research specialist who gathers and synthesizes online information
+- **Tools:** WebSearch, WebFetch, and Jina MCP tools (read_url, search_web) when configured
+- **Role:** Accepts research requests from other teammates via SendMessage, returns findings. May also proactively research when their own tasks require it.
+- **How teammates use it:** Other teammates reference the research assistant by name in messages when they need online information (e.g., "Research Assistant, find the latest API docs for X")
+- **Not counted against panel recommendations:** The research assistant is automatically included — it does not consume a slot in the agent panel's recommendations since it's mandatory infrastructure.
 
 **How to invoke agent teams:**
 
@@ -87,6 +98,7 @@ Agent teams are created through natural language — you tell Claude to form a t
 Tell the lead to create a team with specific personas and task assignments:
 
 "Create an agent team to [describe the work]. Spawn teammates:
+- A research assistant to gather online information using WebSearch, WebFetch, and Jina tools. Other teammates may send research requests to this teammate.
 - [Persona A — e.g., 'a frontend architect'] to own [files/modules A]
 - [Persona B — e.g., 'an API designer'] to own [files/modules B]
 - [Persona C — e.g., 'a test engineer'] to own [files/modules C]
@@ -111,6 +123,7 @@ When a skill needs agent teams for a workflow step, document it like this:
 Form an agent team for [task]. Each teammate owns different files to avoid conflicts:
 
 "Create an agent team to [task description]. Spawn teammates:
+- A research assistant to gather online information (mandatory — included in every team)
 - [Persona A] to handle [scope A, specific files]
 - [Persona B] to handle [scope B, specific files]
 - [Persona C] to handle [scope C, specific files]
@@ -130,6 +143,7 @@ Wait for all teammates to complete before proceeding.
 | File editing | Read-only (evaluation) | Full read/write (implementation) |
 | Permission mode | Inherits from caller | Inherits from lead |
 | Session lifecycle | Single turn | Persistent until shutdown |
+| Research access | Not built-in (agents are isolated) | Always available via mandatory research assistant |
 
 ## Routing Decision Framework
 

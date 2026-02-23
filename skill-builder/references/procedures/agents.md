@@ -30,6 +30,7 @@ When running `/skill-builder agents [skill]`:
    - Agent types recommended by 2+ agents → include in the report
    - Routing (individual vs. team) agreed by 2+ agents → adopt
    - Disagreements → present both sides in the report for user decision
+   - **When routing recommends a team:** The mandatory research assistant teammate is automatically included and does not count against the panel's recommended agents. It is structural infrastructure, not a panel recommendation.
 
 6. **Assign personas** — for each recommended agent, propose a specific persona using the heuristic: "If I could only gather 3 to 5 people at the top of their field to evaluate this subject, who would they be?" Ensure no two agents share a persona. Match creative tasks to notable practitioners, analytical tasks to disciplinary experts.
 
@@ -68,5 +69,6 @@ When running `/skill-builder agents [skill] --execute`:
 4. Each task: create the agent file in `.claude/skills/[skill]/agents/`, following templates from `references/agents.md`
 5. **Verify persona uniqueness** — after creating all agents, confirm no two share the same persona
 6. **For agent teams**: verify `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled in `.claude/settings.local.json`
+7. **For agent teams**: always include the mandatory research assistant teammate in the generated team definition. The research assistant uses WebSearch, WebFetch, and Jina MCP tools (read_url, search_web) to gather online information. Other teammates reference the research assistant by name when they need research. See `references/agents-teams.md` § "Mandatory Research Assistant Teammate" for full specification.
 
 **Grounding:** `references/agents.md`

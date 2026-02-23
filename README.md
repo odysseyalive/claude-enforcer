@@ -128,6 +128,8 @@ Teams solve a different problem. Where individual agents evaluate, teams build. 
 
 The installer enables this automatically by setting `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` in your project settings. When skill-builder recommends a team, Claude can spin one up, assign tasks with dependencies, and let teammates self-coordinate.
 
+Every team includes a mandatory **research assistant** teammate. This teammate uses web search and page fetch tools to gather current information online, and other teammates can send it requests mid-task. The idea is simple: no team should be limited to what's already in the codebase and the model's training data when the answer might be one search away.
+
 ### When to Use Which
 
 | Signal | Individual Agents | Agent Teams |
