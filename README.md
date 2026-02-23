@@ -70,6 +70,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 /skill-builder agents [skill]   # Analyze and create agents for a skill
 /skill-builder hooks [skill]    # Inventory existing hooks + identify new opportunities
 /skill-builder inline [skill] [directive]  # Quick-add a directive to a skill
+/skill-builder ledger           # Create an Awareness Ledger for institutional memory
 /skill-builder update           # Update skill-builder to the latest version
 ```
 
