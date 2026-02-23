@@ -238,7 +238,7 @@ One rule stays absolute through all of this: **directives are sacred**. When a u
 
 ## The Awareness Ledger
 
-A patch ships. Something breaks. You roll it back and move on. But the knowledge of what happened — the code path, the user flow that triggered it, the conditions that aligned to let it through — disappears into a closed pull request nobody will read again.
+A patch ships. Something breaks. You roll it back and move on. But the knowledge of what happened, the code path, the user flow that triggered it, the conditions that aligned to let it through, disappears into a closed pull request nobody will read again.
 
 What struck me was how much this resembles oral history loss. A community carries knowledge in its members' heads. When those members leave, the knowledge leaves with them. The same thing happens in a codebase across conversations. Claude Code starts fresh every session. Whatever you learned debugging last week's regression doesn't carry over unless you wrote it down somewhere the system can find it.
 
