@@ -292,6 +292,7 @@ The `init` process seeds the ledger by scanning git history, your CLAUDE.md, and
 - [Mrinank Sharma, Please Come Back to Work](https://odysseyalive.com/focus/mrinank-sharma-please-come-back-to-work) — Why adversarial agents outperform consensus
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code) — Official docs on skills, hooks, and agents
 - [Agent Teams](https://code.claude.com/docs/en/agent-teams) — Coordinating multiple Claude Code instances
+- [Your AI Has Amnesia](https://odysseyalive.com/focus/your-ai-has-amnesia) — Why AI coding assistants forget instructions and what to do about it
 - [Lost in the Middle](https://arxiv.org/abs/2307.03172) — The research on long-context instruction following
 
 ## Acknowledgments
