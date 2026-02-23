@@ -24,6 +24,9 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 | "If unclear, ask" | **Triage Agent** | Determine if user input is needed |
 | "Never produce overbuilt/AI prose" | **Voice Validator Agent** | Validate draft against voice directives |
 | "Conversational tone" / "No promotional language" | **Voice Validator Agent** | Catch style violations before user sees them |
+| Awareness-ledger skill exists in project | **Ledger Consultation Agents** | Cross-reference changes against institutional memory (incidents, decisions, patterns, flows) |
+
+**Ledger integration:** When `.claude/skills/awareness-ledger/` exists, the agents command should evaluate whether the skill being analyzed would benefit from ledger consultation. Any skill that modifies code, makes architectural decisions, or touches areas with existing ledger records is a candidate. The three ledger agents (Regression Hunter, Skeptic, Premortem Analyst) run as individual agents with `context: none`, reading from the ledger directories. See `references/ledger-templates.md` § "Agent Definitions" for full specifications.
 
 **Persona and routing:** Every agent must have a unique persona, and the agents command must route to individual agents or agent teams based on the task. See:
 - [agents-personas.md](agents-personas.md) — Persona assignment rules, selection heuristic, research backing

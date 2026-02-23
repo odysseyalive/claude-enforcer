@@ -20,6 +20,17 @@ When running `/skill-builder agents [skill]`:
 
 4. **Identify mandatory agent situations** — scan the skill for non-obvious decisions where guessing is involved. Per directive: "When a decision needs to be made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY." Flag these as requiring agent panels.
 
+4b. **Detect Awareness Ledger** — Check if `.claude/skills/awareness-ledger/SKILL.md` exists. If it does:
+
+   - Check if `ledger/index.md` has any records (non-empty ledger)
+   - Scan the skill's SKILL.md for file paths, domain tags, and function names that overlap with ledger record tags
+   - If the skill modifies code, makes architectural decisions, or touches areas with existing ledger records:
+     - Add **Ledger Consultation** to the agent type evaluation table as an applicable type
+     - Recommend integrating the three ledger agents (Regression Hunter, Skeptic, Premortem Analyst) into the skill's workflow — these run as individual agents with `context: none`, reading from `ledger/incidents/`, `ledger/decisions/`, `ledger/patterns/`, and `ledger/flows/`
+     - Recommend adding a grounding link in the skill's SKILL.md: "Before proposing code changes, consult the Awareness Ledger — see `.claude/skills/awareness-ledger/`"
+   - If the ledger is empty, note: "Awareness Ledger exists but has no records yet. Consultation integration will become relevant once records accumulate."
+   - If the ledger does not exist, skip this step silently (no recommendation to install — that's `/skill-builder ledger`'s job)
+
 5. **Agent panel: type applicability and routing** — Deciding which agent types apply to a skill and whether they should be individual or team is itself a judgment call. Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`):
 
    - **Agent 1** (persona: Systems architect who designs for failure modes) — Review the skill's directives and workflows. Which agent types would prevent the highest-risk failures? What happens if each agent type is absent?

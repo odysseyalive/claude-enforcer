@@ -97,6 +97,21 @@ When running `/skill-builder optimize [skill]`:
    - Where all 3 agree → proceed with confidence
    - Where agents disagree → the disputed item stays as an invariant (safe default)
 
+4c. **Detect Awareness Ledger relevance** — Check if `.claude/skills/awareness-ledger/` exists and has records. If it does:
+
+   - Read `ledger/index.md` and scan for tags that overlap with the skill's domain (file paths, function names, component names referenced in the skill's SKILL.md)
+   - If relevant records exist, add to the audit output:
+     ```
+     **Awareness Ledger:**
+     - Ledger installed: yes
+     - Records matching this skill's domain: [count]
+     - Record types: [INC: N, DEC: N, PAT: N, FLW: N]
+     - Recommendation: [Add grounding link to relevant ledger records / No action needed]
+     ```
+   - If the skill's SKILL.md doesn't already reference the awareness-ledger, and matching records exist, recommend adding a grounding note: "Consult the Awareness Ledger for historical context before modifying [domain area]. See `.claude/skills/awareness-ledger/ledger/`."
+   - If the skill has directives that encode historical knowledge (phrases like "because last time," "we learned that," "after the X incident"), flag these as candidates for ledger record capture if not already captured.
+   - If the ledger does not exist or is empty, skip this step silently.
+
 5. **Evaluate reference splitting** (if reference.md exists):
    - Parse all h2 sections in reference.md; record heading, line count, content domain
    - Check thresholds: file >100 lines AND 3+ h2 sections AND each section >20 lines → recommend split

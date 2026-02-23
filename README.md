@@ -231,6 +231,54 @@ Content is copied verbatim during the split. No rewriting, no condensing. The gr
 
 One rule stays absolute through all of this: **directives are sacred**. When a user writes an instruction, optimization never rewords it. The original phrasing is preserved verbatim with its source and date. Restructuring moves content around. It never rewrites what the user said.
 
+## The Awareness Ledger
+
+A patch ships. Something breaks. You roll it back and move on. But the knowledge of what happened — the code path, the user flow that triggered it, the conditions that aligned to let it through — disappears into a closed pull request nobody will read again.
+
+What struck me was how much this resembles oral history loss. A community carries knowledge in its members' heads. When those members leave, the knowledge leaves with them. The same thing happens in a codebase across conversations. Claude Code starts fresh every session. Whatever you learned debugging last week's regression doesn't carry over unless you wrote it down somewhere the system can find it.
+
+The Awareness Ledger is that somewhere.
+
+When skill-builder creates a ledger for your project, it installs a companion skill that acts as institutional memory. It stores four kinds of records:
+
+| Record | What It Captures |
+|--------|-----------------|
+| **Incidents** | What went wrong, root cause, the contributing factors that aligned, timeline, resolution, lessons learned |
+| **Decisions** | What was chosen, why, what alternatives were considered, what trade-offs were accepted |
+| **Patterns** | Reusable knowledge with evidence *and* counter-evidence — because confirmation bias is real |
+| **Flows** | Step-by-step user or system behavior, code paths involved, environmental conditions |
+
+Each record follows a structured template modeled on Google's blameless postmortem format, Architecture Decision Records, and NASA's Lessons Learned Information System. The structure matters because it makes records searchable and cross-referenceable, not because it imposes bureaucracy.
+
+### How it works
+
+The ledger sits quiet until it's needed. Before code changes are presented, the system checks whether anything in the ledger is relevant. If nothing matches, there's zero overhead. If matches are found, three isolated agents evaluate the situation from different angles:
+
+**The Regression Hunter** searches past incidents and flows for overlap with the current change. Have we been here before? What broke last time?
+
+**The Skeptic** checks proposed changes against existing decisions and patterns. What are we assuming? Does any counter-evidence challenge our approach?
+
+**The Premortem Analyst** imagines the change has already failed and works backward. Gary Klein's research showed this technique improves failure identification by 30%. Instead of asking "will this work?" you ask "what specifically will break?"
+
+Each agent runs in isolation — no agent sees what the others found. Where they agree, you have confidence. Where they disagree, the disagreement itself is worth investigating. This is the same adversarial architecture that skill-builder uses for its own decisions, applied to your project's history.
+
+### Capturing knowledge
+
+Three channels feed the ledger:
+
+1. **You record directly.** `/awareness-ledger record incident` walks you through the template.
+2. **Agents suggest capture.** During consultation, if the conversation contains knowledge that isn't in the ledger yet, the agents recommend recording it. You confirm before anything is written. Your words, not the system's interpretation.
+3. **Hooks observe changes.** When code is being edited, the system ensures consultation happens. Not blocking — awareness.
+
+### Creating a ledger
+
+```
+/skill-builder ledger             # See what would be created (display mode)
+/skill-builder ledger --execute   # Create the awareness-ledger skill
+```
+
+The `init` process seeds the ledger by scanning git history, your CLAUDE.md, and TODO/FIXME comments for initial records. A cold-start empty ledger helps nobody, so the system gives you a starting corpus to build on.
+
 ## Learn More
 
 - [Context Is the Interface](https://odysseyalive.com/focus/context-is-the-interface) — The insight behind this approach

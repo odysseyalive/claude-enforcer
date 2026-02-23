@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger"
 allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
@@ -23,6 +23,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 | `/skill-builder update` | Re-run the installer to update skill-builder to the latest version |
 | `/skill-builder verify` | Health check: validate all skills, hooks, and wiring (headless-compatible) |
 | `/skill-builder inline [skill] [directive]` | Quick-add a directive to a skill, then review for optimization/enforcement |
+| `/skill-builder ledger` | Awareness Ledger: create institutional memory for a project |
 | `/skill-builder dev [command]` | Run any command with skill-builder itself included |
 
 ---
@@ -297,6 +298,24 @@ Use `--no-chain` to skip the post-action review (e.g., `/skill-builder new my-sk
 
 ---
 
+## Ledger Command
+
+**Create an Awareness Ledger companion skill for institutional memory.**
+
+When invoked with `/skill-builder ledger`:
+
+1. Validate the project (CLAUDE.md must exist, awareness-ledger must not already exist)
+2. Create the awareness-ledger skill structure (SKILL.md, references, agents, hooks, ledger directories)
+3. Seed the ledger by scanning git history, CLAUDE.md, and TODO/FIXME comments for initial records
+4. Report what was created
+5. Chain into a scoped mini-audit: run optimize, agents, and hooks in display mode for the new skill
+
+Use `--execute` to create files. Default is display mode (shows what would be created). Use `--no-chain` to skip the post-action review.
+
+**Grounding:** Read [references/procedures/ledger.md](references/procedures/ledger.md) before executing. Also consult `references/ledger-templates.md` for record type templates, agent definitions, hook script, and consultation protocol.
+
+---
+
 ## CLAUDE.md Optimization
 
 CLAUDE.md loads into EVERY conversation. Keep it lean. Move domain-specific content to skills.
@@ -326,4 +345,5 @@ Reference files:
 - [references/optimization-examples.md](references/optimization-examples.md) — Before/after examples, optimization targets
 - [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion
 - [references/patterns.md](references/patterns.md) — Lessons learned
-- [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, etc.)
+- [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
+- [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, etc.)

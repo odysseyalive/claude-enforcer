@@ -53,6 +53,16 @@ These MUST appear in the hooks report under a **"Needs Agent, Not Hook"** sectio
 
 **Scoping requirement:** Hooks that enforce writing/voice style rules must skip `.claude/` infrastructure files. Style hooks apply to project content output, not skill machinery. Use the scope check pattern from the grep-block template above.
 
+#### Step 3a: Detect Awareness Ledger Hook Opportunities
+
+Check if `.claude/skills/awareness-ledger/` exists. If it does:
+
+1. **Check if `consult-before-edit.sh` is already wired** in `settings.local.json`. If not, add to the "Wiring Issues" section.
+2. **Evaluate domain scoping** — The default `consult-before-edit.sh` fires on all non-`.claude/` Edit/Write operations. If the skill being analyzed operates on a specific domain (e.g., `src/api/`, `content/`, database migrations), recommend a **domain-scoped consultation note** in the hook's stderr output. This helps users understand *which* ledger records are relevant without reading every record.
+3. **Check for skill-specific consultation gaps** — If the skill has directives that reference past failures, learned patterns, or architectural decisions (phrases like "we decided to," "after the incident," "this was chosen because"), and those aren't captured in the ledger, flag as: "Directive references historical knowledge not yet in the ledger. Recommend `/awareness-ledger record` to capture."
+
+If the ledger does not exist, skip this step silently.
+
 #### Step 3b: Agent panel — enforcement boundary decisions
 
 Some directives sit at the boundary between hook-enforceable and agent-required. "Never use informal language" — is that a grep pattern or a judgment call? "Always validate inputs" — is that a pre-flight check or a simple pattern match? Per directive: agents are mandatory when guessing is involved.
