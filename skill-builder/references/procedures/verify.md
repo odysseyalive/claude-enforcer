@@ -35,6 +35,24 @@ For each hook script:
 For each wired hook in settings.local.json:
 - Does the script file exist?
 
+### Step 3b: Team Validation
+
+```bash
+Read: .claude/settings.local.json → env → CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
+Grep: .claude/skills/**/SKILL.md and .claude/skills/**/agents/*.md for "agent team", "TeamCreate", "Spawn teammates"
+```
+
+Determine whether any skill uses team patterns (grep matches above). Then check the env var.
+
+| Scenario | Result |
+|----------|--------|
+| Env var missing, no skill uses teams | PASS (N/A) |
+| Env var missing, a skill uses teams | FAIL |
+| Env var present, teams have research assistant | PASS |
+| Env var present, team missing research assistant | WARN |
+
+For each skill that uses teams, verify its team definition includes a research assistant (grep for `research assistant`, `Research`, or a role explicitly designated as the research member).
+
 ### Step 4: Agent Validation
 
 ```bash
@@ -58,6 +76,8 @@ For each agent file:
 | Hooks wired | [N]/[N] [PASS/FAIL] |
 | Hooks executable | [N]/[N] [PASS/FAIL] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
+| Agent Teams enabled | [PASS/FAIL/N/A] |
+| Research assistant in teams | [N]/[N] [PASS/WARN/N/A] |
 
 Overall: [PASS / PASS with warnings / FAIL]
 ```

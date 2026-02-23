@@ -44,6 +44,7 @@ When running `/skill-builder optimize [skill]`:
 - allowed-tools: [current]
 - hooks: [present/missing]
 - agents: [present/missing]
+- team routing: [Individual/Team/Both/N/A]
 - Directives enforceable by hooks? [yes/no/partial]
 
 **Structural Invariants:** [count found]

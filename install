@@ -51,24 +51,52 @@ for proc in audit verify quick-audit skills list optimize agents hooks new direc
     curl -fsSL "$REPO_URL/skill-builder/references/procedures/${proc}.md" -o "$SKILL_DIR/references/procedures/${proc}.md"
 done
 
-# Enable agent teams in project settings
+# Enable agent teams and auto-approve research tools
 SETTINGS_FILE=".claude/settings.local.json"
-echo "Enabling agent teams..."
+echo "Configuring project settings..."
 if command -v python3 &>/dev/null; then
     python3 -c "
 import json, os
+
 p = '$SETTINGS_FILE'
 d = json.load(open(p)) if os.path.exists(p) else {}
-if d.get('env', {}).get('CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS') == '1':
-    print('  Agent teams already enabled')
-else:
+changed = False
+
+# Enable agent teams
+if d.get('env', {}).get('CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS') != '1':
     d.setdefault('env', {})['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] = '1'
+    changed = True
+    print('  Agent teams enabled')
+else:
+    print('  Agent teams already enabled')
+
+# Auto-approve web research tools (belt — permissions layer)
+# The suspenders (PreToolUse hook) are generated per-system by /skill-builder hooks
+research_tools = [
+    'WebSearch',
+    'WebFetch',
+    'mcp__jina__read_url',
+    'mcp__jina__search_web',
+    'mcp__jina__parallel_read_url',
+    'mcp__jina__parallel_search_web',
+]
+allow = d.setdefault('permissions', {}).setdefault('allow', [])
+for tool in research_tools:
+    if tool not in allow:
+        allow.append(tool)
+        changed = True
+        print(f'  Added {tool} to permissions.allow')
+    else:
+        print(f'  {tool} already in permissions.allow')
+
+if changed:
     json.dump(d, open(p, 'w'), indent=2)
-    print('  Agent teams enabled in $SETTINGS_FILE')
+    print(f'  Settings saved to $SETTINGS_FILE')
 "
 else
-    echo "  Warning: python3 not found. Add this to $SETTINGS_FILE manually:"
-    echo '  { "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }'
+    echo "  Warning: python3 not found. Add these to $SETTINGS_FILE manually:"
+    echo '  { "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" },'
+    echo '    "permissions": { "allow": ["WebSearch", "WebFetch", "mcp__jina__read_url", "mcp__jina__search_web", "mcp__jina__parallel_read_url", "mcp__jina__parallel_search_web"] } }'
 fi
 
 echo

@@ -21,6 +21,10 @@ Files to scan:
 ## Rules Files
 - **Found:** [count] files in .claude/rules/
 - **Should convert to skills:** [yes/no with reasoning]
+
+## Settings
+- **Agent Teams (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`):** [enabled/disabled]
+  (Read `.claude/settings.local.json` → `env` section)
 ```
 
 ### Step 2.5: Bootstrap Check (No Skills Found)
@@ -42,9 +46,9 @@ Skip Steps 3–5 (they require existing skills) and go directly to Step 6 with t
 
 ```markdown
 ## Skills Summary
-| Skill | Lines | Description | Directives | Reference Inline | Hooks | Status |
-|-------|-------|-------------|------------|------------------|-------|--------|
-| /skill-1 | X | single/multi | Y | Z tables | yes/no | OK/NEEDS WORK |
+| Skill | Lines | Description | Directives | Reference Inline | Hooks | Teams | Status |
+|-------|-------|-------------|------------|------------------|-------|-------|--------|
+| /skill-1 | X | single/multi | Y | Z tables | yes/no | yes/no/N/A | OK/NEEDS WORK |
 
 **Description column:** Flag `multi` if uses `|` or `>` syntax (needs optimization to single line)
 ```
@@ -91,13 +95,19 @@ Combine all sub-command outputs into a single report:
 [aggregated from optimize display mode per skill]
 
 ## Agent Opportunities
-| Skill | Agent Type | Purpose | Priority |
-|-------|------------|---------|----------|
-| /skill-1 | id-lookup | Enforce grounding for IDs | High |
+| Skill | Agent Type | Purpose | Routing | Priority |
+|-------|------------|---------|---------|----------|
+| /skill-1 | id-lookup | Enforce grounding for IDs | Individual/Team/Both | High |
 [from agents display mode per skill]
 
 ## Hooks Status
 [aggregated from hooks display mode]
+
+## Teams Status
+- **Env var enabled:** [yes/no]
+- **Skills using teams:** [list or "none"]
+- **Research assistant present:** [per-team status or N/A]
+- **Issues:** [any team-related issues or "none"]
 
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]

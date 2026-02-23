@@ -88,6 +88,26 @@ Every agent team MUST include a research assistant teammate. This is a structura
 - **How teammates use it:** Other teammates reference the research assistant by name in messages when they need online information (e.g., "Research Assistant, find the latest API docs for X")
 - **Not counted against panel recommendations:** The research assistant is automatically included — it does not consume a slot in the agent panel's recommendations since it's mandatory infrastructure.
 
+### Permissions
+
+The research assistant's web tools must be auto-approved in `.claude/settings.local.json` or every research request will prompt the user for confirmation, defeating the purpose. This uses a belt-and-suspenders approach:
+
+**Belt — `permissions.allow` (set by the install script):**
+- `WebSearch`
+- `WebFetch`
+- `mcp__jina__read_url`
+- `mcp__jina__search_web`
+- `mcp__jina__parallel_read_url`
+- `mcp__jina__parallel_search_web`
+
+**Suspenders — `hooks.PreToolUse` (generated per-system by `/skill-builder hooks`):**
+A PreToolUse hook matching the tools above that exits 0 to auto-approve. This hook is not bundled — it is generated on the target system by running `/skill-builder hooks --execute`, which creates the hook script and wires it into `settings.local.json` based on the system's actual tool configuration.
+
+**If research requests are still prompting:**
+1. Check `.claude/settings.local.json` — verify `permissions.allow` includes the tools above
+2. Run `/skill-builder hooks --execute` to generate and wire the PreToolUse hook
+3. If hooks already exist, check `hooks.PreToolUse` for a matcher entry covering the research tools
+
 **How to invoke agent teams:**
 
 Agent teams are created through natural language — you tell Claude to form a team and describe the work. Claude uses the TeamCreate, TaskCreate, and SendMessage tools automatically. Each teammate is a full Claude Code instance that loads the project's CLAUDE.md, skills, and MCP servers.
