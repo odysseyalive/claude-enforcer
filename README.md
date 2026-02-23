@@ -30,7 +30,7 @@ Claude Code has three mechanisms that help, but most developers underuse them:
 
 ## Requirements
 
-Claude Code **v2.1.3 or later**. Skills became user-invocable in v2.1.3 (January 2026). Earlier versions will refuse to run `/skill-builder` directly. Check with `claude --version` and update with `claude update` if needed.
+Claude Code **v2.1.32 or later**. Skills became user-invocable in v2.1.3 (January 2026). Earlier versions will refuse to run `/skill-builder` directly. Check with `claude --version` and update with `claude update` if needed.
 
 ## Install
 
