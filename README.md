@@ -8,6 +8,8 @@ The problem is that rules fade. As conversations grow longer, the instructions y
 
 This tool helps you build a context system that resists drift.
 
+![Fading ink on aged parchment, sharp at the top, dissolving into nothing at the bottom](assets/images/fading-ink.png)
+
 ## The Problem
 
 When you put everything in `CLAUDE.md`, two things happen:
@@ -25,6 +27,8 @@ Claude Code has three mechanisms that help, but most developers underuse them:
 **Hooks** are shell scripts that run *before* Claude acts. A PreToolUse hook can block a forbidden action regardless of what Claude "remembers." It doesn't matter if the model forgot your rule about never using a certain account. The hook blocks it anyway.
 
 **Agents** are subprocesses that start with fresh context. When you need to validate something without the drift of the current conversation, you spawn an agent with `context: none`. It reads your reference files directly, uninfluenced by the long conversation above. Each agent gets a distinct persona, a specific expert lens, so that when multiple agents evaluate the same problem, they bring genuinely different perspectives rather than echoing each other.
+
+![Three figures at separate desks, each studying the same document under their own light](assets/images/independent-agents.png)
 
 **Agent Teams** coordinate multiple Claude Code instances working in parallel. Where individual agents evaluate independently and report back, teammates share a task list, message each other, and divide labor across files. Think of the difference this way: individual agents are expert witnesses who testify separately; a team is a crew building different parts of the same house.
 
@@ -261,6 +265,8 @@ The ledger sits quiet until it's needed. Before code changes are presented, the 
 **The Premortem Analyst** imagines the change has already failed and works backward. Gary Klein's research showed this technique improves failure identification by 30%. Instead of asking "will this work?" you ask "what specifically will break?"
 
 Each agent runs in isolation — no agent sees what the others found. Where they agree, you have confidence. Where they disagree, the disagreement itself is worth investigating. This is the same adversarial architecture that skill-builder uses for its own decisions, applied to your project's history.
+
+![Three lanterns illuminating a dark forest path from different angles](assets/images/three-lanterns.png)
 
 ### Capturing knowledge
 

@@ -76,6 +76,19 @@ Check if `.claude/skills/awareness-ledger/SKILL.md` exists.
    - Issues: [hook not wired / empty ledger / none]
    ```
 
+4. **Scan for capture integration gaps** — For each skill (excluding skill-builder and awareness-ledger themselves), check whether it produces institutional knowledge but has no capture mechanism:
+   - **Produces institutional knowledge?** Check for: investigation/diagnosis workflow steps, decision-making procedures, debugging flows, architectural evaluation, directives referencing past failures
+   - **Has capture mechanism?** Check for any one of: capture workflow step in SKILL.md, Capture Recommender agent in `agents/`, `capture-reminder.sh` hook in `hooks/`
+   - If a skill produces institutional knowledge but has no capture mechanism, add to the report:
+     ```
+     **Capture Gaps:**
+     | Skill | Knowledge Type | Recommended Mechanism | Procedure |
+     |-------|---------------|----------------------|-----------|
+     | /[skill] | [diagnostic findings / decisions / patterns] | [workflow step / agent / hook] | Run `optimize`, `agents`, or `hooks` |
+     ```
+   - Mechanism recommendation follows the hierarchy: workflow step (if capture is a natural final step) > agent (if capture-worthiness requires judgment) > hook (lightweight fallback). See `references/agents.md` § "Capture Recommender Agent" for the full hierarchy.
+   - If no gaps found, omit this subsection.
+
 **If the ledger does NOT exist:**
 1. Report:
    ```
@@ -136,7 +149,7 @@ Combine all sub-command outputs into a single report:
 - **Issues:** [any team-related issues or "none"]
 
 ## Awareness Ledger
-[from Step 4a — status, record counts, or installation recommendation]
+[from Step 4a — status, record counts, capture gaps, or installation recommendation]
 
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]

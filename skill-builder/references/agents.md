@@ -25,8 +25,12 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 | "Never produce overbuilt/AI prose" | **Voice Validator Agent** | Validate draft against voice directives |
 | "Conversational tone" / "No promotional language" | **Voice Validator Agent** | Catch style violations before user sees them |
 | Awareness-ledger skill exists in project | **Ledger Consultation Agents** | Cross-reference changes against institutional memory (incidents, decisions, patterns, flows) |
+| Skill produces findings/decisions AND awareness-ledger exists | **Capture Recommender Agent** | Evaluate skill output for institutional knowledge worth recording in the ledger |
 
-**Ledger integration:** When `.claude/skills/awareness-ledger/` exists, the agents command should evaluate whether the skill being analyzed would benefit from ledger consultation. Any skill that modifies code, makes architectural decisions, or touches areas with existing ledger records is a candidate. The three ledger agents (Regression Hunter, Skeptic, Premortem Analyst) run as individual agents with `context: none`, reading from the ledger directories. See `references/ledger-templates.md` § "Agent Definitions" for full specifications.
+**Ledger integration (bidirectional):** When `.claude/skills/awareness-ledger/` exists, the agents command evaluates two directions:
+
+- **READ (Consultation):** Does the skill modify code, make architectural decisions, or touch areas with existing ledger records? If yes, recommend integrating the three consultation agents (Regression Hunter, Skeptic, Premortem Analyst) into the skill's workflow. These run as individual agents with `context: none`, reading from the ledger directories. See `references/ledger-templates.md` § "Agent Definitions" for full specifications.
+- **WRITE (Capture):** Does the skill produce findings, decisions, debugging flows, or architectural rationale that constitute institutional knowledge? If yes, recommend a Capture Recommender Agent that evaluates skill output against the capture trigger patterns (see `references/ledger-templates.md` § "Capture Trigger Patterns") and suggests ledger records when warranted. See § "Capture Recommender Agent" below for the template. **Only recommend if no other capture mechanism exists** — check for workflow-step capture prompts and capture-reminder hooks first.
 
 **Persona and routing:** Every agent must have a unique persona, and the agents command must route to individual agents or agent teams based on the task. See:
 - [agents-personas.md](agents-personas.md) — Persona assignment rules, selection heuristic, research backing
@@ -248,6 +252,78 @@ Prompt: "Read directives from .claude/skills/[skill]/SKILL.md § Directives.
         If no violations, say PASS."
 
 If agent reports violations, fix them before presenting to user.
+```
+
+### 6. Capture Recommender Agent (Ledger Write Integration)
+
+**Purpose:** Evaluate skill output for institutional knowledge worth recording in the awareness ledger.
+
+```markdown
+---
+name: capture-recommender
+description: Evaluate skill output for ledger-worthy institutional knowledge
+persona: "[knowledge management specialist — e.g., 'Organizational learning researcher who has seen teams lose critical knowledge by not recording it']"
+allowed-tools: Read, Grep, Glob
+context: none
+---
+
+# Capture Recommender Agent
+
+You evaluate skill output to determine if it contains institutional knowledge
+worth recording in the awareness ledger. You have NO knowledge of the
+conversation that produced the output — you assess the content on its own merit.
+
+## Rules
+1. Read the skill's output or results
+2. Read the capture trigger patterns from `.claude/skills/awareness-ledger/` or
+   `references/ledger-templates.md` § "Capture Trigger Patterns"
+3. Match output against trigger patterns for each record type (INC, DEC, PAT, FLW)
+4. If triggers match, suggest a record using the Capture Opportunity format
+5. Capture is ALWAYS user-confirmed — suggest, never auto-record
+6. If no triggers match, say "NO CAPTURE: Output does not contain ledger-worthy knowledge"
+
+## Response Format
+```
+NO CAPTURE: Output does not contain ledger-worthy knowledge
+```
+or
+```
+CAPTURE RECOMMENDED: [count] potential record(s)
+
+1. Type: [INC/DEC/PAT/FLW]
+   Suggested ID: [auto-generated from context]
+   Trigger matched: "[quoted trigger pattern]"
+   Source material: "[quoted content from skill output]"
+   Why record: [brief justification]
+
+Confirm to record with /awareness-ledger record, or skip.
+```
+```
+
+**When to create:** Skill produces diagnostic findings, architectural decisions, debugging flows, or pattern observations AND the awareness-ledger exists AND no simpler capture mechanism is already present (workflow step or reminder hook). Key indicators: skills with investigation workflows, decision-making procedures, root cause analysis, or architectural evaluation steps.
+
+**Capture mechanism hierarchy** — only one mechanism per skill:
+
+| Mechanism | Best For | Cost | Check First |
+|-----------|----------|------|-------------|
+| **Workflow step** (in SKILL.md) | Skills where capture is a natural final step | Zero — no tokens, no hook overhead | — |
+| **Capture Recommender agent** | Skills where capture-worthiness requires judgment | Medium — agent tokens | Workflow step absent? |
+| **Post-action reminder hook** | Lightweight fallback when neither above is present | Zero runtime, but least intelligent | Workflow step AND agent absent? |
+
+**Implementation in parent skill:**
+```markdown
+## Capture Evaluation (Enforced via Agent)
+
+After the skill completes its primary workflow, spawn the capture-recommender agent:
+
+Task tool with subagent_type: "general-purpose"
+Prompt: "Read the output from .claude/skills/[skill]/[output].
+        Read capture trigger patterns from references/ledger-templates.md
+        § 'Capture Trigger Patterns'. Evaluate the output for institutional
+        knowledge. If triggers match, suggest records using the Capture
+        Opportunity format. If no triggers match, say NO CAPTURE."
+
+If agent recommends capture, present the suggestion to the user.
 ```
 
 ## Creating Agents for a Skill

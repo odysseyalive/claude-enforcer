@@ -289,6 +289,8 @@ The current conversation contains knowledge not yet in the ledger:
 Confirm to record, or skip.
 ```
 
+<!-- Consumed by: optimize.md Step 4d (capture integration), agents.md Step 4b (capture agent evaluation), post-action-chain.md Step 1b (ledger capture relevance), audit.md Step 4a (capture gaps) -->
+
 **Proportional overhead rules:**
 
 | Match Scope | Agents Spawned | Rationale |
@@ -330,6 +332,8 @@ Conversation signals that suggest a record should be created:
 - Environment-specific: "only happens when," "requires X to be running"
 
 **Capture is always user-confirmed.** Agents suggest, user decides. Directives are sacred — never auto-record.
+
+<!-- Consumed by: optimize.md Step 4d (trigger pattern matching), hooks.md Step 3a-ii (capture-reminder hook), agents.md § Capture Recommender Agent (trigger detection logic) -->
 
 ---
 
@@ -436,6 +440,50 @@ exit 0
   }
 }
 ```
+
+### capture-reminder.sh
+
+```bash
+#!/bin/bash
+# Awareness Ledger: post-action capture reminder
+# PostToolUse hook on Task (fires after agent/skill completion)
+# Exits 0 always (awareness, not blocking)
+# Outputs stderr reminder when skill output may contain capturable knowledge
+
+TOOL_NAME="$1"
+
+# Only trigger on Task (skill/agent completion)
+if [[ "$TOOL_NAME" != "Task" ]]; then
+    exit 0
+fi
+
+# Check if ledger exists
+LEDGER_DIR=".claude/skills/awareness-ledger/ledger"
+if [[ ! -d "$LEDGER_DIR" ]]; then
+    exit 0
+fi
+
+echo "Awareness Ledger: Skill completed. If findings, decisions, or patterns emerged, consider recording with /awareness-ledger record." >&2
+
+exit 0
+```
+
+**Wiring (settings.local.json):**
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "command": ".claude/skills/awareness-ledger/hooks/capture-reminder.sh $TOOL_NAME"
+      }
+    ]
+  }
+}
+```
+
+<!-- Consumed by: hooks.md Step 3a-ii (post-action capture hook template) -->
 
 ---
 *Created by skill-builder ledger command. Templates modeled on Google SRE postmortems, MADR/ADR, NASA LLIS, and Klein's premortem methodology.*

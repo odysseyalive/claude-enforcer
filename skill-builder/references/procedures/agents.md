@@ -17,6 +17,7 @@ When running `/skill-builder agents [skill]`:
 | **Evaluation** | Skill produces output that needs quality assessment | [yes/no + reasoning] |
 | **Matcher** | Skill requires matching inputs to categories or patterns | [yes/no + reasoning] |
 | **Voice Validator** | Skill produces written content AND has voice/style directives (tone rules, forbidden phrasing, writing constraints) | [yes/no + reasoning] |
+| **Capture Recommender** | Skill produces findings/decisions/patterns AND awareness-ledger exists AND no simpler capture mechanism present (workflow step or hook) | [yes/no + reasoning] |
 
 4. **Identify mandatory agent situations** — scan the skill for non-obvious decisions where guessing is involved. Per directive: "When a decision needs to be made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY." Flag these as requiring agent panels.
 
@@ -30,6 +31,16 @@ When running `/skill-builder agents [skill]`:
      - Recommend adding a grounding link in the skill's SKILL.md: "Before proposing code changes, consult the Awareness Ledger — see `.claude/skills/awareness-ledger/`"
    - If the ledger is empty, note: "Awareness Ledger exists but has no records yet. Consultation integration will become relevant once records accumulate."
    - If the ledger does not exist, skip this step silently (no recommendation to install — that's `/skill-builder ledger`'s job)
+
+4c. **Evaluate Capture Recommender Agent** — If the awareness-ledger exists, evaluate whether the skill would benefit from a Capture Recommender agent (see `references/agents.md` § "Capture Recommender Agent"):
+
+   - **When to recommend:** Skill produces diagnostic findings, architectural decisions, debugging flows, or pattern observations that match capture trigger patterns (see `references/ledger-templates.md` § "Capture Trigger Patterns"). The value of the agent is in applying judgment to determine *whether* output is ledger-worthy — not just reminding the user to check.
+   - **When the agent adds value over a simple workflow step:** The skill's output varies significantly between invocations (some runs produce capturable knowledge, others don't), making a blanket capture prompt wasteful. The agent can distinguish routine output from genuinely novel findings.
+   - **Check for existing capture integration first:** Before recommending, verify no capture mechanism already exists:
+     - Scan SKILL.md for post-workflow capture steps (keywords: "capture," "record," "ledger," "awareness-ledger record")
+     - Check `hooks/` for `capture-reminder.sh` or similar post-action hooks
+     - If either exists, skip — one capture mechanism per skill. Note in the report: "Capture integration: present ([mechanism type])"
+   - If recommending, add **Capture Recommender** to the evaluation table with reasoning that references the specific trigger patterns the skill's output is likely to match.
 
 5. **Agent panel: type applicability and routing** — Deciding which agent types apply to a skill and whether they should be individual or team is itself a judgment call. Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`):
 

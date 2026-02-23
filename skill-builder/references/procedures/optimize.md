@@ -113,6 +113,31 @@ When running `/skill-builder optimize [skill]`:
    - If the skill has directives that encode historical knowledge (phrases like "because last time," "we learned that," "after the X incident"), flag these as candidates for ledger record capture if not already captured.
    - If the ledger does not exist or is empty, skip this step silently.
 
+4d. **Detect Capture Integration gap** — Check if the skill produces institutional knowledge that should be captured in the awareness ledger. Only evaluate if `.claude/skills/awareness-ledger/` exists.
+
+   **Positive indicators** (skill produces capturable knowledge — any 2+ of these):
+   - Workflow includes investigation, diagnosis, or root cause analysis steps
+   - Skill produces decisions with rationale (chose X because Y)
+   - Output includes debugging flows, error resolution paths, or architectural evaluation
+   - Directives reference past failures or learned patterns ("because last time," "we learned that")
+   - Skill operates on areas with existing ledger records (overlapping tags/file paths)
+
+   **Negative indicators** (capture not relevant — any 1 of these):
+   - Skill is purely mechanical (formatting, linting, file manipulation)
+   - Skill output is ephemeral (status reports, one-time lookups)
+   - Skill already has a capture mechanism (check for: capture workflow step in SKILL.md, Capture Recommender agent in `agents/`, or `capture-reminder.sh` hook in `hooks/`)
+
+   If positive indicators present and no negative indicators apply:
+   - Add to the audit output:
+     ```
+     **Capture Integration:**
+     - Produces institutional knowledge: yes
+     - Existing capture mechanism: [workflow step / agent / hook / NONE]
+     - Recommendation: [Add post-workflow capture prompt / No action needed]
+     ```
+   - Recommend adding a post-workflow capture step to SKILL.md that references the trigger patterns and Capture Opportunity format from `references/ledger-templates.md` § "Capture Trigger Patterns" and § "Capture Opportunity"
+   - **Capture mechanism hierarchy:** workflow step (zero cost, recommended by `optimize`) > Capture Recommender agent (recommended by `agents`) > post-action reminder hook (recommended by `hooks`). Only recommend the workflow step here — the other mechanisms are recommended by their respective procedures, which check for existing mechanisms before recommending.
+
 5. **Evaluate reference splitting** (if reference.md exists):
    - Parse all h2 sections in reference.md; record heading, line count, content domain
    - Check thresholds: file >100 lines AND 3+ h2 sections AND each section >20 lines → recommend split

@@ -63,6 +63,26 @@ Check if `.claude/skills/awareness-ledger/` exists. If it does:
 
 If the ledger does not exist, skip this step silently.
 
+#### Step 3a-ii: Evaluate Post-Action Capture Hook
+
+If `.claude/skills/awareness-ledger/` exists, evaluate whether a lightweight post-action reminder hook would help capture institutional knowledge from skill output.
+
+**Proportionality checks — skip if any apply:**
+- Skill already has a capture workflow step in SKILL.md (keywords: "capture," "record," "ledger," "/awareness-ledger record") → workflow step is superior, no hook needed
+- Capture Recommender agent was recommended by the `agents` procedure → agent provides intelligent filtering, hook would be redundant
+- Skill runs frequently with routine output (formatting, linting, status checks) → reminder fatigue outweighs capture value
+
+**When to recommend:**
+- Skill produces occasional findings worth capturing, but not enough to justify an agent
+- No other capture mechanism exists for this skill
+- Skill completes as a discrete action (agent/Task tool) so PostToolUse hook can fire
+
+If recommending, reference the `capture-reminder.sh` template from `references/ledger-templates.md` § "capture-reminder.sh". Add to the report under "New Opportunities" with hook type "Post-action capture reminder" and note the capture mechanism hierarchy:
+
+**Capture mechanism hierarchy:** workflow step (zero cost, recommended by `optimize`) > Capture Recommender agent (judgment-based, recommended by `agents`) > post-action reminder hook (lightweight fallback, recommended here). Only one mechanism per skill.
+
+If the ledger does not exist, skip this step silently.
+
 #### Step 3b: Agent panel — enforcement boundary decisions
 
 Some directives sit at the boundary between hook-enforceable and agent-required. "Never use informal language" — is that a grep pattern or a judgment call? "Always validate inputs" — is that a pre-flight check or a simple pattern match? Per directive: agents are mandatory when guessing is involved.
