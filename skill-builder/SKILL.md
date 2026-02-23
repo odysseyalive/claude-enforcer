@@ -27,6 +27,18 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 
 ---
 
+## Directives
+
+> **"When a decision needs to be made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY, in order to provide additional input in decision making."**
+
+*— Added 2026-02-22, source: user directive*
+
+> **"Each agent being created by this system always has to have an appropriate persona that is not being used anywhere else."**
+
+*— Added 2026-02-22, source: user directive*
+
+---
+
 ## The `update` Command
 
 **Re-run the installer to update skill-builder to the latest version.**
@@ -217,9 +229,11 @@ See [references/optimization-examples.md](references/optimization-examples.md) f
 
 **Analyze and create agents for a skill.**
 
-Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evaluation, Matcher, Voice Validator) against it, and reports which would help and why. In execute mode, creates agent files from templates.
+Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evaluation, Matcher, Voice Validator) against it, and reports which would help and why. Routes each recommendation to either **individual agents** (isolated evaluation with independent opinions) or **agent teams** (collaborative execution with shared task lists). Every agent gets a unique persona — no exceptions.
 
-**Grounding:** Read [references/procedures/agents.md](references/procedures/agents.md) before executing. Also consult `references/agents.md`.
+**Mandatory agent situations:** When the analysis identifies non-obvious decisions where guessing is involved, agents are flagged as mandatory per directive. The report includes a "Mandatory Agent Situations" section listing these.
+
+**Grounding:** Read [references/procedures/agents.md](references/procedures/agents.md) before executing. Also consult `references/agents.md` — especially § "Persona Assignment," § "Individual Agents vs. Agent Teams," and § "When Agents Are Mandatory."
 
 ---
 
@@ -300,6 +314,8 @@ Before using any template, example, or pattern from reference material:
 Reference files:
 - [references/enforcement.md](references/enforcement.md) — Hook JSON, permissions, context mutability
 - [references/agents.md](references/agents.md) — Agent templates, opportunity detection, creation workflow
+- [references/agents-personas.md](references/agents-personas.md) — Persona assignment rules, selection heuristic, research backing
+- [references/agents-teams.md](references/agents-teams.md) — Individual vs. team routing, invocation patterns, mandatory agent situations
 - [references/templates.md](references/templates.md) — Skill directory layout, SKILL.md template, frontmatter
 - [references/optimization-examples.md](references/optimization-examples.md) — Before/after examples, optimization targets
 - [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion

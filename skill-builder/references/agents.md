@@ -25,6 +25,12 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 | "Never produce overbuilt/AI prose" | **Voice Validator Agent** | Validate draft against voice directives |
 | "Conversational tone" / "No promotional language" | **Voice Validator Agent** | Catch style violations before user sees them |
 
+**Persona and routing:** Every agent must have a unique persona, and the agents command must route to individual agents or agent teams based on the task. See:
+- [agents-personas.md](agents-personas.md) — Persona assignment rules, selection heuristic, research backing
+- [agents-teams.md](agents-teams.md) — Individual vs. team routing, invocation patterns, mandatory agent situations
+
+---
+
 ## Agent Templates
 
 ### 1. ID Lookup Agent (Grounding Enforcement)
@@ -35,6 +41,7 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 ---
 name: id-lookup
 description: Look up IDs from reference files
+persona: "[domain-specific data steward — e.g., 'Financial data analyst with zero tolerance for unverified identifiers']"
 allowed-tools: Read, Grep
 context: none
 ---
@@ -81,6 +88,7 @@ Only proceed if agent returns FOUND.
 ---
 name: preflight-validator
 description: Validate operations against skill rules
+persona: "[domain-specific quality gatekeeper — e.g., 'Senior QA engineer who has seen every edge case']"
 allowed-tools: Read, Grep
 context: fork
 ---
@@ -119,6 +127,7 @@ Suggested fix: [how to correct]
 ---
 name: evaluator
 description: Evaluate content for quality/issues
+persona: "[domain-specific critic — e.g., 'Veteran code reviewer,' 'Editor with 20 years at a literary magazine']"
 allowed-tools: Read, Glob, Grep
 context: none
 ---
@@ -144,6 +153,7 @@ You evaluate content against criteria WITHOUT knowledge of how it was created.
 ---
 name: matcher
 description: Match inputs to predefined categories
+persona: "[domain-specific classifier — e.g., 'Taxonomist who has mapped this domain for a decade']"
 allowed-tools: Read, Grep
 context: none
 ---
@@ -184,6 +194,7 @@ Recommendation: Ask user to choose
 ---
 name: voice-validator
 description: Validate content against voice and style directives
+persona: "[voice-specific critic — e.g., 'Writing coach who knows this author's voice intimately']"
 allowed-tools: Read, Grep, Glob
 context: none
 ---
@@ -248,6 +259,16 @@ Read SKILL.md and identify:
 - Complex validation → Validator Agent?
 - Quality checks → Evaluation Agent?
 - Matching/categorization → Matcher Agent?
+- Non-obvious decisions → Mandatory agent panel (see agents-teams.md § "When Agents Are Mandatory")
+```
+
+**Step 1b: Determine routing — individual agents or team**
+
+```
+Ask: Does this task need independent evaluation or collaborative execution?
+- Independent opinions on the same subject → Individual agents (context: none)
+- Parallel implementation across different files → Agent team
+- See agents-teams.md § "Routing Decision Framework"
 ```
 
 **Step 2: For each opportunity, assess value**
@@ -259,7 +280,16 @@ Read SKILL.md and identify:
 | Complexity | Multi-step reasoning | Simple lookup |
 | Hook alternative | Can't be done with grep | Simple pattern match |
 
-**Step 3: Create agent files**
+**Step 3: Assign personas**
+
+For each agent, select a persona using the heuristic: "If I could only gather 3 to 5 people at the top of their field to evaluate this subject, who would they be?"
+
+- Ensure no two agents share a persona
+- Match creative tasks to notable practitioners, analytical tasks to disciplinary experts
+- Write the persona into the agent's frontmatter and opening instruction
+- See [agents-personas.md](agents-personas.md) for full rules
+
+**Step 4: Create agent files**
 
 ```
 .claude/skills/[skill]/agents/
@@ -268,7 +298,7 @@ Read SKILL.md and identify:
 └── matcher.md
 ```
 
-**Step 4: Update SKILL.md to invoke agents**
+**Step 5: Update SKILL.md to invoke agents**
 
 Add to the workflow section:
 ```markdown
@@ -282,7 +312,7 @@ Prompt: "[specific prompt for this use case]"
 [What to do with the result]
 ```
 
-**Step 5: Document in audit report**
+**Step 6: Document in audit report**
 
 ```
 ## Agents Created

@@ -24,7 +24,9 @@ Claude Code has three mechanisms that help, but most developers underuse them:
 
 **Hooks** are shell scripts that run *before* Claude acts. A PreToolUse hook can block a forbidden action regardless of what Claude "remembers." It doesn't matter if the model forgot your rule about never using a certain account. The hook blocks it anyway.
 
-**Agents** are subprocesses that start with fresh context. When you need to validate something without the drift of the current conversation, you spawn an agent with `context: none`. It reads your reference files directly, uninfluenced by the long conversation above.
+**Agents** are subprocesses that start with fresh context. When you need to validate something without the drift of the current conversation, you spawn an agent with `context: none`. It reads your reference files directly, uninfluenced by the long conversation above. Each agent gets a distinct persona — a specific expert lens — so that when multiple agents evaluate the same problem, they bring genuinely different perspectives rather than echoing each other.
+
+**Agent Teams** coordinate multiple Claude Code instances working in parallel. Where individual agents evaluate independently and report back, teammates share a task list, message each other, and divide labor across files. Think of the difference this way: individual agents are expert witnesses who testify separately; a team is a crew building different parts of the same house.
 
 ## Requirements
 
@@ -100,21 +102,48 @@ Sometimes you notice a pattern violation while you're working — Claude uses a 
 
 This adds the directive verbatim to the target skill with a date and source attribution. If the directive is programmable (contains "never" or "always" with a specific value), skill-builder suggests a hook but won't create one unless you ask.
 
-## Analyzing Agent Opportunities
+## Agents and Teams
 
-Sometimes a skill needs more than instructions. It needs a checkpoint.
+Sometimes a skill needs more than instructions. It needs a second opinion. Or a third.
 
-Agents are subprocesses that validate something before Claude acts. They start fresh, without the drift of the current conversation, and can catch mistakes that instructions alone might miss.
+An adversarial tutoring study published at AAAI 2026 measured what happens when you remove the devil's advocate from a multi-agent system. Performance dropped 4.2%. Removing the model's fine-tuning only cost 2%. The structure of disagreement contributed more than the training itself. Google's "society of thought" research found the same pattern from a different direction: models that argue internally arrive at better answers than models that don't.
 
 ```
 /skill-builder agents
 ```
 
-This analyzes your skills and identifies where agents could help: lookups that need to come from a file instead of memory, validations that should happen before an API call, evaluations that benefit from a second opinion, and voice/style enforcement for content-creation skills.
+This analyzes your skills and identifies where agents could help. But it does something most agent systems don't. It distinguishes between two fundamentally different architectures.
 
-For skills that produce written content, skill-builder can recommend a **Voice Validator** agent. This agent runs with `context: none`, evaluating drafts against your voice directives without inheriting the conversational bias that created the text. It catches overbuilt prose, promotional language, and style violations before they reach you.
+### Individual Agents
 
-Not every skill needs agents. But when you notice Claude "forgetting" a rule mid-conversation, an agent can enforce it reliably.
+Individual agents run in isolation. Each one evaluates the same problem from its own perspective, without knowing what the others think. Their findings come back to the main AI, which synthesizes everything and makes a recommendation.
+
+This is the adversarial model. You're assembling a panel of independent experts. A security researcher and a UX specialist reviewing the same code, each unaware of the other's findings. Where they agree, you have confidence. Where they disagree, the disagreement itself is the signal worth investigating.
+
+Every agent gets a **persona**. Not a label, a genuine evaluative lens. The heuristic: if you could only gather three to five people at the top of their field to evaluate this subject, who would they be? For creative work, that might mean a writing coach with Joan Didion's editorial instinct. For technical work, a database performance engineer who has seen every bottleneck. No two agents share a persona.
+
+### Agent Teams
+
+Teams solve a different problem. Where individual agents evaluate, teams build. Teammates share a task list, message each other in real-time, and coordinate across files. A frontend architect, an API designer, and a test engineer each owning their piece of the same feature.
+
+The installer enables this automatically by setting `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` in your project settings. When skill-builder recommends a team, Claude can spin one up, assign tasks with dependencies, and let teammates self-coordinate.
+
+### When to Use Which
+
+| Signal | Individual Agents | Agent Teams |
+|--------|------------------|-------------|
+| Goal | Evaluate, judge, diagnose | Build, implement, coordinate |
+| Interaction | Must NOT influence each other | Should influence each other |
+| Output | Independent opinions for synthesis | Coordinated deliverable |
+| File ownership | All read the same files | Each owns different files |
+
+### When Agents Are Mandatory
+
+Here's the rule that makes this system work: **when a decision isn't overtly obvious and guessing is involved, agents are mandatory.** Not recommended. Mandatory.
+
+Skill-builder enforces this in its own procedures. When the optimize command is deciding whether a piece of content is a structural invariant or safely movable, it spawns three agents to evaluate independently. When the hooks command can't tell whether a directive needs a shell script or an AI evaluator, two agents argue the boundary. The audit's priority ranking works the same way, with agents bringing different risk frameworks to the same set of findings.
+
+If the tool that creates agents doesn't use agents for its own decisions, something is wrong. So it does. The argument is the product, not the answer that comes after.
 
 ## When to Use Rules
 
@@ -134,7 +163,8 @@ Keep rules lean. Use them for lightweight, always-on guidance that doesn't fit i
 | Rules | Files in `.claude/rules/` | Always-on context (keep lean) | No |
 | Skills | On-demand instruction files | Domain-specific rules | No (but refreshable) |
 | Hooks | Shell scripts before actions | Hard blocks on forbidden actions | Yes |
-| Agents | Subprocesses with isolated context | Validation without drift | Yes |
+| Agents | Subprocesses with isolated context | Independent evaluation without drift | Yes |
+| Teams | Coordinated parallel instances | Collaborative implementation | Yes |
 
 The goal: soft guidance where drift is acceptable, hard enforcement where it isn't.
 
@@ -202,8 +232,16 @@ One rule stays absolute through all of this: **directives are sacred**. When a u
 ## Learn More
 
 - [Context Is the Interface](https://odysseyalive.com/focus/context-is-the-interface) — The insight behind this approach
+- [Mrinank Sharma, Please Come Back to Work](https://odysseyalive.com/focus/mrinank-sharma-please-come-back-to-work) — Why adversarial agents outperform consensus
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code) — Official docs on skills, hooks, and agents
+- [Agent Teams](https://code.claude.com/docs/en/agent-teams) — Coordinating multiple Claude Code instances
 - [Lost in the Middle](https://arxiv.org/abs/2307.03172) — The research on long-context instruction following
+
+## Acknowledgments
+
+Special thanks to Joe Loudermilk, who helped me understand why giving an LLM a second opinion opens doors. That conversation planted the seed for everything the agent system became.
+
+Thanks also to [Autonomee](https://www.skool.com/autonomee/about?ref=ab20c334980842ac864a041f7c84f88c) for hooking together the greatest minds in the business.
 
 ## License
 

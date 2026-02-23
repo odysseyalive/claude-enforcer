@@ -84,6 +84,19 @@ When running `/skill-builder optimize [skill]`:
      - Steps that appear unnecessary but exist to create a checkpoint or pause point
    - Record all structural invariants in the audit output under "Structural Invariants"
    - These items are **excluded from all optimization targets** — they must not appear in proposed changes
+
+4b. **Agent panel: structural invariant review** — Structural invariant identification is a judgment call. Content that looks movable may be load-bearing, and content that looks load-bearing may be safely movable. Per directive: agents are mandatory when guessing is involved.
+
+   Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`), each with a unique persona:
+
+   - **Agent 1** (persona: Refactoring specialist — someone who has broken production by removing "dead code") — Review the proposed invariants list. Are any items falsely flagged as invariant when they're safely movable?
+   - **Agent 2** (persona: Defensive architect — someone who designs systems that survive maintenance by strangers) — Review the proposed optimization targets. Are any items falsely considered movable when they're actually load-bearing?
+   - **Agent 3** (persona: Skill author's advocate — someone who asks "would the original author recognize this as equivalent?") — Review both lists. Does the overall restructuring preserve the skill's observable behavior?
+
+   Each agent reads the skill's SKILL.md, the proposed invariants, and the proposed targets. They return independent findings. Synthesize:
+   - Where all 3 agree → proceed with confidence
+   - Where agents disagree → the disputed item stays as an invariant (safe default)
+
 5. **Evaluate reference splitting** (if reference.md exists):
    - Parse all h2 sections in reference.md; record heading, line count, content domain
    - Check thresholds: file >100 lines AND 3+ h2 sections AND each section >20 lines → recommend split
@@ -94,6 +107,14 @@ When running `/skill-builder optimize [skill]`:
      - API docs → **LOW** (hook for deprecated endpoints)
      - Examples/theory → **NONE**
    - If under threshold, note "Reference file: KEEP single file" and proceed
+
+5b. **Agent panel: split decision** (if reference.md is near the threshold) — When the file is close to the splitting threshold (e.g., 80-120 lines, or 2-3 sections), the decision isn't clear-cut. Spawn 2 individual agents:
+
+   - **Agent 1** (persona: Context efficiency engineer — optimizes for minimal token load per invocation) — Argue for splitting. What enforcement boundaries would splitting create?
+   - **Agent 2** (persona: Simplicity advocate — resists premature abstraction) — Argue for keeping. Is the overhead of multiple files worth it for this skill?
+
+   Synthesize their arguments and present both sides in the report. If the file clearly exceeds thresholds, skip this panel — the decision is obvious.
+
 6. **Identify optimization targets** per `references/optimization-examples.md`, excluding all structural invariants found in step 4
 7. **Destination impact check** — For each proposed move, calculate the destination file's line count *after* the move. If any destination file would exceed the split threshold (>100 lines, 3+ h2 sections, each >20 lines), include the split as part of the same proposed changes. Do not move content into a file and leave it bloated for a second pass to discover. The optimization must be a single atomic operation: move content AND split the destination if needed.
 8. **List proposed changes** (what would move to reference.md, frontmatter fixes, etc.)

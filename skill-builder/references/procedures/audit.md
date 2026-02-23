@@ -56,6 +56,21 @@ For each skill found:
 2. Run **agents** in display mode → collect agent opportunities
 3. Run **hooks** in display mode → collect hooks inventory and opportunities
 
+### Step 4b: Agent panel — priority ranking
+
+After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
+
+Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`):
+
+- **Agent 1** (persona: Risk analyst — prioritizes by blast radius and failure probability) — Review all findings. Rank by: what breaks first if left unfixed? What affects the most users or invocations?
+- **Agent 2** (persona: Developer experience advocate — prioritizes by friction and daily pain) — Review all findings. Rank by: what slows people down the most? What causes the most confusion or repeated mistakes?
+- **Agent 3** (persona: Architectural debt specialist — prioritizes by compounding cost) — Review all findings. Rank by: what gets harder to fix over time? What blocks other improvements?
+
+Each agent reads the aggregated findings from optimize, agents, and hooks across all skills. They return independently ranked priority lists. Synthesize:
+- Items ranked top-3 by 2+ agents → highest priority
+- Items ranked top-3 by only 1 agent → medium priority
+- Present the synthesized ranking with attribution to each agent's rationale
+
 ### Step 5: Aggregate Report
 
 Combine all sub-command outputs into a single report:

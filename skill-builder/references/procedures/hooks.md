@@ -53,6 +53,22 @@ These MUST appear in the hooks report under a **"Needs Agent, Not Hook"** sectio
 
 **Scoping requirement:** Hooks that enforce writing/voice style rules must skip `.claude/` infrastructure files. Style hooks apply to project content output, not skill machinery. Use the scope check pattern from the grep-block template above.
 
+#### Step 3b: Agent panel — enforcement boundary decisions
+
+Some directives sit at the boundary between hook-enforceable and agent-required. "Never use informal language" — is that a grep pattern or a judgment call? "Always validate inputs" — is that a pre-flight check or a simple pattern match? Per directive: agents are mandatory when guessing is involved.
+
+For directives that aren't clearly in the "hook" or "agent" column, spawn 2 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`):
+
+- **Agent 1** (persona: Shell scripting pragmatist — writes hooks that catch 80% of violations with zero false positives) — Review the ambiguous directives. Which can be reliably enforced with grep/pattern matching? What specific patterns would the hook check? What's the false positive risk?
+- **Agent 2** (persona: AI evaluation specialist — designs agent-based validation for nuanced rules) — Review the same directives. Which require reasoning, context, or judgment that a shell script can't provide? What would the agent need to read and evaluate?
+
+Synthesize:
+- Directives both agree are hook-enforceable → hooks section
+- Directives both agree need agents → "Needs Agent, Not Hook" section
+- Disagreements → present in the report with both arguments; let the user decide
+
+Skip this panel when all directives are clearly one category or the other (e.g., "Never use account ID X" is obviously a grep-block hook).
+
 #### Step 4: Generate Report
 
 ```markdown
