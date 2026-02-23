@@ -60,6 +60,32 @@ For each skill found:
 2. Run **agents** in display mode → collect agent opportunities
 3. Run **hooks** in display mode → collect hooks inventory and opportunities
 
+### Step 4a: Ledger Status
+
+Check if `.claude/skills/awareness-ledger/SKILL.md` exists.
+
+**If the ledger exists:**
+1. Count records: `find .claude/skills/awareness-ledger/ledger -name "*.md" -not -name "index.md"` (excludes index)
+2. Check hook wiring: scan `.claude/settings.local.json` for `consult-before-edit.sh`
+3. Report:
+   ```
+   **Awareness Ledger:** Installed
+   - Records: [N] (INC: [n], DEC: [n], PAT: [n], FLW: [n])
+   - Hook wired: [yes/no]
+   - Last updated: [date of most recent record file, or "unknown"]
+   - Issues: [hook not wired / empty ledger / none]
+   ```
+
+**If the ledger does NOT exist:**
+1. Report:
+   ```
+   **Awareness Ledger:** Not installed
+   - Recommendation: Run `/skill-builder ledger` to create institutional memory.
+     Captures incidents, decisions, patterns, and flows so diagnostic findings
+     and architectural decisions persist across sessions.
+   ```
+2. This recommendation MUST appear in the report — do NOT skip silently. The audit is the orchestrator; even though optimize/agents/hooks correctly skip ledger analysis when no ledger exists, the audit is responsible for surfacing the gap.
+
 ### Step 4b: Agent panel — priority ranking
 
 After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
@@ -109,6 +135,9 @@ Combine all sub-command outputs into a single report:
 - **Research assistant present:** [per-team status or N/A]
 - **Issues:** [any team-related issues or "none"]
 
+## Awareness Ledger
+[from Step 4a — status, record counts, or installation recommendation]
+
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]
 
@@ -126,6 +155,7 @@ After presenting the report, ask:
 > 2. `agents --execute` for [skill(s)]
 > 3. `hooks --execute` for [skill(s)]
 > 4. All of the above for [skill]
-> 5. Skip — just review for now
+> 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
+> 6. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.

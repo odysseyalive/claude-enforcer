@@ -2,9 +2,9 @@
 
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
-[Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's command-line AI assistant for software development. When you run it in a project directory, it reads a `CLAUDE.md` file at the start of every conversation. Think of this file as a briefing room: your project's architecture, coding conventions, API keys to avoid, workflows to follow.
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's command-line AI assistant for software development. When you run it in a project directory, it reads a `CLAUDE.md` file at the start of every conversation. This file is where you write the rules: your project's architecture, coding conventions, API keys to avoid, workflows to follow. Everything Claude needs to know before it touches your code.
 
-The problem is that briefing rooms fade. As conversations grow longer, the instructions you loaded at the start get diluted by everything that comes after. Researchers call this ["lost in the middle"](https://arxiv.org/abs/2307.03172), and it means your carefully written rules stop being consulted reliably.
+The problem is that rules fade. As conversations grow longer, the instructions you loaded at the start get diluted by everything that comes after. Researchers call this ["lost in the middle"](https://arxiv.org/abs/2307.03172), and it means your carefully written rules stop being consulted reliably.
 
 This tool helps you build a context system that resists drift.
 
@@ -14,17 +14,17 @@ When you put everything in `CLAUDE.md`, two things happen:
 
 1. **Context bloat.** Every conversation loads every rule, even irrelevant ones. A 500-line file full of deployment procedures wastes context when you're just trying to fix a CSS bug.
 
-2. **Instruction drift.** Under long context, Claude "forgets" rules loaded at the start. Not literally, but it stops consulting them as reliably. The rules are still there. The model just drifts.
+2. **Instruction drift.** You write a rule that says "never commit without running tests." For the first twenty messages, Claude follows it. By message forty, it commits without running tests. The rule is still there in the context window. The model just stops reaching for it.
 
 ## The Solution
 
 Claude Code has three mechanisms that help, but most developers underuse them:
 
-**Skills** are reusable instruction files that load on-demand. Instead of a 500-line `CLAUDE.md` that fades, you have a lean briefing room (~100 lines) plus specialized skills you invoke when needed. Type `/deploy` when deploying, `/api` when working with your API, `/review` when reviewing code. The context stays relevant.
+**Skills** are reusable instruction files that load on-demand. Instead of a 500-line `CLAUDE.md` that fades, you have a lean set of essentials (~100 lines) plus specialized skills you invoke when needed. Type `/deploy` when deploying, `/api` when working with your API, `/review` when reviewing code. The context stays relevant.
 
 **Hooks** are shell scripts that run *before* Claude acts. A PreToolUse hook can block a forbidden action regardless of what Claude "remembers." It doesn't matter if the model forgot your rule about never using a certain account. The hook blocks it anyway.
 
-**Agents** are subprocesses that start with fresh context. When you need to validate something without the drift of the current conversation, you spawn an agent with `context: none`. It reads your reference files directly, uninfluenced by the long conversation above. Each agent gets a distinct persona — a specific expert lens — so that when multiple agents evaluate the same problem, they bring genuinely different perspectives rather than echoing each other.
+**Agents** are subprocesses that start with fresh context. When you need to validate something without the drift of the current conversation, you spawn an agent with `context: none`. It reads your reference files directly, uninfluenced by the long conversation above. Each agent gets a distinct persona, a specific expert lens, so that when multiple agents evaluate the same problem, they bring genuinely different perspectives rather than echoing each other.
 
 **Agent Teams** coordinate multiple Claude Code instances working in parallel. Where individual agents evaluate independently and report back, teammates share a task list, message each other, and divide labor across files. Think of the difference this way: individual agents are expert witnesses who testify separately; a team is a crew building different parts of the same house.
 
@@ -145,7 +145,7 @@ Here's the rule that makes this system work: **when a decision isn't overtly obv
 
 Skill-builder enforces this in its own procedures. When the optimize command is deciding whether a piece of content is a structural invariant or safely movable, it spawns three agents to evaluate independently. When the hooks command can't tell whether a directive needs a shell script or an AI evaluator, two agents argue the boundary. The audit's priority ranking works the same way, with agents bringing different risk frameworks to the same set of findings.
 
-If the tool that creates agents doesn't use agents for its own decisions, something is wrong. So it does. The argument is the product, not the answer that comes after.
+If the tool that creates agents doesn't use agents for its own decisions, something is wrong. So it does.
 
 ## When to Use Rules
 
