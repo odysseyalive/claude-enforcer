@@ -8,7 +8,7 @@ The problem is that rules fade. As conversations grow longer, the instructions y
 
 This tool helps you build a context system that resists drift.
 
-![Fading ink on aged parchment, sharp at the top, dissolving into nothing at the bottom](assets/images/fading-ink.png)
+![Instructions left at the start of a conversation, consumed by everything that follows](assets/images/breadcrumbs.png)
 
 ## The Problem
 
