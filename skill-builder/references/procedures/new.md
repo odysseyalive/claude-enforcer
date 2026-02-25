@@ -36,6 +36,28 @@ Using templates from `references/templates.md`:
 3. Create `reference.md` (minimal placeholder)
 4. If content-creation domain: add voice directive placeholder and note about Voice Validator agent
 
+### Step 3b: Embed Ledger Awareness
+
+Check if `.claude/skills/awareness-ledger/` exists. If it does:
+
+1. Add a **Grounding** section to the new skill's SKILL.md (or append to existing Grounding section):
+   ```markdown
+   ## Project Memory
+
+   Before recommending changes to files in this skill's domain, check
+   `.claude/skills/awareness-ledger/ledger/index.md` for relevant records.
+   If matching records exist, read them and incorporate their warnings,
+   decisions, and patterns into your plan. Use `/awareness-ledger consult`
+   for full agent-assisted analysis when high-risk overlap is detected.
+
+   After resolving issues that produce institutional knowledge (root causes,
+   architectural decisions, recurring patterns, user flows), ask the user
+   if they want to record it with `/awareness-ledger record [type]`.
+   ```
+2. This ensures every new skill starts with ledger integration built in, rather than relying on the post-action chain to recommend adding it after the fact.
+
+If the ledger does not exist, skip this step silently.
+
 ### Step 4: Report Creation
 
 ```
@@ -43,6 +65,7 @@ Created skill /[name]:
   .claude/skills/[name]/SKILL.md ([X] lines)
   .claude/skills/[name]/reference.md ([Y] lines)
   Domain: [standard / content-creation]
+  Ledger integration: [embedded / not installed]
 ```
 
 ### Step 5: Run Post-Action Chain

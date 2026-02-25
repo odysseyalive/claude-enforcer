@@ -35,7 +35,7 @@ Create the full awareness-ledger skill directory. In display mode, show the prop
 │   ├── skeptic.md
 │   └── premortem-analyst.md
 └── hooks/
-    └── consult-before-edit.sh
+    └── capture-reminder.sh
 ```
 
 **SKILL.md** (~150 lines, lean):
@@ -72,7 +72,7 @@ Use templates from `references/ledger-templates.md` for all record type formats,
 | `skeptic.md` | Epistemologist who treats every assumption as a hypothesis | `ledger/decisions/`, `ledger/patterns/` | Decisions & patterns, especially counter-evidence fields |
 | `premortem-analyst.md` | Risk specialist trained in Klein's premortem methodology | Full index scope | Imagines the change already failed, works backward |
 
-**hooks/consult-before-edit.sh** — PreToolUse hook on Edit/Write. Exits 0 always (awareness, not blocking). Triggers consultation by outputting a stderr reminder when edits target project source files (not `.claude/` infrastructure). The hook itself is lightweight; the consultation reasoning happens in agents.
+**hooks/capture-reminder.sh** — PreToolUse hook on Task/Bash. Exits 0 always (awareness, not blocking). Pattern-matches tool input against capture trigger patterns (incident, decision, pattern, flow language). Only outputs when a trigger matches — stays silent otherwise, eliminating reminder fatigue. See `references/ledger-templates.md` § "capture-reminder.sh" for the template.
 
 **ledger/index.md** — Initialized with header and empty sections for tag-based groupings, relationship map, status summary, and statistics. Updated automatically when records are added.
 

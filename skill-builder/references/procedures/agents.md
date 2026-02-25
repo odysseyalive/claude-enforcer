@@ -29,6 +29,7 @@ When running `/skill-builder agents [skill]`:
      - Add **Ledger Consultation** to the agent type evaluation table as an applicable type
      - Recommend integrating the three ledger agents (Regression Hunter, Skeptic, Premortem Analyst) into the skill's workflow — these run as individual agents with `context: none`, reading from `ledger/incidents/`, `ledger/decisions/`, `ledger/patterns/`, and `ledger/flows/`
      - Recommend adding a grounding link in the skill's SKILL.md: "Before proposing code changes, consult the Awareness Ledger — see `.claude/skills/awareness-ledger/`"
+     - Recommend the **proportional auto-activation model**: the skill should automatically read `ledger/index.md` before code changes and only spawn the full agent panel when matching records are found. The escalation workflow is: index scan (free) → read matching records (cheap) → spawn agents (expensive, only when high-risk overlap detected). Reference `references/ledger-templates.md` § "Auto-Activation Directives" for the template text to add to the skill's SKILL.md.
    - If the ledger is empty, note: "Awareness Ledger exists but has no records yet. Consultation integration will become relevant once records accumulate."
    - If the ledger does not exist, skip this step silently (no recommendation to install — that's `/skill-builder ledger`'s job)
 

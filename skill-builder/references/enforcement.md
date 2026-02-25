@@ -26,6 +26,25 @@ CLAUDE.md and skills load at conversation start. Under long context windows, Cla
 | Validation | Agent (`context: none`) | Yes | Important rules |
 | Hard block | Hook (PreToolUse) | Yes | Critical/never-violate |
 
+### Planning-Phase Activation
+
+Some concerns must shape the plan itself, not just police its execution. Institutional memory is the primary example: if the ledger is only consulted when code is being edited, the plan has already been presented and approved — too late for historical context to change the recommendation.
+
+**Consultation belongs in the planning phase.** The awareness ledger uses two layers that target thinking, not action:
+
+| Layer | Role | When It Activates |
+|-------|------|-------------------|
+| CLAUDE.md line | Baseline awareness in every conversation | During research, before any plan is formed |
+| Skill directive | Full agent-assisted analysis when warranted | When the awareness-ledger skill is loaded |
+
+The CLAUDE.md line survives context compression (it reloads at the start of every conversation). The skill directive provides the escalation workflow — index scan, record review, agent spawning — that turns awareness into analysis.
+
+**Why not a hook?** Hooks fire on tool use (Edit, Write, Bash). By the time a tool fires, the plan has already been presented. Consultation during planning is about shaping recommendations, not blocking actions. This is what directives are for — they influence reasoning, not execution.
+
+**Hooks still serve capture.** The `capture-reminder.sh` hook fires on Task/Bash when trigger patterns match, suggesting records to capture. Capture is a reactive concern (detecting knowledge as it emerges) and suits the hook model. Consultation is a proactive concern (enriching thinking before it produces output) and suits the directive model.
+
+**When to apply this pattern:** Cross-cutting concerns that must influence the planning phase. See `references/ledger-templates.md` § "CLAUDE.md Integration Line" and § "Auto-Activation Directives" for the two layers in practice.
+
 ### Skill-Builder Recommendations
 
 When optimizing or creating skills:

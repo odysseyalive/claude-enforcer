@@ -12,6 +12,7 @@ CLAUDE.md loads into EVERY conversation. Keep it lean — move domain-specific c
 | Path aliases | Import resolution |
 | Skills reference table | Discovery/navigation |
 | Universal rules | Apply to ALL tasks |
+| Project Memory (if ledger exists) | Ledger consultation + capture in every conversation |
 
 ### What Should Move to Skills
 
@@ -64,6 +65,14 @@ Scan for:
 
 Ensure extracted skills appear in the Skills Reference table.
 
+**Step 4b: Ensure Project Memory section**
+
+If `.claude/skills/awareness-ledger/` exists and has records:
+- Check if CLAUDE.md already has a Project Memory section (grep for "awareness ledger" or "ledger/index.md")
+- If missing, add the CLAUDE.md Integration Line from `references/ledger-templates.md` § "CLAUDE.md Integration Line"
+- If present, leave it untouched — it is a structural section that must not be extracted to a skill
+- This section must survive optimization. It provides baseline ledger awareness (both consultation and capture) in every conversation, regardless of which skills are loaded.
+
 **Step 5: Report savings**
 ```
 ## CLAUDE.md Optimization Report
@@ -98,6 +107,10 @@ After optimization, CLAUDE.md should be ~100-150 lines:
 
 ## Important Rules
 [Only rules that apply to EVERY task]
+
+## Project Memory
+[Awareness ledger integration — if ledger is installed with records.
+ See references/ledger-templates.md § "CLAUDE.md Integration Line" for template.]
 
 ## Self-Improvement Protocol
 [Meta-rules for learning]

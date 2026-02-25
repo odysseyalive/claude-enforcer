@@ -66,14 +66,16 @@ Check if `.claude/skills/awareness-ledger/SKILL.md` exists.
 
 **If the ledger exists:**
 1. Count records: `find .claude/skills/awareness-ledger/ledger -name "*.md" -not -name "index.md"` (excludes index)
-2. Check hook wiring: scan `.claude/settings.local.json` for `consult-before-edit.sh`
-3. Report:
+2. Check planning-phase integration: scan project CLAUDE.md for awareness ledger reference (grep for "awareness ledger" or "ledger/index.md")
+3. If `consult-before-edit.sh` exists in hooks/ or is wired in settings.local.json, flag as obsolete
+4. Report:
    ```
    **Awareness Ledger:** Installed
    - Records: [N] (INC: [n], DEC: [n], PAT: [n], FLW: [n])
-   - Hook wired: [yes/no]
+   - CLAUDE.md integration: [yes/no]
+   - Auto-activation directives: [present/missing]
    - Last updated: [date of most recent record file, or "unknown"]
-   - Issues: [hook not wired / empty ledger / none]
+   - Issues: [missing CLAUDE.md line / missing auto-activation / obsolete hook / empty ledger / none]
    ```
 
 4. **Scan for capture integration gaps** — For each skill (excluding skill-builder and awareness-ledger themselves), check whether it produces institutional knowledge but has no capture mechanism:

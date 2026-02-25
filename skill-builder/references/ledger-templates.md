@@ -391,38 +391,72 @@ context: none
 
 ## Hook Definition
 
-### consult-before-edit.sh
+### capture-reminder.sh
 
 ```bash
 #!/bin/bash
-# Awareness Ledger: consultation trigger
-# PreToolUse hook on Edit/Write
+# Awareness Ledger: trigger-pattern capture reminder
+# PreToolUse hook on Task and Bash
 # Exits 0 always (awareness, not blocking)
-# Outputs stderr reminder when edits target project source files
+# Pattern-matches tool input against capture trigger patterns
+# Only outputs when a trigger pattern matches — eliminates reminder fatigue
 
 TOOL_NAME="$1"
 
-# Only trigger on Edit and Write
-if [[ "$TOOL_NAME" != "Edit" && "$TOOL_NAME" != "Write" ]]; then
+# Only trigger on Task and Bash (debugging often reveals capturable knowledge)
+if [[ "$TOOL_NAME" != "Task" && "$TOOL_NAME" != "Bash" ]]; then
     exit 0
 fi
 
-# Read file_path from stdin (JSON)
-FILE_PATH=$(cat /dev/stdin | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//')
-
-# Skip .claude/ infrastructure files
-if [[ "$FILE_PATH" == *".claude/"* ]]; then
-    exit 0
-fi
-
-# Check if ledger has any records
+# Check if ledger exists
 LEDGER_DIR=".claude/skills/awareness-ledger/ledger"
-RECORD_COUNT=$(find "$LEDGER_DIR/incidents" "$LEDGER_DIR/decisions" "$LEDGER_DIR/patterns" "$LEDGER_DIR/flows" -name "*.md" 2>/dev/null | wc -l)
-
-if [[ "$RECORD_COUNT" -gt 0 ]]; then
-    echo "Awareness Ledger: $RECORD_COUNT records available. Consider /awareness-ledger consult before this change." >&2
+if [[ ! -d "$LEDGER_DIR" ]]; then
+    exit 0
 fi
 
+INPUT=$(cat)
+
+# Incident triggers
+if echo "$INPUT" | grep -qiE '(roll\s*back|revert|undo|broke|regression|root\s*cause|what\s*went\s*wrong|caused\s*by|the\s*fix\s*was|lesson\s*learned)'; then
+    echo "--- AWARENESS LEDGER ---" >&2
+    echo "Capture trigger detected: incident-related language" >&2
+    echo "Suggested record type: INC (Incident)" >&2
+    echo "After resolving this issue, consider recording with /awareness-ledger record" >&2
+    echo "--- END LEDGER ---" >&2
+    exit 0
+fi
+
+# Decision triggers
+if echo "$INPUT" | grep -qiE '(chose.*because|should\s*use.*instead|trade-?off|downside\s*of\s*this|going\s*forward|from\s*now\s*on|the\s*pattern\s*should)'; then
+    echo "--- AWARENESS LEDGER ---" >&2
+    echo "Capture trigger detected: decision/trade-off language" >&2
+    echo "Suggested record type: DEC (Decision)" >&2
+    echo "After completing this task, consider recording with /awareness-ledger record" >&2
+    echo "--- END LEDGER ---" >&2
+    exit 0
+fi
+
+# Pattern triggers
+if echo "$INPUT" | grep -qiE '(keeps\s*happening|every\s*time\s*we|i.ve\s*noticed|turns\s*out|the\s*trick\s*is|what\s*works\s*is|except\s*when|doesn.t\s*apply)'; then
+    echo "--- AWARENESS LEDGER ---" >&2
+    echo "Capture trigger detected: recurring pattern language" >&2
+    echo "Suggested record type: PAT (Pattern)" >&2
+    echo "After completing this task, consider recording with /awareness-ledger record" >&2
+    echo "--- END LEDGER ---" >&2
+    exit 0
+fi
+
+# Flow triggers
+if echo "$INPUT" | grep -qiE '(first\s*it\s*does.*then|when\s*the\s*user\s*does|the\s*flow\s*is|only\s*happens\s*when|requires.*to\s*be\s*running)'; then
+    echo "--- AWARENESS LEDGER ---" >&2
+    echo "Capture trigger detected: flow/process description" >&2
+    echo "Suggested record type: FLW (Flow)" >&2
+    echo "After completing this task, consider recording with /awareness-ledger record" >&2
+    echo "--- END LEDGER ---" >&2
+    exit 0
+fi
+
+# No trigger matched — stay silent
 exit 0
 ```
 
@@ -433,49 +467,7 @@ exit 0
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
-        "command": ".claude/skills/awareness-ledger/hooks/consult-before-edit.sh $TOOL_NAME"
-      }
-    ]
-  }
-}
-```
-
-### capture-reminder.sh
-
-```bash
-#!/bin/bash
-# Awareness Ledger: post-action capture reminder
-# PostToolUse hook on Task (fires after agent/skill completion)
-# Exits 0 always (awareness, not blocking)
-# Outputs stderr reminder when skill output may contain capturable knowledge
-
-TOOL_NAME="$1"
-
-# Only trigger on Task (skill/agent completion)
-if [[ "$TOOL_NAME" != "Task" ]]; then
-    exit 0
-fi
-
-# Check if ledger exists
-LEDGER_DIR=".claude/skills/awareness-ledger/ledger"
-if [[ ! -d "$LEDGER_DIR" ]]; then
-    exit 0
-fi
-
-echo "Awareness Ledger: Skill completed. If findings, decisions, or patterns emerged, consider recording with /awareness-ledger record." >&2
-
-exit 0
-```
-
-**Wiring (settings.local.json):**
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Task",
+        "matcher": "Task|Bash",
         "command": ".claude/skills/awareness-ledger/hooks/capture-reminder.sh $TOOL_NAME"
       }
     ]
@@ -484,6 +476,99 @@ exit 0
 ```
 
 <!-- Consumed by: hooks.md Step 3a-ii (post-action capture hook template) -->
+
+---
+
+## Auto-Activation Directives
+
+Template text for the awareness-ledger SKILL.md in target projects. These directives define automatic consultation and capture workflows that complement the hook layer.
+
+### READ Auto-Activation Directive
+
+Add to the awareness-ledger SKILL.md under its directives section:
+
+```markdown
+### Auto-Consultation (READ)
+
+During research and planning — before formulating any plan, recommendation, or
+code change proposal — automatically consult the ledger:
+
+1. **Index scan** — Read `ledger/index.md` and match tags against the files,
+   directories, and components under discussion. This is free — the index is
+   small. Do this as part of your initial research, alongside reading source
+   files.
+2. **Record review** — If matching records exist, read the full record files.
+   Incorporate warnings, known failure modes, and relevant decisions into your
+   thinking before presenting any plan to the user. This is cheap — records
+   are short.
+3. **Agent escalation** — If high-risk overlap is detected (matching INC records
+   with active status, or multiple record types matching the same change area),
+   spawn consultation agents proportionally per the agent table in
+   `ledger-templates.md` § "Proportional overhead rules." Present agent
+   findings as part of your recommendation. This is expensive — only when
+   warranted.
+
+The consultation must happen during planning, not at edit time. By the time
+code is being written, the plan has already been presented and approved. The
+ledger's value is in shaping the plan itself — surfacing past failures,
+challenging assumptions, and providing historical context that changes what
+you recommend.
+
+Skip auto-consultation for:
+- Changes to `.claude/` infrastructure files
+- Trivial edits (typos, formatting, comments)
+- Areas with no tag overlap in the index
+```
+
+### WRITE Auto-Activation Directive
+
+Add to the awareness-ledger SKILL.md under its directives section:
+
+```markdown
+### Auto-Capture Suggestion (WRITE)
+
+When the current conversation produces institutional knowledge, suggest recording it **after** resolving the immediate issue. Never interrupt active problem-solving to suggest capture.
+
+Automatically suggest capture when you encounter:
+- **Bug investigation** with timeline, root cause analysis, or contributing factors → INC record
+- **Architectural decisions** with trade-offs discussed and option chosen → DEC record
+- **Recurring patterns** observed across multiple instances or confirmed by evidence → PAT record
+- **User/system flows** traced step-by-step with code paths identified → FLW record
+
+Capture suggestions are always user-confirmed. Present the suggestion with:
+- Suggested record type and ID
+- Key content to capture (quoted from conversation)
+- One-line confirmation prompt: "Record this in the awareness ledger? (confirm/skip)"
+```
+
+<!-- Consumed by: optimize.md Step 4c (auto-activation directive check), agents.md Step 4b (proportional auto-activation model) -->
+
+---
+
+## CLAUDE.md Integration Line
+
+Template for CLAUDE.md when the awareness ledger is installed with records. The optimize procedure recommends adding this when the ledger has matching records and CLAUDE.md doesn't already reference it.
+
+```markdown
+## Project Memory
+This project uses an awareness ledger for institutional memory.
+
+**Before recommending changes:** During research and planning, check
+`.claude/skills/awareness-ledger/ledger/index.md` for relevant records. If
+matching records exist, read them and factor their warnings, decisions, and
+patterns into your recommendation. Use `/awareness-ledger consult` for full
+agent-assisted analysis when high-risk overlap is detected.
+
+**After resolving issues:** When you encounter bug investigations with root
+causes, architectural decisions with trade-offs, or recurring patterns, ask
+the user if they want to record the knowledge in the awareness ledger. Use
+`/awareness-ledger record [type]` to capture it. Always finish the immediate
+work first — suggest capture after, not during.
+```
+
+This provides baseline awareness for both directions in every conversation, even before skills load. It is the weakest layer (subject to drift) but the broadest (always in context). The READ instruction targets the planning phase — shaping recommendations before they're presented. The WRITE instruction targets the post-resolution moment — capturing knowledge while it's fresh.
+
+<!-- Consumed by: optimize.md Step 4c (CLAUDE.md integration line recommendation) -->
 
 ---
 *Created by skill-builder ledger command. Templates modeled on Google SRE postmortems, MADR/ADR, NASA LLIS, and Klein's premortem methodology.*

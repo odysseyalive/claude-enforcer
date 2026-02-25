@@ -257,7 +257,7 @@ Each record follows a structured template modeled on Google's blameless postmort
 
 ### How it works
 
-The ledger sits quiet until it's needed. Before code changes are presented, the system checks whether anything in the ledger is relevant. If nothing matches, there's zero overhead. If matches are found, three isolated agents evaluate the situation from different angles:
+The ledger sits quiet until it's needed. During research and planning — before any recommendation is presented — the system checks whether anything in the ledger is relevant to the area under discussion. If nothing matches, there's zero overhead. If matches are found, three isolated agents evaluate the situation from different angles:
 
 **The Regression Hunter** searches past incidents and flows for overlap with the current change. Have we been here before? What broke last time?
 
@@ -275,7 +275,7 @@ Three channels feed the ledger:
 
 1. **You record directly.** `/awareness-ledger record incident` walks you through the template.
 2. **Agents suggest capture.** During consultation, if the conversation contains knowledge that isn't in the ledger yet, the agents recommend recording it. You confirm before anything is written. Your words, not the system's interpretation.
-3. **Hooks observe changes.** When code is being edited, the system ensures consultation happens. Not blocking — awareness.
+3. **Hooks detect patterns.** When tool input contains incident language ("root cause," "regression"), decision language ("trade-off," "chose X because"), or pattern language ("turns out," "every time we"), a hook surfaces a capture suggestion with the appropriate record type. The hook only fires when trigger patterns match — no blanket reminders.
 
 ### Creating a ledger
 

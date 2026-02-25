@@ -55,7 +55,7 @@ When invoked with `/skill-builder update`:
    bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
    ```
 2. Report the result to the user
-3. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill definition loaded. Starting a new conversation ensures all changes take effect.
+3. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill loaded in memory, so start a new conversation. Once you're back, run `/skill-builder audit` — updates often add new recommendations that apply to your existing skills.
 
 ---
 
