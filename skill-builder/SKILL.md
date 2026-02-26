@@ -24,6 +24,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 | `/skill-builder verify` | Health check: validate all skills, hooks, and wiring (headless-compatible) |
 | `/skill-builder inline [skill] [directive]` | Quick-add a directive to a skill, then review for optimization/enforcement |
 | `/skill-builder ledger` | Awareness Ledger: create institutional memory for a project |
+| `/skill-builder self-heal` | Install the Self-Heal companion skill |
 | `/skill-builder dev [command]` | Run any command with skill-builder itself included |
 
 ---
@@ -102,6 +103,8 @@ Scans all skills, validates frontmatter, line counts, hook wiring, and agent ref
 - `/skill-builder dev optimize skill-builder` → allowed
 
 **Detection:** If the first argument after the command is `dev`, strip it and proceed with self-inclusion enabled. Otherwise, skip any skill whose name is `skill-builder` when iterating skills, and refuse if `skill-builder` is explicitly named as a target.
+
+**Self-heal exception:** `/skill-builder self-heal` installs self-heal and is not subject to exclusion — this is installation, not analysis. However, self-heal integration embedded in other skills IS subject to self-exclusion — skill-builder does not embed self-heal awareness into itself.
 
 **Post-dev check:** After any `dev` command that modifies skill-builder files, verify that the `install` script still covers all files. Glob `skill-builder/**/*.md`, compare against the files downloaded in the installer's loop, and flag any new/renamed/removed files that the installer doesn't handle. This prevents drift between the repo and what users receive on install.
 
@@ -316,6 +319,20 @@ Use `--execute` to create files. Default is display mode (shows what would be cr
 
 ---
 
+## Self-Heal Command
+
+**Install the Self-Heal companion skill — ambient friction detection and surgical skill correction.**
+
+When invoked with `/skill-builder self-heal`:
+
+Installs a companion skill that embeds friction-detection awareness into all skills. During live sessions, each skill quietly watches for signals that its own instructions caused a misrepresentation or unnecessary friction. At natural task resolution, if a fixable source is found in the skill's instructions, self-heal proposes a surgical update — showing an exact before/after diff — and asks for approval before changing anything.
+
+Use `--execute` to create files. Default is display mode.
+
+**Grounding:** Read [references/procedures/self-heal.md](references/procedures/self-heal.md) before executing.
+
+---
+
 ## CLAUDE.md Optimization
 
 CLAUDE.md loads into EVERY conversation. Keep it lean. Move domain-specific content to skills.
@@ -346,4 +363,6 @@ Reference files:
 - [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion
 - [references/patterns.md](references/patterns.md) — Lessons learned
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
+- [references/procedures/self-heal.md](references/procedures/self-heal.md) — Self-Heal companion skill installation procedure
+- [references/self-heal-templates.md](references/self-heal-templates.md) — Friction detection instructions, diff format, update protocol templates
 - [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, etc.)

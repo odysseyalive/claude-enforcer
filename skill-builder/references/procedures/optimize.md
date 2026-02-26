@@ -191,5 +191,12 @@ When running `/skill-builder optimize [skill] --execute`:
    e. Delete original `reference.md` only after verification passes
    f. Generate enforcement recommendations per split file (hook, agent, or none based on priority from step 4)
 5. Report before/after line counts
+6. **Post-optimize: Self-Heal Observer check**
+   - Check if self-heal is installed (`.claude/skills/self-heal/SKILL.md` exists)
+   - Check if the optimized skill already has the Observer Instruction Block (grep for "Self-Heal Observer")
+   - If self-heal installed AND observer missing → embed the Observer Instruction Block (from `references/self-heal-templates.md` § "Observer Instruction Block") as the last section
+   - If self-heal installed AND observer present → verify it's still the last section; if optimization moved it, move it back
+   - If self-heal not installed → skip silently
+   - **Compound infrastructure check:** When embedding, verify combined infrastructure (observer + runtime eval protocol, if present) does not exceed 50 lines. If it does, flag to user. Also check the target skill's `self-heal-history.md` — if recent patches modified instructions that the eval rubric covers, flag: "Self-heal patched this skill recently. Eval rubric calibration may need review."
 
 **Grounding:** `references/optimization-examples.md`, `references/templates.md`

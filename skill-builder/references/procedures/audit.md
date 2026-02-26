@@ -101,7 +101,47 @@ Check if `.claude/skills/awareness-ledger/SKILL.md` exists.
    ```
 2. This recommendation MUST appear in the report — do NOT skip silently. The audit is the orchestrator; even though optimize/agents/hooks correctly skip ledger analysis when no ledger exists, the audit is responsible for surfacing the gap.
 
-### Step 4b: Agent panel — priority ranking
+### Step 4b: Self-Heal Status
+
+Check if `.claude/skills/self-heal/SKILL.md` exists.
+
+**If self-heal is installed:**
+1. Scan all skills for the Observer Instruction Block (grep for "Self-Heal Observer")
+2. Report:
+   ```
+   **Self-Heal:** Installed
+   - Skills with observer embedded: [N]/[total]
+   - Skills missing observer: [list, or "none"]
+   - Issues: [missing observers / none]
+   ```
+3. If any skills are missing the observer, add to execution choices:
+   > `self-heal embed` — embed observer into skills missing it
+
+   **When `self-heal embed` is selected for execution:**
+   For each skill missing the observer:
+   a. Read the skill's SKILL.md
+   b. Verify line count will stay under 150 after embedding (~15 lines). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
+   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (observer + eval protocol) does not exceed 50 lines. If it does, flag and skip.
+   d. Append the Observer Instruction Block (from `references/self-heal-templates.md` § "Observer Instruction Block") as the last section of SKILL.md
+   e. Report: `Embedded self-heal observer into /[skill-name]`
+
+   After all skills are processed, report summary:
+   ```
+   Self-heal observer embedded: [N] skills
+   Skipped (line budget): [list, or "none"]
+   ```
+
+**If self-heal is NOT installed:**
+1. Report:
+   ```
+   **Self-Heal:** Not installed
+   - Recommendation: Run `/skill-builder self-heal` to install ambient friction
+     detection. Skills will learn from session friction and propose surgical
+     corrections automatically.
+   ```
+2. This recommendation MUST appear — do not skip silently. The audit is the orchestrator.
+
+### Step 4c: Agent panel — priority ranking
 
 After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
 
@@ -153,6 +193,9 @@ Combine all sub-command outputs into a single report:
 ## Awareness Ledger
 [from Step 4a — status, record counts, capture gaps, or installation recommendation]
 
+## Self-Heal
+[from Step 4b — status, observer coverage, or installation recommendation]
+
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]
 
@@ -171,6 +214,7 @@ After presenting the report, ask:
 > 3. `hooks --execute` for [skill(s)]
 > 4. All of the above for [skill]
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
-> 6. Skip — just review for now
+> 6. `self-heal --execute` — install Self-Heal companion skill *(only if self-heal does not exist)*
+> 7. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.

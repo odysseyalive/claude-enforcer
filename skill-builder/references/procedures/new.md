@@ -58,6 +58,19 @@ Check if `.claude/skills/awareness-ledger/` exists. If it does:
 
 If the ledger does not exist, skip this step silently.
 
+### Step 3d: Embed Self-Heal Observer
+
+Check if `.claude/skills/self-heal/SKILL.md` exists. If it does:
+
+1. Append the Observer Instruction Block (from `references/self-heal-templates.md` § "Observer Instruction Block") to the new skill's SKILL.md
+2. Verify total line count stays under 150. If over, flag: "Skill is [N] lines with observer embedded. Consider optimizing before adding more content."
+3. **Compound infrastructure check:** If the skill also has a runtime eval protocol section, verify combined infrastructure (observer + eval protocol) does not exceed 50 lines. If it does, flag to the user and recommend optimizing the skill first.
+4. Add to creation report: `Self-heal observer: embedded`
+
+If self-heal is not installed:
+1. Skip silently — do not recommend installation here
+2. The audit orchestrator is responsible for surfacing the gap
+
 ### Step 4: Report Creation
 
 ```
@@ -66,6 +79,7 @@ Created skill /[name]:
   .claude/skills/[name]/reference.md ([Y] lines)
   Domain: [standard / content-creation]
   Ledger integration: [embedded / not installed]
+  Self-heal observer: [embedded / not installed]
 ```
 
 ### Step 5: Run Post-Action Chain

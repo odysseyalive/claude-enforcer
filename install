@@ -44,10 +44,10 @@ mkdir -p "$SKILL_DIR/references/procedures"
 # Download SKILL.md and reference files
 echo "Downloading skill-builder..."
 curl -fsSL "$REPO_URL/skill-builder/SKILL.md" -o "$SKILL_DIR/SKILL.md"
-for ref in agents agents-personas agents-teams enforcement ledger-templates optimization-examples patterns portability templates; do
+for ref in agents agents-personas agents-teams enforcement ledger-templates optimization-examples patterns portability self-heal-templates templates; do
     curl -fsSL "$REPO_URL/skill-builder/references/${ref}.md" -o "$SKILL_DIR/references/${ref}.md"
 done
-for proc in audit verify quick-audit skills list optimize agents hooks new directives inline post-action-chain claude-md ledger; do
+for proc in audit verify quick-audit skills list optimize agents hooks new directives inline post-action-chain claude-md ledger self-heal; do
     curl -fsSL "$REPO_URL/skill-builder/references/procedures/${proc}.md" -o "$SKILL_DIR/references/procedures/${proc}.md"
 done
 

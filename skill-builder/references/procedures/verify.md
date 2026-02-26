@@ -20,6 +20,7 @@ For each skill found:
 | `allowed-tools` present | Check frontmatter field exists | Present |
 | Line count | Count lines in SKILL.md (exclude reference files) | < 150 |
 | Modes table | If skill has 2+ modes, check for Modes table | Present if needed |
+| Self-heal observer | Grep SKILL.md for "Self-Heal Observer" | Present (WARN if absent and self-heal installed) |
 
 ### Step 3: Hook Validation
 
@@ -83,4 +84,5 @@ Overall: [PASS / PASS with warnings / FAIL]
 ```
 
 **If any FAIL:** List each failure with the skill name and specific issue.
+**If WARN (self-heal observer missing):** Note: "Run `/skill-builder self-heal` or `optimize --execute` to embed missing observers."
 **If all PASS:** Report clean health.
