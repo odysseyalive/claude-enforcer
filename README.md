@@ -38,19 +38,24 @@ Claude Code **v2.1.32 or later**. Skills became user-invocable in v2.1.3 (Januar
 
 ## Install
 
-**1.** Initialize Claude Code (if you haven't already):
+**Option A — npx (recommended)**
 
 ```bash
-claude /init
+npx skills add odysseyalive/claude-enforcer
 ```
 
-**2.** Install/Update skill-builder:
+This works across Claude Code, Cursor, Codex, and [37 other agents](https://skills.sh/docs).
+
+**Option B — curl**
+
+Includes extra setup (agent teams, auto-approved research tools):
 
 ```bash
+claude /init   # if you haven't already
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 ```
 
-**3.** Open Claude Code and run your first audit:
+**Then run your first audit:**
 
 ```
 /skill-builder audit

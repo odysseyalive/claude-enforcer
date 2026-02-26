@@ -1,0 +1,13 @@
+{
+  "name": "skill-builder",
+  "description": "Create, audit, optimize Claude Code skills. Converts bloated CLAUDE.md files into lean briefing documents plus on-demand skills, enforcement hooks, and validation agents.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Francis Meetze",
+    "url": "https://odysseyalive.com"
+  },
+  "homepage": "https://github.com/odysseyalive/claude-enforcer",
+  "repository": "https://github.com/odysseyalive/claude-enforcer",
+  "license": "MIT",
+  "keywords": ["skills", "hooks", "agents", "optimization", "context-drift", "enforcement"]
+}

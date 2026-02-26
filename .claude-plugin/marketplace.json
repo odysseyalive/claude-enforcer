@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-enforcer",
+  "description": "Meta-tool for optimizing Claude Code instruction systems. Solves context drift where instructions degrade over long conversations.",
+  "owner": {
+    "name": "Francis Meetze",
+    "email": "francis@odysseyalive.com"
+  },
+  "plugins": [
+    {
+      "name": "skill-builder",
+      "description": "Create, audit, optimize Claude Code skills. Converts bloated CLAUDE.md files into lean briefing documents plus on-demand skills, enforcement hooks, and validation agents.",
+      "source": "./skill-builder",
+      "category": "development",
+      "homepage": "https://github.com/odysseyalive/claude-enforcer",
+      "keywords": ["skills", "hooks", "agents", "optimization", "context-drift", "enforcement"]
+    }
+  ]
+}
