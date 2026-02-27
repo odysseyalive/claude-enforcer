@@ -1,6 +1,0 @@
-{
-  "name": "claude-enforcer",
-  "version": "1.0.0",
-  "description": "Meta-tool for optimizing Claude Code instruction systems",
-  "private": true
-}
