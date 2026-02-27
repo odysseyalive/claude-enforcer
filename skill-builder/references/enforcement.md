@@ -194,7 +194,7 @@ Delegate to a specialized agent with limited tools:
 ```yaml
 ---
 name: read-only-analyst
-allowed-tools: Read, Grep, Glob, WebSearch
+allowed-tools: Read, Grep, Glob
 context: fork
 ---
 ```

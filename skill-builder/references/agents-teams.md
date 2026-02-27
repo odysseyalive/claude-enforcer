@@ -70,7 +70,7 @@ Agent teams use Claude Code's experimental team mode (`CLAUDE_CODE_EXPERIMENTAL_
 **Architecture:**
 ```
 Lead (coordinator)
-  ├── Research Assistant (mandatory — web search + page fetch) ←→ messages ←→ all
+  ├── Research Assistant (mandatory — read-only reference gathering) ←→ messages ←→ all
   ├── Teammate A (persona: frontend architect) ←→ messages ←→ Teammate B
   ├── Teammate B (persona: API designer) ←→ messages ←→ Teammate C
   └── Teammate C (persona: test engineer) ←→ messages ←→ Teammate A
@@ -83,7 +83,7 @@ Shared task list + inter-agent messaging → coordinated output
 Every agent team MUST include a research assistant teammate. This is a structural requirement, not optional.
 
 - **Persona:** Research specialist who gathers and synthesizes online information
-- **Tools:** WebSearch, WebFetch, and Jina MCP tools (read_url, search_web) when configured
+- **Tools:** The user's configured search and reference tools (see Permissions section below for the specific tool list)
 - **Role:** Accepts research requests from other teammates via SendMessage, returns findings. May also proactively research when their own tasks require it.
 - **How teammates use it:** Other teammates reference the research assistant by name in messages when they need online information (e.g., "Research Assistant, find the latest API docs for X")
 - **Not counted against panel recommendations:** The research assistant is automatically included — it does not consume a slot in the agent panel's recommendations since it's mandatory infrastructure.
@@ -93,18 +93,14 @@ Every agent team MUST include a research assistant teammate. This is a structura
 The research assistant's web tools must be auto-approved in `.claude/settings.local.json` or every research request will prompt the user for confirmation, defeating the purpose. This uses a belt-and-suspenders approach:
 
 **Belt — `permissions.allow` (set by the install script):**
-- `WebSearch`
-- `WebFetch`
-- `mcp__jina__read_url`
-- `mcp__jina__search_web`
-- `mcp__jina__parallel_read_url`
-- `mcp__jina__parallel_search_web`
+
+The install script auto-approves the user's configured search and reference tools in `.claude/settings.local.json`. See the install script for the current list.
 
 **Suspenders — `hooks.PreToolUse` (generated per-system by `/skill-builder hooks`):**
 A PreToolUse hook matching the tools above that exits 0 to auto-approve. This hook is not bundled — it is generated on the target system by running `/skill-builder hooks --execute`, which creates the hook script and wires it into `settings.local.json` based on the system's actual tool configuration.
 
 **If research requests are still prompting:**
-1. Check `.claude/settings.local.json` — verify `permissions.allow` includes the tools above
+1. Check `.claude/settings.local.json` — verify `permissions.allow` includes the research tools
 2. Run `/skill-builder hooks --execute` to generate and wire the PreToolUse hook
 3. If hooks already exist, check `hooks.PreToolUse` for a matcher entry covering the research tools
 
@@ -118,7 +114,7 @@ Agent teams are created through natural language — you tell Claude to form a t
 Tell the lead to create a team with specific personas and task assignments:
 
 "Create an agent team to [describe the work]. Spawn teammates:
-- A research assistant to gather online information using WebSearch, WebFetch, and Jina tools. Other teammates may send research requests to this teammate.
+- A research assistant to gather reference information using the project's configured search tools. Other teammates may send research requests to this teammate.
 - [Persona A — e.g., 'a frontend architect'] to own [files/modules A]
 - [Persona B — e.g., 'an API designer'] to own [files/modules B]
 - [Persona C — e.g., 'a test engineer'] to own [files/modules C]

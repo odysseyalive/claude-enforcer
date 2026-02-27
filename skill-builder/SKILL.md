@@ -51,12 +51,8 @@ allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, 
 
 When invoked with `/skill-builder update`:
 
-1. Update via the skills package manager:
-   ```bash
-   npx skills add https://github.com/odysseyalive/claude-enforcer --skill skill-builder
-   ```
-2. Report the result to the user
-3. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill loaded in memory, so start a new conversation. Once you're back, run `/skill-builder audit` — updates often add new recommendations that apply to your existing skills.
+1. Tell the user to run the install command shown on the skill's page at skills.sh to update to the latest version
+2. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill loaded in memory, so start a new conversation. Once you're back, run `/skill-builder audit` — updates often add new recommendations that apply to your existing skills.
 
 ---
 
