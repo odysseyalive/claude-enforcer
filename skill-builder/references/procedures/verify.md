@@ -84,5 +84,5 @@ Overall: [PASS / PASS with warnings / FAIL]
 ```
 
 **If any FAIL:** List each failure with the skill name and specific issue.
-**If WARN (self-heal observer missing):** Note: "Run `/skill-builder self-heal` or `optimize --execute` to embed missing observers."
+**If WARN (self-heal observer missing):** Note: "WARN: Self-heal observer missing."
 **If all PASS:** Report clean health.

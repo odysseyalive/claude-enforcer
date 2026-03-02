@@ -95,9 +95,9 @@ Check if `.claude/skills/awareness-ledger/SKILL.md` exists.
 1. Report:
    ```
    **Awareness Ledger:** Not installed
-   - Recommendation: Run `/skill-builder ledger` to create institutional memory.
-     Captures incidents, decisions, patterns, and flows so diagnostic findings
+   - Captures incidents, decisions, patterns, and flows so diagnostic findings
      and architectural decisions persist across sessions.
+   - Available in the execution menu below.
    ```
 2. This recommendation MUST appear in the report — do NOT skip silently. The audit is the orchestrator; even though optimize/agents/hooks correctly skip ledger analysis when no ledger exists, the audit is responsible for surfacing the gap.
 
@@ -135,9 +135,9 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 1. Report:
    ```
    **Self-Heal:** Not installed
-   - Recommendation: Run `/skill-builder self-heal` to install ambient friction
-     detection. Skills will learn from session friction and propose surgical
-     corrections automatically.
+   - Ambient friction detection. Skills learn from session friction and propose
+     surgical corrections automatically.
+   - Available in the execution menu below.
    ```
 2. This recommendation MUST appear — do not skip silently. The audit is the orchestrator.
 
@@ -207,8 +207,9 @@ Combine all sub-command outputs into a single report:
 
 ### Step 6: Offer Execution
 
-After presenting the report, ask:
-> "Which sub-commands should I execute?"
+After presenting the report, use **AskUserQuestion** (not plain text) to present execution choices:
+
+> "Which actions should I execute?"
 > 1. `optimize --execute` for [skill(s)]
 > 2. `agents --execute` for [skill(s)]
 > 3. `hooks --execute` for [skill(s)]
@@ -218,3 +219,5 @@ After presenting the report, ask:
 > 7. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
+
+**Follow § Output Discipline** (in SKILL.md) for cascade execution and cross-skill separation.

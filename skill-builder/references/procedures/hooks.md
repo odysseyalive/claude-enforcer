@@ -129,7 +129,7 @@ Skip this panel when all directives are clearly one category or the other (e.g.,
 | /skill-name | "Never produce overbuilt prose" | Voice Validator | Requires judgment, not pattern matching |
 | /skill-name | "Match vendor to category" | Matcher | Requires reasoning about best fit |
 
-*Run `/skill-builder agents [skill]` to create these.*
+*Needs agent, not hook — flagged for the agents sub-command.*
 
 ## Recommended Actions
 1. [Wire orphaned script X]

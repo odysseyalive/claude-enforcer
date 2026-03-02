@@ -129,6 +129,19 @@ Scans all skills, validates frontmatter, line counts, hook wiring, and agent ref
 
 ---
 
+## § Output Discipline — Cascade, Don't Scatter
+
+**Applies to ALL procedures universally. This is a behavioral constraint on how skill-builder presents its output.**
+
+### Rules
+
+1. **Own-skill actions** (optimize, agents, hooks, ledger for skills managed by skill-builder): Always cascade into the current execution flow via AskUserQuestion + TaskCreate. Never present as standalone slash commands for manual invocation.
+2. **Cross-skill actions** (commands belonging to other skills like `/awareness-ledger`, `/self-heal`): Present in a clearly separated "Related Suggestions" footer, labeled as informational. Never mix into execution menus.
+3. **Informational recommendations** in conditional notes (e.g., "Run X to fix this"): Reframe as what the *current procedure* will do, or defer to the execution menu. Example: instead of "Run `/skill-builder optimize` to add eval protocol", say "Missing runtime eval protocol — flagged for optimization."
+4. **Anti-pattern**: Never end any procedure output with a list of slash commands the user must copy-paste and run manually. If an action is worth recommending, it's worth cascading.
+
+---
+
 ## Audit Command
 
 **When invoked without arguments or with `audit`, run the full audit as an orchestrator.**

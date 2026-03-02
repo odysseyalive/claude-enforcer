@@ -9,7 +9,7 @@ Called by: New Command Procedure (Step 5), Adding Directives Procedure (Step 4),
 If the invoking command included `--no-chain`, skip this entire procedure. Report:
 
 ```
-Skipping post-action review (--no-chain). Run `/skill-builder optimize [skill]` manually to review.
+Skipping post-action review (--no-chain). Optimization opportunities may exist.
 ```
 
 ### Step 1: Run Sub-Commands in Display Mode
@@ -34,11 +34,13 @@ If any capture opportunity is detected, add to the scoped report (Step 2):
 The modification to /[skill] contains knowledge that may be worth recording:
 - **Suggested type:** [DEC/PAT]
 - **Source:** [quoted directive or skill description]
-- **Action:** Run `/awareness-ledger record` to capture, or skip.
 ```
 
-And add to the execution choices (Step 3):
-> 6. `/awareness-ledger record` — capture this modification as a ledger entry
+And add to a **Related Suggestions** footer in the report (per § Output Discipline — this is a cross-skill action):
+```markdown
+### Related Suggestions (other skills)
+- `/awareness-ledger record` — capture this modification as a ledger entry
+```
 
 If the ledger does not exist, skip this step silently.
 
@@ -72,7 +74,7 @@ Post-action review: No optimization, agent, or hook opportunities found for /[sk
 
 ### Step 3: Offer Execution Choices
 
-If any opportunities were found, ask:
+If any opportunities were found, use **AskUserQuestion** to present execution choices:
 
 > "Which actions should I execute?"
 > 1. `optimize --execute` for /[skill]
@@ -82,3 +84,5 @@ If any opportunities were found, ask:
 > 5. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
+
+**Follow § Output Discipline** (in SKILL.md) for cascade execution and cross-skill separation.

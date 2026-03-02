@@ -101,7 +101,7 @@ A PreToolUse hook matching the tools above that exits 0 to auto-approve. This ho
 
 **If research requests are still prompting:**
 1. Check `.claude/settings.local.json` — verify `permissions.allow` includes the research tools
-2. Run `/skill-builder hooks --execute` to generate and wire the PreToolUse hook
+2. The hooks sub-command will generate and wire the PreToolUse hook when executed
 3. If hooks already exist, check `hooks.PreToolUse` for a matcher entry covering the research tools
 
 **How to invoke agent teams:**
