@@ -52,6 +52,9 @@ Includes extra setup (agent teams, auto-approved research tools):
 
 ```bash
 claude /init   # if you haven't already
+```
+
+```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 ```
 
