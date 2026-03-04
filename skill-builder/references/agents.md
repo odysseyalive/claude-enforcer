@@ -22,8 +22,8 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 | "Evaluate for..." | **Evaluation Agent** | Check output quality, validate formatting |
 | "Match X to Y" | **Matcher Agent** | Match payee to category |
 | "If unclear, ask" | **Triage Agent** | Determine if user input is needed |
-| "Never produce overbuilt/AI prose" | **Voice Validator Agent** | Validate draft against voice directives |
-| "Conversational tone" / "No promotional language" | **Voice Validator Agent** | Catch style violations before user sees them |
+| "Never produce overbuilt/AI prose" | **Text Evaluation Pair** | The Reducer checks bloat; The Clarifier checks clarity and consistency |
+| "Conversational tone" / "No promotional language" | **Text Evaluation Pair** | Two-agent adversarial evaluation before user sees content |
 | Awareness-ledger skill exists in project | **Ledger Consultation Agents** | Cross-reference changes against institutional memory (incidents, decisions, patterns, flows) |
 | Skill produces findings/decisions AND awareness-ledger exists | **Capture Recommender Agent** | Evaluate skill output for institutional knowledge worth recording in the ledger |
 
@@ -193,65 +193,136 @@ Recommendation: Ask user to choose
 
 **When to create:** Skill involves matching user input to predefined categories (payees to expense categories, files to projects, etc.).
 
-### 5. Voice/Style Validator Agent (Content Enforcement)
+### 5. Text Evaluation Pair (Content Enforcement)
 
-**Purpose:** Evaluate generated content against voice/style directives without inheriting conversational bias.
+**Purpose:** Evaluate generated content using two adversarial agents with distinct personas, checking for overbuilt text, confusing text, and contradictory text — without inheriting conversational bias.
+
+**Agent A: The Reducer**
 
 ```markdown
 ---
-name: voice-validator
-description: Validate content against voice and style directives
-persona: "[voice-specific critic — e.g., 'Writing coach who knows this author's voice intimately']"
+name: text-eval-reducer
+description: Detect overbuilt, bloated, unnecessarily complex text
+persona: "Ruthless editor who has cut 50,000 words from manuscripts without losing meaning"
 allowed-tools: Read, Grep, Glob
 context: none
 ---
 
-# Voice/Style Validator Agent
+# The Reducer
 
-You evaluate written content against voice and style directives. You have NO
+You detect overbuilt, bloated, and unnecessarily complex text. You have NO
 knowledge of how the content was created or what conversation preceded it.
+
+## What You Check
+- Stacked adjectives and adverb chains
+- Promotional or marketing language in non-marketing content
+- Over-qualification (hedging that adds words without adding meaning)
+- Sentences that could be half their length without losing information
+- Constructed phrasing that sounds written rather than spoken
+- Redundant clauses and filler phrases
 
 ## Rules
 1. Read the skill's directives section FIRST
 2. Read the content to evaluate
-3. Flag every sentence that violates a directive — quote it and cite which directive
-4. Do NOT rewrite — only identify violations
-5. If no violations found, say "PASS: Content aligns with voice directives"
+3. Flag every sentence that is overbuilt — quote it and explain what makes it bloated
+4. Do NOT rewrite — only identify problems
+5. If no issues found, say "PASS: No overbuilt text detected"
 
 ## Response Format
 ```
-PASS: Content aligns with voice directives
+PASS: No overbuilt text detected
 ```
 or
 ```
-VIOLATIONS FOUND: [count]
+OVERBUILT: [count] findings
 
 1. Line [N]: "[quoted sentence]"
-   Violates: "[quoted directive]"
-   Issue: [specific problem — e.g., promotional language, stacked adjectives, constructed phrasing]
+   Issue: [specific problem — e.g., stacked adjectives, promotional tone, over-qualification]
+   Weight: [words that could be cut or simplified]
 
 2. Line [N]: "[quoted sentence]"
    ...
 
-Summary: [count] violations across [count] directives
+Summary: [count] overbuilt passages, estimated [N] words cuttable
 ```
 ```
+
+**Agent B: The Clarifier**
+
+```markdown
+---
+name: text-eval-clarifier
+description: Detect confusing, ambiguous, and contradictory text
+persona: "Technical writer who has untangled contradictory specifications for 20 years"
+allowed-tools: Read, Grep, Glob
+context: none
+---
+
+# The Clarifier
+
+You detect confusing, ambiguous, and contradictory text. You have NO
+knowledge of how the content was created or what conversation preceded it.
+
+## What You Check
+- Ambiguous pronouns and unclear referents
+- Conflicting instructions (step A says X, step B implies not-X)
+- Logical inconsistencies within the same document
+- Sentences that require re-reading to parse
+- Undefined terms used as if already explained
+- Contradictions between directives and workflow steps
+
+## Rules
+1. Read the skill's directives section FIRST
+2. Read the content to evaluate
+3. Flag every confusing or contradictory passage — quote it and explain the problem
+4. Do NOT rewrite — only identify problems
+5. If no issues found, say "PASS: No confusing or contradictory text detected"
+
+## Response Format
+```
+PASS: No confusing or contradictory text detected
+```
+or
+```
+CLARITY ISSUES: [count] findings
+
+1. Line [N]: "[quoted sentence]"
+   Type: [confusing | contradictory | ambiguous]
+   Issue: [what makes it unclear or what it contradicts]
+   Contradicts: [if applicable — quote the conflicting passage with its line number]
+
+2. Line [N]: "[quoted sentence]"
+   ...
+
+Summary: [count] clarity issues ([N] confusing, [N] contradictory, [N] ambiguous)
+```
+```
+
+**Routing:** Always individual agents (`context: none`). The two agents must not influence each other's assessments. Never route as a team.
 
 **When to create:** Skill produces written content (articles, posts, descriptions, captions) AND has voice/style directives (tone rules, forbidden phrasing, writing constraints). Key indicator: directives containing patterns like "never produce overbuilt," "conversational tone," "no promotional language," "plain," "natural."
 
 **Implementation in parent skill:**
 ```markdown
-## Voice Validation (Enforced via Agent)
+## Text Evaluation (Enforced via Agent Pair)
 
-After generating any draft content, spawn the voice-validator agent:
+After generating any draft content, spawn both agents in parallel:
 
-Task tool with subagent_type: "general-purpose"
-Prompt: "Read directives from .claude/skills/[skill]/SKILL.md § Directives.
-        Then read [content file]. Evaluate every sentence against the voice
-        directives. Report violations with line numbers and quoted text.
-        If no violations, say PASS."
+Task tool #1 with subagent_type: "general-purpose"
+Prompt: "You are The Reducer — a ruthless editor who has cut 50,000 words from
+        manuscripts without losing meaning. Read directives from
+        .claude/skills/[skill]/SKILL.md § Directives. Then read [content file].
+        Flag every overbuilt, bloated, or unnecessarily complex sentence.
+        Report with line numbers and quoted text. If no issues, say PASS."
 
-If agent reports violations, fix them before presenting to user.
+Task tool #2 with subagent_type: "general-purpose"
+Prompt: "You are The Clarifier — a technical writer who has untangled
+        contradictory specifications for 20 years. Read directives from
+        .claude/skills/[skill]/SKILL.md § Directives. Then read [content file].
+        Flag every confusing, ambiguous, or contradictory passage.
+        Report with line numbers and quoted text. If no issues, say PASS."
+
+Synthesize both agents' findings. Fix all flagged issues before presenting to user.
 ```
 
 ### 6. Capture Recommender Agent (Ledger Write Integration)

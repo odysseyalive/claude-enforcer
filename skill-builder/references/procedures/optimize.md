@@ -63,7 +63,7 @@ When running `/skill-builder optimize [skill]`:
 
    **If content-creation skill detected:**
    - Flag in audit output: `Domain: CONTENT CREATION`
-   - Recommend Voice Validator agent (HIGH priority) if not already present
+   - Recommend Text Evaluation agent pair (HIGH priority) if not already present
    - Recommend voice directive placeholder if Directives section has no voice/style rules
    - If a `text-eval` or `voice` skill exists in the project, recommend integration
 

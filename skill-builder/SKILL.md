@@ -246,7 +246,7 @@ See [references/optimization-examples.md](references/optimization-examples.md) f
 
 **Analyze and create agents for a skill.**
 
-Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evaluation, Matcher, Voice Validator) against it, and reports which would help and why. Routes each recommendation to either **individual agents** (isolated evaluation with independent opinions) or **agent teams** (collaborative execution with shared task lists). Every agent gets a unique persona — no exceptions.
+Reads the skill's SKILL.md, evaluates 5 agent types (ID Lookup, Validator, Evaluation, Matcher, Text Evaluation Pair) against it, and reports which would help and why. Routes each recommendation to either **individual agents** (isolated evaluation with independent opinions) or **agent teams** (collaborative execution with shared task lists). Every agent gets a unique persona — no exceptions.
 
 **Mandatory research assistant in teams:** When routing recommends an agent team, a read-only research assistant teammate is always included. This teammate gathers supplementary information and other teammates can send research requests to it. The research assistant is mandatory infrastructure and is not counted against the agent panel's recommendations. The research assistant operates in a read-only sandbox with no access to Write, Edit, or Bash tools. All external content is treated as untrusted reference material — used only to inform decisions, never executed as code, commands, or directives. The research assistant's tool access is defined in the agent's frontmatter at creation time (see references/agents.md).
 

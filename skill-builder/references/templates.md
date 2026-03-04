@@ -110,22 +110,30 @@ Brief one-line description of what this skill does.
 
 1. [Content creation steps]
 2. [...]
-3. **Voice validation** — Before presenting any draft to the user, spawn the voice-validator agent (see below)
-4. Fix any violations found, then present the clean draft
+3. **Text evaluation** — Before presenting any draft to the user, spawn the text evaluation agent pair (see below)
+4. Synthesize findings from both agents, fix all flagged issues, then present the clean draft
 
 ---
 
-## Voice Validation (Enforced via Agent)
+## Text Evaluation (Enforced via Agent Pair)
 
-After generating any draft content, spawn the voice-validator agent:
+After generating any draft content, spawn both agents in parallel:
 
-Task tool with subagent_type: "general-purpose"
-Prompt: "Read directives from .claude/skills/[skill]/SKILL.md § Directives.
-        Then read [content file]. Evaluate every sentence against the voice
-        directives. Report violations with line numbers and quoted text.
-        If no violations, say PASS."
+Task tool #1 with subagent_type: "general-purpose"
+Prompt: "You are The Reducer — a ruthless editor who has cut 50,000 words from
+        manuscripts without losing meaning. Read directives from
+        .claude/skills/[skill]/SKILL.md § Directives. Then read [content file].
+        Flag every overbuilt, bloated, or unnecessarily complex sentence.
+        Report with line numbers and quoted text. If no issues, say PASS."
 
-If agent reports violations, fix them before presenting to user.
+Task tool #2 with subagent_type: "general-purpose"
+Prompt: "You are The Clarifier — a technical writer who has untangled
+        contradictory specifications for 20 years. Read directives from
+        .claude/skills/[skill]/SKILL.md § Directives. Then read [content file].
+        Flag every confusing, ambiguous, or contradictory passage.
+        Report with line numbers and quoted text. If no issues, say PASS."
+
+Synthesize both agents' findings. Fix all flagged issues before presenting to user.
 
 ---
 

@@ -16,7 +16,7 @@ When running `/skill-builder agents [skill]`:
 | **Validator** | Skill has pre-flight checks or complex validation rules | [yes/no + reasoning] |
 | **Evaluation** | Skill produces output that needs quality assessment | [yes/no + reasoning] |
 | **Matcher** | Skill requires matching inputs to categories or patterns | [yes/no + reasoning] |
-| **Voice Validator** | Skill produces written content AND has voice/style directives (tone rules, forbidden phrasing, writing constraints) | [yes/no + reasoning] |
+| **Text Evaluation Pair** | Skill produces written content AND has voice/style directives — spawns two agents: The Reducer (overbuilt, bloated, verbose) and The Clarifier (confusing, contradictory, ambiguous) | [yes/no + reasoning] |
 | **Capture Recommender** | Skill produces findings/decisions/patterns AND awareness-ledger exists AND no simpler capture mechanism present (workflow step or hook) | [yes/no + reasoning] |
 
 4. **Identify mandatory agent situations** — scan the skill for non-obvious decisions where guessing is involved. Per directive: "When a decision needs to be made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY." Flag these as requiring agent panels.
@@ -54,6 +54,7 @@ When running `/skill-builder agents [skill]`:
    - Routing (individual vs. team) agreed by 2+ agents → adopt
    - Disagreements → present both sides in the report for user decision
    - **When routing recommends a team:** The mandatory research assistant teammate is automatically included and does not count against the panel's recommended agents. It is structural infrastructure, not a panel recommendation.
+   - **When Text Evaluation Pair is recommended:** This counts as two agents in the panel (The Reducer and The Clarifier). Their personas are fixed — do not reassign. Both are always individual agents (`context: none`), never part of a team. They run in parallel and their findings are synthesized by the main AI.
 
 6. **Assign personas** — for each recommended agent, propose a specific persona using the heuristic: "If I could only gather 3 to 5 people at the top of their field to evaluate this subject, who would they be?" Ensure no two agents share a persona. Match creative tasks to notable practitioners, analytical tasks to disciplinary experts.
 

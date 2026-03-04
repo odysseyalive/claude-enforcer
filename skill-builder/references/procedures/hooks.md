@@ -45,9 +45,9 @@ Scan each skill's SKILL.md for directive patterns that can be enforced with hook
 - "Choose the best X" → judgment call → **Matcher Agent**
 - "If unclear, ask" → context-dependent → **Triage Agent**
 - "Match X to Y" → reasoning required → **Matcher Agent**
-- "Never produce overbuilt/AI prose" → style judgment → **Voice Validator Agent**
-- "Conversational tone" / "No promotional language" → voice enforcement → **Voice Validator Agent**
-- "Plain language" / "Natural writing" → style constraint → **Voice Validator Agent**
+- "Never produce overbuilt/AI prose" → style judgment → **Text Evaluation Pair**
+- "Conversational tone" / "No promotional language" → voice enforcement → **Text Evaluation Pair**
+- "Plain language" / "Natural writing" → style constraint → **Text Evaluation Pair**
 
 These MUST appear in the hooks report under a **"Needs Agent, Not Hook"** section (see report template below) so the recommendation isn't lost.
 
@@ -152,7 +152,7 @@ Scan each skill for temporal exposure — patterns that indicate the skill produ
 
 | Skill | Directive | Recommended Agent | Why Not a Hook |
 |-------|-----------|-------------------|----------------|
-| /skill-name | "Never produce overbuilt prose" | Voice Validator | Requires judgment, not pattern matching |
+| /skill-name | "Never produce overbuilt prose" | Text Evaluation Pair | Requires judgment, not pattern matching |
 | /skill-name | "Match vendor to category" | Matcher | Requires reasoning about best fit |
 
 *Needs agent, not hook — flagged for the agents sub-command.*
@@ -161,7 +161,7 @@ Scan each skill for temporal exposure — patterns that indicate the skill produ
 1. [Wire orphaned script X]
 2. [Create hook for directive Y in /skill-name]
 3. [Fix exit code in script Z]
-4. [Create Voice Validator agent for /skill-name (see above)]
+4. [Create Text Evaluation agent pair for /skill-name (see above)]
 ```
 
 ### Execute Mode (`--execute`)

@@ -20,7 +20,7 @@ Classify the skill before selecting a template:
 - User describes output as: articles, posts, drafts, descriptions, captions, newsletters, emails
 - User mentions: tone, voice, style, prose
 
-**If content-creation detected:** use content-creation template variant (includes Voice Validator agent placeholder and voice directive placeholder). Content-creation skills with citation or reference workflows are also flagged for temporal risk — the post-action chain's hooks display (Step 3c) will surface temporal validation hook opportunities automatically.
+**If content-creation detected:** use content-creation template variant (includes Text Evaluation agent pair placeholder and voice directive placeholder). Content-creation skills with citation or reference workflows are also flagged for temporal risk — the post-action chain's hooks display (Step 3c) will surface temporal validation hook opportunities automatically.
 
 **Otherwise:** use standard template.
 
@@ -34,7 +34,7 @@ Using templates from `references/templates.md`:
    - `## Directives` section (empty, ready for population)
    - Grounding link to reference.md
 3. Create `reference.md` (minimal placeholder)
-4. If content-creation domain: add voice directive placeholder and note about Voice Validator agent
+4. If content-creation domain: add voice directive placeholder and note about Text Evaluation agent pair
 
 ### Step 3b: Embed Ledger Awareness
 
