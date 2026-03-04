@@ -20,7 +20,7 @@ Classify the skill before selecting a template:
 - User describes output as: articles, posts, drafts, descriptions, captions, newsletters, emails
 - User mentions: tone, voice, style, prose
 
-**If content-creation detected:** use content-creation template variant (includes Voice Validator agent placeholder and voice directive placeholder).
+**If content-creation detected:** use content-creation template variant (includes Voice Validator agent placeholder and voice directive placeholder). Content-creation skills with citation or reference workflows are also flagged for temporal risk — the post-action chain's hooks display (Step 3c) will surface temporal validation hook opportunities automatically.
 
 **Otherwise:** use standard template.
 

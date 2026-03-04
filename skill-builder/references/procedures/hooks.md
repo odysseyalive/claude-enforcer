@@ -99,6 +99,32 @@ Synthesize:
 
 Skip this panel when all directives are clearly one category or the other (e.g., "Never use account ID X" is obviously a grep-block hook).
 
+#### Step 3c: Detect Temporal Validation Opportunities
+
+Scan each skill for temporal exposure — patterns that indicate the skill produces or manipulates date/time-sensitive content where the model's arithmetic could silently fail.
+
+**Temporal exposure indicators** (any 2+ → temporal risk):
+- Content generation with citations or references containing dates
+- Scheduling, calendar, or timeline workflows
+- Data reporting with date ranges or period comparisons
+- Directives requiring temporal accuracy ("dates must be accurate," "verify timelines")
+- Output that embeds relative time phrases ("a few weeks ago," "recently," "since [date]")
+
+**Classify risk per `references/temporal-validation.md` § "Temporal Risk Classification":**
+
+- **HIGH risk:** Add to "New Opportunities" table with hook type "Temporal-validation" and **High** priority. Note: "Content-creation skills with citations are auto-classified HIGH."
+- **MEDIUM risk:** Add to "New Opportunities" table with hook type "Temporal-validation" and **Medium** priority.
+- **LOW risk:** Skip silently — no hook needed.
+
+**In execute mode:** Generate the hook script following the architecture specification in `references/temporal-validation.md` § "Hook Generation Specification," adapted to the target system's available tools (detect Python/GNU date/BSD date at runtime). The hook:
+- Scopes to content files only (skips `.claude/` infrastructure)
+- Handles Edit vs. Write tool input differently (new content only for edits)
+- Strips non-prose content before scanning
+- Uses the temporal phrase → day-range mapping for mismatch detection
+- Exits 2 with specifics on mismatch, exits 0 when unverifiable
+
+**Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) before generating temporal hooks.
+
 #### Step 4: Generate Report
 
 ```markdown

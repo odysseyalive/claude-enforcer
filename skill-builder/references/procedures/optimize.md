@@ -142,6 +142,32 @@ When running `/skill-builder optimize [skill]`:
    - Recommend adding a post-workflow capture step to SKILL.md that references the trigger patterns and Capture Opportunity format from `references/ledger-templates.md` § "Capture Trigger Patterns" and § "Capture Opportunity"
    - **Capture mechanism hierarchy:** workflow step (zero cost, recommended by `optimize`) > Capture Recommender agent (recommended by `agents`) > post-action reminder hook (recommended by `hooks`). Only recommend the workflow step here — the other mechanisms are recommended by their respective procedures, which check for existing mechanisms before recommending.
 
+4e. **Detect Temporal Reference Risk** — Classify the skill's temporal exposure level per `references/temporal-validation.md` § "Temporal Risk Classification."
+
+   **Check for temporal exposure indicators** (any 2+ → temporal risk):
+   - Content generation with citations or references containing dates
+   - Scheduling, calendar, or timeline workflows
+   - Data reporting with date ranges or period comparisons
+   - Directives requiring temporal accuracy
+   - Output that embeds relative time phrases in prose
+
+   **Content-creation skills with citation/reference workflows are auto-classified HIGH.**
+
+   If risk is HIGH or MEDIUM, check whether a temporal validation hook exists (grep skill's `hooks/` directory for temporal-related scripts, or check `settings.local.json` for temporal hook wiring).
+
+   If HIGH or MEDIUM risk and no temporal validation hook exists, add to the audit output:
+   ```
+   **Temporal Reference Risk:**
+   - Risk level: [HIGH/MEDIUM/LOW]
+   - Exposure: [what temporal patterns were found]
+   - Temporal validation hook: [present/MISSING]
+   - Recommendation: [Run hooks for temporal hook generation / No action needed]
+   ```
+
+   If LOW risk or temporal hook already exists, skip silently.
+
+   **Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) before classifying.
+
 5. **Evaluate reference splitting** (if reference.md exists):
    - Parse all h2 sections in reference.md; record heading, line count, content domain
    - Check thresholds: file >100 lines AND 3+ h2 sections AND each section >20 lines → recommend split

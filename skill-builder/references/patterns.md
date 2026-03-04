@@ -38,4 +38,6 @@
 
 - **Ambiguous diagnoses do not trigger updates** — If the root-cause-analyst cannot confidently determine whether friction was skill-caused or reasoning-caused, the result is AMBIGUOUS and no update is proposed. The risk of a wrong patch — adding confusion where there wasn't — is worse than missing a fixable friction source. When in doubt, do nothing. (2026-02-25)
 
+- **Date/time math needs programmatic backstop** — LLMs confidently produce wrong temporal claims. "A few weeks later" for a 92-day gap. "Recently" for something six months old. Hooks with datetime arithmetic catch what the model cannot. The LLM handles language; the hook handles math. Reference implementation exists in Odyssey Alive's `check-temporal-refs.sh`. See `references/temporal-validation.md` for the full specification. (2026-03-04)
+
 - **Eval and self-heal are complementary, not redundant** — Eval measures output quality against a rubric (scored). Self-heal detects instruction clarity issues from conversational friction (linguistically-grounded). They cross-reference during diagnosis: self-heal checks eval-history.md for pending compensations on the same instruction, eval pre-flight checks self-heal-history.md for recent patches that may affect rubric calibration. Neither replaces the other. (2026-02-25)

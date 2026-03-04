@@ -141,7 +141,19 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
    ```
 2. This recommendation MUST appear — do not skip silently. The audit is the orchestrator.
 
-### Step 4c: Agent panel — priority ranking
+### Step 4c: Temporal Reference Risk
+
+For each skill, assess temporal reference risk leveraging the optimize procedure's Step 4e classification:
+
+1. Check the skill's temporal risk level per `references/temporal-validation.md` § "Temporal Risk Classification"
+2. Check whether a temporal validation hook exists for the skill
+3. If HIGH or MEDIUM risk with no hook, include in the aggregate report
+
+Skip silently for LOW-risk skills or skills with temporal hooks already in place.
+
+**Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) for risk classification criteria.
+
+### Step 4d: Agent panel — priority ranking
 
 After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
 
@@ -196,6 +208,12 @@ Combine all sub-command outputs into a single report:
 ## Self-Heal
 [from Step 4b — status, observer coverage, or installation recommendation]
 
+## Temporal Reference Risk
+[from Step 4c — per-skill risk levels, missing hooks]
+| Skill | Risk Level | Exposure | Temporal Hook |
+|-------|-----------|----------|---------------|
+| /skill-1 | HIGH/MEDIUM | [temporal patterns found] | present/MISSING |
+
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]
 
@@ -216,7 +234,8 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 4. All of the above for [skill]
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
 > 6. `self-heal --execute` — install Self-Heal companion skill *(only if self-heal does not exist)*
-> 7. Skip — just review for now
+> 7. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
+> 8. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
 

@@ -266,6 +266,16 @@ Scans for hook scripts and wiring in settings.local.json, validates existing hoo
 
 ---
 
+## Temporal Reference Validation
+
+**LLMs are unreliable at date/time math. Temporal validation hooks perform deterministic datetime arithmetic to catch mismatches the model cannot.**
+
+Skills that produce date-sensitive content — especially content-creation skills with citations — are vulnerable to temporal reference errors ("a few weeks ago" for a 92-day gap). Temporal risk assessment runs automatically as part of **optimize** (Step 4e), **hooks** (Step 3c), and **audit** (Step 4c). No scripts are included in skill-builder; hook generation specifications allow hooks to be built on target systems with varying toolchains.
+
+**Grounding:** Read [references/temporal-validation.md](references/temporal-validation.md) for risk classification, phrase mappings, and hook generation architecture.
+
+---
+
 ## Skill File Structure & Templates
 
 See [references/templates.md](references/templates.md) for directory layout, SKILL.md template, and frontmatter requirements with YAML examples.
@@ -371,6 +381,7 @@ Reference files:
 - [references/optimization-examples.md](references/optimization-examples.md) — Before/after examples, optimization targets
 - [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion
 - [references/patterns.md](references/patterns.md) — Lessons learned
+- [references/temporal-validation.md](references/temporal-validation.md) — Temporal risk classification, phrase mappings, hook generation spec
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
 - [references/procedures/self-heal.md](references/procedures/self-heal.md) — Self-Heal companion skill installation procedure
 - [references/self-heal-templates.md](references/self-heal-templates.md) — Friction detection instructions, diff format, update protocol templates
