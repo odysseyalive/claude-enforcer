@@ -63,9 +63,8 @@ When running `/skill-builder optimize [skill]`:
 
    **If content-creation skill detected:**
    - Flag in audit output: `Domain: CONTENT CREATION`
-   - Recommend Text Evaluation agent pair (HIGH priority) if not already present
    - Recommend voice directive placeholder if Directives section has no voice/style rules
-   - If a `text-eval` or `voice` skill exists in the project, recommend integration
+   - Text Evaluation agent pair is recommended by the `agents` procedure only when the skill **already has voice/style directives** — do not speculatively recommend it here
 
    **API/DevOps skills** (default): proceed with standard optimization.
 
@@ -86,7 +85,7 @@ When running `/skill-builder optimize [skill]`:
    - Record all structural invariants in the audit output under "Structural Invariants"
    - These items are **excluded from all optimization targets** — they must not appear in proposed changes
 
-4b. **Agent panel: structural invariant review** — Structural invariant identification is a judgment call. Content that looks movable may be load-bearing, and content that looks load-bearing may be safely movable. Per directive: agents are mandatory when guessing is involved.
+4b. **Agent panel: structural invariant review** *(skip when running as sub-command of audit — fires only in standalone or `--execute` mode)* — Structural invariant identification is a judgment call. Content that looks movable may be load-bearing, and content that looks load-bearing may be safely movable. Per directive: agents are mandatory when guessing is involved.
 
    Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`), each with a unique persona:
 
@@ -98,75 +97,7 @@ When running `/skill-builder optimize [skill]`:
    - Where all 3 agree → proceed with confidence
    - Where agents disagree → the disputed item stays as an invariant (safe default)
 
-4c. **Detect Awareness Ledger relevance** — Check if `.claude/skills/awareness-ledger/` exists and has records. If it does:
-
-   - Read `ledger/index.md` and scan for tags that overlap with the skill's domain (file paths, function names, component names referenced in the skill's SKILL.md)
-   - If relevant records exist, add to the audit output:
-     ```
-     **Awareness Ledger:**
-     - Ledger installed: yes
-     - Records matching this skill's domain: [count]
-     - Record types: [INC: N, DEC: N, PAT: N, FLW: N]
-     - Recommendation: [Add grounding link to relevant ledger records / No action needed]
-     ```
-   - If the skill's SKILL.md doesn't already reference the awareness-ledger, and matching records exist, recommend adding a grounding note: "Consult the Awareness Ledger for historical context before modifying [domain area]. See `.claude/skills/awareness-ledger/ledger/`."
-   - If the project's CLAUDE.md does not already reference the awareness ledger (grep for "awareness ledger" or "ledger/index.md"), and the ledger has records, recommend adding the CLAUDE.md Integration Line from `references/ledger-templates.md` § "CLAUDE.md Integration Line". This provides baseline awareness across all conversations, not just when the skill is loaded.
-   - If the skill being optimized IS the awareness-ledger itself, verify its SKILL.md contains the auto-activation directives (both READ auto-consultation and WRITE auto-capture). Check for keywords: "Auto-Consultation" and "Auto-Capture Suggestion". If missing, flag: "Awareness-ledger SKILL.md is missing auto-activation directives. Recommend adding READ (auto-consultation) and WRITE (auto-capture) workflows from `references/ledger-templates.md` § Auto-Activation Directives."
-   - If `consult-before-edit.sh` exists in the awareness-ledger's `hooks/` directory, flag as obsolete: "consult-before-edit.sh fires at edit time — too late for consultation to shape the plan. Remove it. Ledger consultation is handled by the CLAUDE.md Integration Line and READ auto-activation directive during the planning phase."
-   - If `capture-reminder.sh` fires on every Task completion without trigger pattern matching (grep for the generic "If findings, decisions, or patterns emerged" message), flag as: "capture-reminder.sh is outdated. Enhanced template available with trigger-pattern matching — run `/skill-builder hooks awareness-ledger` for upgrade recommendations."
-   - If the skill has directives that encode historical knowledge (phrases like "because last time," "we learned that," "after the X incident"), flag these as candidates for ledger record capture if not already captured.
-   - If the ledger does not exist or is empty, skip this step silently.
-
-4d. **Detect Capture Integration gap** — Check if the skill produces institutional knowledge that should be captured in the awareness ledger. Only evaluate if `.claude/skills/awareness-ledger/` exists.
-
-   **Positive indicators** (skill produces capturable knowledge — any 2+ of these):
-   - Workflow includes investigation, diagnosis, or root cause analysis steps
-   - Skill produces decisions with rationale (chose X because Y)
-   - Output includes debugging flows, error resolution paths, or architectural evaluation
-   - Directives reference past failures or learned patterns ("because last time," "we learned that")
-   - Skill operates on areas with existing ledger records (overlapping tags/file paths)
-
-   **Negative indicators** (capture not relevant — any 1 of these):
-   - Skill is purely mechanical (formatting, linting, file manipulation)
-   - Skill output is ephemeral (status reports, one-time lookups)
-   - Skill already has a capture mechanism (check for: capture workflow step in SKILL.md, Capture Recommender agent in `agents/`, or `capture-reminder.sh` hook in `hooks/`)
-
-   If positive indicators present and no negative indicators apply:
-   - Add to the audit output:
-     ```
-     **Capture Integration:**
-     - Produces institutional knowledge: yes
-     - Existing capture mechanism: [workflow step / agent / hook / NONE]
-     - Recommendation: [Add post-workflow capture prompt / No action needed]
-     ```
-   - Recommend adding a post-workflow capture step to SKILL.md that references the trigger patterns and Capture Opportunity format from `references/ledger-templates.md` § "Capture Trigger Patterns" and § "Capture Opportunity"
-   - **Capture mechanism hierarchy:** workflow step (zero cost, recommended by `optimize`) > Capture Recommender agent (recommended by `agents`) > post-action reminder hook (recommended by `hooks`). Only recommend the workflow step here — the other mechanisms are recommended by their respective procedures, which check for existing mechanisms before recommending.
-
-4e. **Detect Temporal Reference Risk** — Classify the skill's temporal exposure level per `references/temporal-validation.md` § "Temporal Risk Classification."
-
-   **Check for temporal exposure indicators** (any 2+ → temporal risk):
-   - Content generation with citations or references containing dates
-   - Scheduling, calendar, or timeline workflows
-   - Data reporting with date ranges or period comparisons
-   - Directives requiring temporal accuracy
-   - Output that embeds relative time phrases in prose
-
-   **Content-creation skills with citation/reference workflows are auto-classified HIGH.**
-
-   If risk is HIGH or MEDIUM, check whether a temporal validation hook exists (grep skill's `hooks/` directory for temporal-related scripts, or check `settings.local.json` for temporal hook wiring).
-
-   If HIGH or MEDIUM risk and no temporal validation hook exists, add to the audit output:
-   ```
-   **Temporal Reference Risk:**
-   - Risk level: [HIGH/MEDIUM/LOW]
-   - Exposure: [what temporal patterns were found]
-   - Temporal validation hook: [present/MISSING]
-   - Recommendation: [Run hooks for temporal hook generation / No action needed]
-   ```
-
-   If LOW risk or temporal hook already exists, skip silently.
-
-   **Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) before classifying.
+4c. **Identify user directives** — User directives are identified by the `## Directives` section heading and blockquote format (`> **"..."**`). During optimization, preserve all directive text verbatim — never reword, compress, or remove user directives. Generated sections (workflow, grounding, etc.) can be freely restructured.
 
 5. **Evaluate reference splitting** (if reference.md exists):
    - Parse all h2 sections in reference.md; record heading, line count, content domain
@@ -179,7 +110,7 @@ When running `/skill-builder optimize [skill]`:
      - Examples/theory → **NONE**
    - If under threshold, note "Reference file: KEEP single file" and proceed
 
-5b. **Agent panel: split decision** (if reference.md is near the threshold) — When the file is close to the splitting threshold (e.g., 80-120 lines, or 2-3 sections), the decision isn't clear-cut. Spawn 2 individual agents:
+5b. **Agent panel: split decision** *(skip when running as sub-command of audit — fires only in standalone or `--execute` mode)* (if reference.md is near the threshold) — When the file is close to the splitting threshold (e.g., 80-120 lines, or 2-3 sections), the decision isn't clear-cut. Spawn 2 individual agents:
 
    - **Agent 1** (persona: Context efficiency engineer — optimizes for minimal token load per invocation) — Argue for splitting. What enforcement boundaries would splitting create?
    - **Agent 2** (persona: Simplicity advocate — resists premature abstraction) — Argue for keeping. Is the overhead of multiple files worth it for this skill?

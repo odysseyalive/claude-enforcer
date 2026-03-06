@@ -55,10 +55,15 @@ Skip Steps 3–5 (they require existing skills) and go directly to Step 6 with t
 
 ### Step 4: Run Sub-Commands in Display Mode
 
+**Agent budget:** Sub-procedures running in display mode during audit skip their own agent panels. Agent panels fire only in standalone mode or `--execute` mode where decisions have real consequences. The audit's only agent panel is the priority ranking panel (Step 4f) — one per audit run, not per skill.
+
+- Quick audit (`--quick`): **0 agent panels** — pure checklist, no spawning
+- Standard audit: **1 agent panel total** (Step 4f priority ranking), plus lightweight cascade guard checks (no panel)
+
 For each skill found:
-1. Run **optimize** in display mode → collect optimization findings
-2. Run **agents** in display mode → collect agent opportunities
-3. Run **hooks** in display mode → collect hooks inventory and opportunities
+1. Run **optimize** in display mode (skip agent panels in Steps 4b and 5b) → collect optimization findings
+2. Run **agents** in display mode (skip agent panel in Step 5) → collect agent opportunities
+3. Run **hooks** in display mode (skip agent panel in Step 3b) → collect hooks inventory and opportunities
 
 ### Step 4a: Ledger Status
 
@@ -68,28 +73,16 @@ Check if `.claude/skills/awareness-ledger/SKILL.md` exists.
 1. Count records: `find .claude/skills/awareness-ledger/ledger -name "*.md" -not -name "index.md"` (excludes index)
 2. Check planning-phase integration: scan project CLAUDE.md for awareness ledger reference (grep for "awareness ledger" or "ledger/index.md")
 3. If `consult-before-edit.sh` exists in hooks/ or is wired in settings.local.json, flag as obsolete
-4. Report:
+4. Report **status only**:
    ```
    **Awareness Ledger:** Installed
    - Records: [N] (INC: [n], DEC: [n], PAT: [n], FLW: [n])
    - CLAUDE.md integration: [yes/no]
-   - Auto-activation directives: [present/missing]
    - Last updated: [date of most recent record file, or "unknown"]
-   - Issues: [missing CLAUDE.md line / missing auto-activation / obsolete hook / empty ledger / none]
+   - Issues: [missing CLAUDE.md line / obsolete hook / empty ledger / none]
    ```
 
-4. **Scan for capture integration gaps** — For each skill (excluding skill-builder and awareness-ledger themselves), check whether it produces institutional knowledge but has no capture mechanism:
-   - **Produces institutional knowledge?** Check for: investigation/diagnosis workflow steps, decision-making procedures, debugging flows, architectural evaluation, directives referencing past failures
-   - **Has capture mechanism?** Check for any one of: capture workflow step in SKILL.md, Capture Recommender agent in `agents/`, `capture-reminder.sh` hook in `hooks/`
-   - If a skill produces institutional knowledge but has no capture mechanism, add to the report:
-     ```
-     **Capture Gaps:**
-     | Skill | Knowledge Type | Recommended Mechanism | Procedure |
-     |-------|---------------|----------------------|-----------|
-     | /[skill] | [diagnostic findings / decisions / patterns] | [workflow step / agent / hook] | Run `optimize`, `agents`, or `hooks` |
-     ```
-   - Mechanism recommendation follows the hierarchy: workflow step (if capture is a natural final step) > agent (if capture-worthiness requires judgment) > hook (lightweight fallback). See `references/agents.md` § "Capture Recommender Agent" for the full hierarchy.
-   - If no gaps found, omit this subsection.
+Per-skill ledger integration recommendations (capture gaps, grounding notes) are surfaced only when a specific skill is targeted via `optimize`, `agents`, or `hooks` — not as a global scan during audit.
 
 **If the ledger does NOT exist:**
 1. Report:
@@ -107,29 +100,14 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 
 **If self-heal is installed:**
 1. Scan all skills for the Observer Instruction Block (grep for "Self-Heal Observer")
-2. Report:
+2. Report **status only**:
    ```
    **Self-Heal:** Installed
-   - Skills with observer embedded: [N]/[total]
-   - Skills missing observer: [list, or "none"]
-   - Issues: [missing observers / none]
+   - Skills with observer: [N]/[total]
+   - Skills without observer: [list, or "none"]
    ```
-3. If any skills are missing the observer, add to execution choices:
-   > `self-heal embed` — embed observer into skills missing it
 
-   **When `self-heal embed` is selected for execution:**
-   For each skill missing the observer:
-   a. Read the skill's SKILL.md
-   b. Verify line count will stay under 150 after embedding (~15 lines). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
-   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (observer + eval protocol) does not exceed 50 lines. If it does, flag and skip.
-   d. Append the Observer Instruction Block (from `references/self-heal-templates.md` § "Observer Instruction Block") as the last section of SKILL.md
-   e. Report: `Embedded self-heal observer into /[skill-name]`
-
-   After all skills are processed, report summary:
-   ```
-   Self-heal observer embedded: [N] skills
-   Skipped (line budget): [list, or "none"]
-   ```
+Per-skill observer recommendations are surfaced only when a specific skill is targeted via `optimize` and evidence of friction exists (repeated corrections, directive violations in git history) — not as a blanket recommendation for all skills.
 
 **If self-heal is NOT installed:**
 1. Report:
@@ -143,7 +121,7 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 
 ### Step 4c: Temporal Reference Risk
 
-For each skill, assess temporal reference risk leveraging the optimize procedure's Step 4e classification:
+For each skill, assess temporal reference risk:
 
 1. Check the skill's temporal risk level per `references/temporal-validation.md` § "Temporal Risk Classification"
 2. Check whether a temporal validation hook exists for the skill
@@ -153,7 +131,29 @@ Skip silently for LOW-risk skills or skills with temporal hooks already in place
 
 **Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) for risk classification criteria.
 
-### Step 4d: Agent panel — priority ranking
+### Step 4d: Per-Skill Integration Checks
+
+These checks run only for skills **explicitly targeted** by the user (e.g., `/skill-builder optimize [skill]`, `/skill-builder agents [skill]`). During a full audit, skip per-skill integration checks — companion skill status is reported in Steps 4a and 4b.
+
+When running for a targeted skill:
+
+**Awareness Ledger relevance** — If `.claude/skills/awareness-ledger/` exists with records:
+- Scan `ledger/index.md` for tags overlapping the skill's domain (file paths, function names, component names)
+- Only recommend integration if matching records actually exist for this skill's domain
+- If the skill IS the awareness-ledger, verify auto-activation directives (Auto-Consultation + Auto-Capture)
+
+**Capture Integration gap** — If the awareness-ledger exists, check whether the targeted skill produces institutional knowledge but lacks a capture mechanism. If gap found, include in report with recommended mechanism per hierarchy: workflow step > agent > hook.
+
+### Step 4e: Validation Cascade Analysis
+
+For each skill with 2+ validators or evaluation agents:
+1. Run the cascade analysis per [cascade.md](cascade.md)
+2. Include findings in the aggregate report under "Validation Cascade"
+3. If cascade risk is MODERATE or HIGH, add to Priority Fixes
+
+Skip silently for skills with 0-1 validators.
+
+### Step 4f: Agent panel — priority ranking
 
 After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
 
@@ -213,6 +213,12 @@ Combine all sub-command outputs into a single report:
 | Skill | Risk Level | Exposure | Temporal Hook |
 |-------|-----------|----------|---------------|
 | /skill-1 | HIGH/MEDIUM | [temporal patterns found] | present/MISSING |
+
+## Validation Cascade
+[from Step 4e — per-skill cascade risk]
+| Skill | Validators | Cascade Risk | Top Finding |
+|-------|-----------|-------------|-------------|
+| /skill-1 | [count] | [NONE/LOW/MODERATE/HIGH] | [summary] |
 
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]

@@ -78,6 +78,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 /skill-builder agents [skill]   # Analyze and create agents for a skill
 /skill-builder hooks [skill]    # Inventory existing hooks + identify new opportunities
 /skill-builder inline [skill] [directive]  # Quick-add a directive to a skill
+/skill-builder cascade [skill]  # Detect validation cascade (too many validators)
 /skill-builder ledger           # Create an Awareness Ledger for institutional memory
 /skill-builder update           # Update skill-builder to the latest version
 ```
@@ -296,6 +297,7 @@ The `init` process seeds the ledger by scanning git history, your CLAUDE.md, and
 
 ## Learn More
 
+- [The Complete Guide to Building Skills for Claude](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf) — Anthropic's official guide to skill structure, progressive disclosure, and distribution. Skill-builder adds the enforcement layers — hooks, agents, and diagnostics — that make instructions stick across long conversations.
 - [Context Is the Interface](https://odysseyalive.com/focus/context-is-the-interface) — The insight behind this approach
 - [Mrinank Sharma, Please Come Back to Work](https://odysseyalive.com/focus/mrinank-sharma-please-come-back-to-work) — Why adversarial agents outperform consensus
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code) — Official docs on skills, hooks, and agents

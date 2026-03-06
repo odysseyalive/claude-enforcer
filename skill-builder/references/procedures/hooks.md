@@ -83,7 +83,7 @@ If recommending, reference the `capture-reminder.sh` template from `references/l
 
 If the ledger does not exist, skip this step silently.
 
-#### Step 3b: Agent panel — enforcement boundary decisions
+#### Step 3b: Agent panel — enforcement boundary decisions *(skip when running as sub-command of audit — fires only in standalone or `--execute` mode)*
 
 Some directives sit at the boundary between hook-enforceable and agent-required. "Never use informal language" — is that a grep pattern or a judgment call? "Always validate inputs" — is that a pre-flight check or a simple pattern match? Per directive: agents are mandatory when guessing is involved.
 
@@ -112,7 +112,7 @@ Scan each skill for temporal exposure — patterns that indicate the skill produ
 
 **Classify risk per `references/temporal-validation.md` § "Temporal Risk Classification":**
 
-- **HIGH risk:** Add to "New Opportunities" table with hook type "Temporal-validation" and **High** priority. Note: "Content-creation skills with citations are auto-classified HIGH."
+- **HIGH risk:** Add to "New Opportunities" table with hook type "Temporal-validation" and **High** priority. Classify based on actual temporal patterns found (citation workflows, date arithmetic, timeline generation), not domain assumption.
 - **MEDIUM risk:** Add to "New Opportunities" table with hook type "Temporal-validation" and **Medium** priority.
 - **LOW risk:** Skip silently — no hook needed.
 

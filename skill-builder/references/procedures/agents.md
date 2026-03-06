@@ -16,34 +16,35 @@ When running `/skill-builder agents [skill]`:
 | **Validator** | Skill has pre-flight checks or complex validation rules | [yes/no + reasoning] |
 | **Evaluation** | Skill produces output that needs quality assessment | [yes/no + reasoning] |
 | **Matcher** | Skill requires matching inputs to categories or patterns | [yes/no + reasoning] |
-| **Text Evaluation Pair** | Skill produces written content AND has voice/style directives — spawns two agents: The Reducer (overbuilt, bloated, verbose) and The Clarifier (confusing, contradictory, ambiguous) | [yes/no + reasoning] |
+| **Text Evaluation Pair** | Skill produces written content AND **already has voice/style directives in its `## Directives` section** — spawns two agents: The Reducer (overbuilt, bloated, verbose) and The Clarifier (confusing, contradictory, ambiguous). Do not recommend speculatively for content-creation skills without existing voice directives. | [yes/no + reasoning] |
 | **Capture Recommender** | Skill produces findings/decisions/patterns AND awareness-ledger exists AND no simpler capture mechanism present (workflow step or hook) | [yes/no + reasoning] |
+
+3b. **Cascade guard** — Before recommending new validators, check the skill's current validation load:
+   - Count existing validators (hooks, evaluation agents, text evaluation pair, inline validation steps)
+   - If the skill already has 3+ validators, run the cascade analysis per [cascade.md](cascade.md)
+   - If cascade risk is MODERATE or HIGH, note in the report: "This skill has [N] existing validators with [risk level] cascade risk. Adding more validators may suppress creative output. Consider consolidating existing validators before adding new ones."
+   - If cascade risk is LOW or NONE, proceed normally
 
 4. **Identify mandatory agent situations** — scan the skill for non-obvious decisions where guessing is involved. Per directive: "When a decision needs to be made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY." Flag these as requiring agent panels.
 
-4b. **Detect Awareness Ledger** — Check if `.claude/skills/awareness-ledger/SKILL.md` exists. If it does:
+4b. **Detect Awareness Ledger** *(runs only when this skill is explicitly targeted, not during audit's display-mode pass)* — Check if `.claude/skills/awareness-ledger/SKILL.md` exists. If it does:
 
    - Check if `ledger/index.md` has any records (non-empty ledger)
    - Scan the skill's SKILL.md for file paths, domain tags, and function names that overlap with ledger record tags
-   - If the skill modifies code, makes architectural decisions, or touches areas with existing ledger records:
+   - Only recommend ledger integration if the skill's domain **explicitly overlaps** with existing ledger records (matching file paths, component names, or domain tags)
+   - If overlap found:
      - Add **Ledger Consultation** to the agent type evaluation table as an applicable type
-     - Recommend integrating the three ledger agents (Regression Hunter, Skeptic, Premortem Analyst) into the skill's workflow — these run as individual agents with `context: none`, reading from `ledger/incidents/`, `ledger/decisions/`, `ledger/patterns/`, and `ledger/flows/`
-     - Recommend adding a grounding link in the skill's SKILL.md: "Before proposing code changes, consult the Awareness Ledger — see `.claude/skills/awareness-ledger/`"
-     - Recommend the **proportional auto-activation model**: the skill should automatically read `ledger/index.md` before code changes and only spawn the full agent panel when matching records are found. The escalation workflow is: index scan (free) → read matching records (cheap) → spawn agents (expensive, only when high-risk overlap detected). Reference `references/ledger-templates.md` § "Auto-Activation Directives" for the template text to add to the skill's SKILL.md.
+     - Recommend the **proportional auto-activation model**: index scan (free) → read matching records (cheap) → spawn agents (expensive, only when high-risk overlap detected). Reference `references/ledger-templates.md` § "Auto-Activation Directives" for template text.
    - If the ledger is empty, note: "Awareness Ledger exists but has no records yet. Consultation integration will become relevant once records accumulate."
-   - If the ledger does not exist, skip this step silently (no recommendation to install — that's `/skill-builder ledger`'s job)
+   - If the ledger does not exist, skip this step silently
 
-4c. **Evaluate Capture Recommender Agent** — If the awareness-ledger exists, evaluate whether the skill would benefit from a Capture Recommender agent (see `references/agents.md` § "Capture Recommender Agent"):
+4c. **Evaluate Capture Recommender Agent** *(runs only when this skill is explicitly targeted, not during audit's display-mode pass)* — If the awareness-ledger exists, evaluate whether the skill would benefit from a Capture Recommender agent (see `references/agents.md` § "Capture Recommender Agent"):
 
-   - **When to recommend:** Skill produces diagnostic findings, architectural decisions, debugging flows, or pattern observations that match capture trigger patterns (see `references/ledger-templates.md` § "Capture Trigger Patterns"). The value of the agent is in applying judgment to determine *whether* output is ledger-worthy — not just reminding the user to check.
-   - **When the agent adds value over a simple workflow step:** The skill's output varies significantly between invocations (some runs produce capturable knowledge, others don't), making a blanket capture prompt wasteful. The agent can distinguish routine output from genuinely novel findings.
-   - **Check for existing capture integration first:** Before recommending, verify no capture mechanism already exists:
-     - Scan SKILL.md for post-workflow capture steps (keywords: "capture," "record," "ledger," "awareness-ledger record")
-     - Check `hooks/` for `capture-reminder.sh` or similar post-action hooks
-     - If either exists, skip — one capture mechanism per skill. Note in the report: "Capture integration: present ([mechanism type])"
-   - If recommending, add **Capture Recommender** to the evaluation table with reasoning that references the specific trigger patterns the skill's output is likely to match.
+   - **When to recommend:** Skill produces diagnostic findings, architectural decisions, debugging flows, or pattern observations that match capture trigger patterns. The agent applies judgment to determine *whether* output is ledger-worthy.
+   - **Check for existing capture integration first:** Before recommending, verify no capture mechanism already exists (workflow step, hook, or agent). One capture mechanism per skill.
+   - If recommending, add **Capture Recommender** to the evaluation table with reasoning referencing specific trigger patterns.
 
-5. **Agent panel: type applicability and routing** — Deciding which agent types apply to a skill and whether they should be individual or team is itself a judgment call. Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`):
+5. **Agent panel: type applicability and routing** *(skip when running as sub-command of audit — fires only in standalone or `--execute` mode)* — Deciding which agent types apply to a skill and whether they should be individual or team is itself a judgment call. Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`):
 
    - **Agent 1** (persona: Systems architect who designs for failure modes) — Review the skill's directives and workflows. Which agent types would prevent the highest-risk failures? What happens if each agent type is absent?
    - **Agent 2** (persona: Token economist who optimizes cost-per-value) — Review the same skill. Which agents are worth the token cost? Which would fire frequently enough to justify their existence vs. being rare edge cases?

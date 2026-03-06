@@ -142,6 +142,27 @@ The optimize command protects directives (verbatim text), workflows (step order)
 
 ---
 
+## Content Provenance Model
+
+Skill-builder's own SKILL.md uses HTML comment markers to distinguish sacred user directives from generated machinery. This model applies to **skill-builder internals only** — user skills do not get provenance markers.
+
+### How User Directives Are Identified in User Skills
+
+User directives are identified structurally:
+- Located in the `## Directives` section
+- Blockquote format: `> **"..."**`
+- Attribution line: `*— Added YYYY-MM-DD, source: ...*`
+
+### Permission Model
+
+| Content Type | Skill-builder can... | Cannot... |
+|--------------|---------------------|-----------|
+| User directives (in `## Directives`) | Move (preserving exact wording) | Reword, compress, remove |
+| Generated sections (workflow, grounding) | Modify, remove, replace, restructure | — |
+| Unrecognized content | Treat as user-origin (safe default) | — |
+
+---
+
 ## Enforcement Mechanisms
 
 ### 1. PreToolUse Hooks (Strongest)
