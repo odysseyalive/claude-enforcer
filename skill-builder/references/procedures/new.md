@@ -45,12 +45,14 @@ Check if `.claude/skills/awareness-ledger/` exists. If it does:
 
 If the ledger does not exist, skip this step silently.
 
-### Step 3d: Note Self-Heal Availability
+### Step 3d: Embed Self-Heal Trigger
 
 Check if `.claude/skills/self-heal/SKILL.md` exists. If it does:
 
-1. Note in the creation report: "Self-Heal installed — audit will recommend observer if the skill shows friction patterns."
-2. Do **not** auto-embed the observer into the new skill. Observer embedding is recommended via audit when evidence of friction exists (repeated corrections, directive violations).
+1. Append the Trigger Block (from `references/self-heal-templates.md` § "Trigger Block") to the new skill's SKILL.md
+2. Verify total line count stays under 150. If over, flag: "Skill is [N] lines with trigger embedded. Consider optimizing before adding more content."
+3. **Compound infrastructure check:** If the skill also has a runtime eval protocol section, verify combined infrastructure (trigger block + eval protocol) does not exceed 50 lines. If it does, flag to the user and recommend optimizing the skill first.
+4. Add to creation report: `Self-heal trigger: embedded`
 
 If self-heal is not installed, skip this step silently.
 

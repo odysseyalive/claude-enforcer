@@ -20,9 +20,8 @@ In display mode, show the proposed structure. In execute mode (`--execute`), cre
 ```
 .claude/skills/self-heal/
 ├── SKILL.md
-├── self-heal-history.md          ← created per target skill on first diagnosis, not during install
 ├── references/
-│   ├── friction-signals.md
+│   ├── directive-disagreement-signals.md
 │   ├── diagnosis-protocol.md
 │   └── update-protocol.md
 └── agents/
@@ -32,17 +31,15 @@ In display mode, show the proposed structure. In execute mode (`--execute`), cre
 
 `self-heal-history.md` files are created per target skill (e.g., `.claude/skills/[target-skill]/self-heal-history.md`) when self-heal first runs diagnosis on that skill — not during install. See `references/self-heal-templates.md` § "self-heal-history.md Format" for the record format.
 
-During diagnosis, the root-cause-analyst also reads the target skill's `eval-history.md` (if it exists) to check for pending compensations targeting the same instruction area.
-
 **SKILL.md** content — see `references/self-heal-templates.md` § "self-heal SKILL.md Template"
 
-**references/friction-signals.md** — The complete taxonomy of friction signals the embedded observer watches for. Loaded by the observer instruction at session end.
+**references/directive-disagreement-signals.md** — How users express directive disagreements. The taxonomy of signals that trigger self-heal. Loaded by the trigger block during live sessions.
 
-**references/diagnosis-protocol.md** — How to trace a friction signal back to its source in the skill's instructions. Loaded by the root-cause-analyst agent.
+**references/diagnosis-protocol.md** — How to trace a directive disagreement back to the skill's non-directive wording. Loaded immediately when a disagreement is detected.
 
 **references/update-protocol.md** — How to construct the before/after diff, frame the approval request, and apply the surgical update. Loaded when a fixable source is confirmed.
 
-**agents/root-cause-analyst.md** — `context: none` agent. Reads the friction log and the skill's SKILL.md. Determines whether friction originated in the skill's instructions and identifies the specific instruction. Unique persona: see `references/self-heal-templates.md` § "Agent Personas".
+**agents/root-cause-analyst.md** — `context: none` agent. Reads the directive, the skill's SKILL.md, and what the user said. Determines whether the skill's non-directive wording caused the AI to misinterpret the directive. Unique persona: see `references/self-heal-templates.md` § "Agent Personas".
 
 **agents/patch-reviewer.md** — `context: none` agent. Reads the proposed patch. Checks: is this the smallest possible change? Does it fix the root cause without introducing new ambiguity? Does it preserve all directives verbatim? Unique persona: see `references/self-heal-templates.md` § "Agent Personas".
 

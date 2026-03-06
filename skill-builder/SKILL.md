@@ -213,6 +213,6 @@ Reference files:
 - [references/temporal-validation.md](references/temporal-validation.md) — Temporal risk classification, phrase mappings, hook generation spec
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
 - [references/procedures/self-heal.md](references/procedures/self-heal.md) — Self-Heal companion skill installation procedure
-- [references/self-heal-templates.md](references/self-heal-templates.md) — Friction detection instructions, diff format, update protocol templates
+- [references/self-heal-templates.md](references/self-heal-templates.md) — Directive disagreement signals, diagnosis protocol, update protocol templates
 - [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, etc.)
 <!-- /origin -->

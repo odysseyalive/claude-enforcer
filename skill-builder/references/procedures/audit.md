@@ -99,22 +99,38 @@ Per-skill ledger integration recommendations (capture gaps, grounding notes) are
 Check if `.claude/skills/self-heal/SKILL.md` exists.
 
 **If self-heal is installed:**
-1. Scan all skills for the Observer Instruction Block (grep for "Self-Heal Observer")
-2. Report **status only**:
+1. Scan all skills for the Trigger Block (grep for "## Self-Heal")
+2. Report:
    ```
    **Self-Heal:** Installed
-   - Skills with observer: [N]/[total]
-   - Skills without observer: [list, or "none"]
+   - Skills with trigger embedded: [N]/[total]
+   - Skills missing trigger: [list, or "none"]
+   - Issues: [missing triggers / none]
    ```
+3. If any skills are missing the trigger, add to execution choices:
+   > `self-heal embed` — embed trigger into skills missing it
 
-Per-skill observer recommendations are surfaced only when a specific skill is targeted via `optimize` and evidence of friction exists (repeated corrections, directive violations in git history) — not as a blanket recommendation for all skills.
+   **When `self-heal embed` is selected for execution:**
+   For each skill missing the trigger:
+   a. Read the skill's SKILL.md
+   b. Verify line count will stay under 150 after embedding (~12 lines). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
+   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (trigger block + eval protocol) does not exceed 50 lines. If it does, flag and skip.
+   d. Append the Trigger Block (from `references/self-heal-templates.md` § "Trigger Block") as the last section of SKILL.md
+   e. Report: `Embedded self-heal trigger into /[skill-name]`
+
+   After all skills are processed, report summary:
+   ```
+   Self-heal trigger embedded: [N] skills
+   Skipped (line budget): [list, or "none"]
+   ```
 
 **If self-heal is NOT installed:**
 1. Report:
    ```
    **Self-Heal:** Not installed
-   - Ambient friction detection. Skills learn from session friction and propose
-     surgical corrections automatically.
+   - Reactive directive-compliance correction. When a user disagrees with the AI
+     about following a directive, self-heal diagnoses whether the skill's wording
+     caused the misinterpretation and proposes a surgical fix.
    - Available in the execution menu below.
    ```
 2. This recommendation MUST appear — do not skip silently. The audit is the orchestrator.
