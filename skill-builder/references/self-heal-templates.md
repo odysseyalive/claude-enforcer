@@ -9,7 +9,7 @@ Templates for creating the self-heal companion skill and embedding its reactive 
 ```yaml
 ---
 name: self-heal
-description: "Reactive directive-compliance correction. Triggers when a user disagrees with the AI about following a directive. Diagnoses whether the skill's wording caused the misinterpretation and proposes surgical fixes."
+description: "Reactive skill correction. Triggers on directive disagreements (user corrections) and error compensation (hook-detected tool failures with workarounds). Diagnoses root cause and proposes surgical fixes."
 allowed-tools: Read, Write, Edit, Task, TaskCreate, TaskUpdate
 ---
 ```
@@ -17,9 +17,12 @@ allowed-tools: Read, Write, Edit, Task, TaskCreate, TaskUpdate
 ```markdown
 # Self-Heal
 
-Reactive companion skill. Activates when a user corrects the AI about directive compliance during a live session. Diagnoses whether the skill's own wording caused the misinterpretation and proposes a surgical fix — with user approval.
+Reactive companion skill. Two trigger paths:
 
-**This skill does not run on a schedule or at session end.** It triggers in the moment, when a directive disagreement surfaces.
+1. **Directive disagreement** — User corrects the AI about directive compliance. Diagnoses whether the skill's wording caused the misinterpretation.
+2. **Error compensation** — A PostToolUse hook detects a tool failure. If the AI finds a workaround, this skill diagnoses whether the skill's workflow has a gap worth patching.
+
+Both paths propose surgical fixes — with user approval. This skill does not run on a schedule or at session end.
 
 ---
 
@@ -60,6 +63,8 @@ Reference files:
 - [references/directive-disagreement-signals.md](references/directive-disagreement-signals.md) — How users express directive disagreements
 - [references/diagnosis-protocol.md](references/diagnosis-protocol.md) — Root cause tracing procedure
 - [references/update-protocol.md](references/update-protocol.md) — Diff construction and approval workflow
+- [references/error-compensation-signals.md](references/error-compensation-signals.md) — How to recognize error compensation patterns
+- [references/error-compensation-monitor.md](references/error-compensation-monitor.md) — Error compensation diagnosis and patching procedure
 ```
 
 ---
@@ -354,13 +359,24 @@ Each target skill gets its own `self-heal-history.md` at `.claude/skills/[skill-
 # Self-Heal History: [skill-name]
 <!-- Append-only. Populated by self-heal diagnosis protocol. -->
 
-## Entry format:
+## Entry format (directive disagreement):
 ## Diagnosis: YYYY-MM-DD
 Skill: [skill-name]
 Directive: [quoted directive]
 Verdict: [SKILL_WORDING / AI_ERROR / AMBIGUOUS]
 Signal type: [Direct reference / Corrective / Frustrated repetition / Behavioral redirect / Implicit]
 Wording: [quoted non-directive wording that caused the issue, if SKILL_WORDING]
+Patch: [PROPOSED / APPLIED / DECLINED]
+
+## Entry format (error compensation):
+## Diagnosis: YYYY-MM-DD
+Skill: [skill-name]
+Trigger: error-compensation
+Error: [brief error description]
+Workaround: [what the AI did instead]
+Verdict: [SKILL_GAP / TRANSIENT / AMBIGUOUS]
+Gap type: [Missing fallback / Stale reference / Undocumented edge case / Missing prerequisite]
+Workflow step: [quoted step that lacked coverage, if SKILL_GAP]
 Patch: [PROPOSED / APPLIED / DECLINED]
 ```
 
@@ -426,4 +442,313 @@ not followed. General dissatisfaction or style preferences are not triggers.
 
 **Line budget:** The Trigger block is approximately 12 lines. When embedding, verify the skill's total line count stays under 150. If embedding would push the skill over 150 lines, flag to the user and recommend optimizing the skill first.
 
-**Compound infrastructure check:** When embedding, verify combined infrastructure (trigger block + runtime eval protocol, if present) does not exceed 50 lines. If it does, flag to the user and recommend optimizing the skill first to free up line budget.
+**Compound infrastructure check:** When embedding, verify combined infrastructure (trigger blocks + runtime eval protocol, if present) does not exceed 50 lines. If it does, flag to the user and recommend optimizing the skill first to free up line budget.
+
+---
+
+## Error Compensation Hook Script Template
+
+A PostToolUse hook that detects tool failures and injects a message telling Claude to load the error compensation monitor. Conservative detection — only fires on clear error indicators.
+
+**Hook configuration (added to `.claude/settings.local.json`):**
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/error-compensation-detect.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Hook script (`.claude/hooks/error-compensation-detect.sh`):**
+
+```bash
+#!/bin/bash
+# Error Compensation Detection Hook
+# PostToolUse hook — detects tool failures and prompts self-heal monitoring.
+# Conservative: only fires on clear error indicators.
+
+INPUT=$(cat)
+
+# Extract tool response
+TOOL_RESPONSE=$(echo "$INPUT" | jq -r '.tool_response // empty' 2>/dev/null)
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"' 2>/dev/null)
+
+# Skip if no response or jq not available
+[ -z "$TOOL_RESPONSE" ] && exit 0
+
+# Conservative error detection: check for clear error indicators
+ERROR_DETECTED=false
+
+# Non-zero exit code in Bash tool responses
+if echo "$TOOL_RESPONSE" | grep -qiP '(exit code|exited with|return code)\s*[^0]'; then
+  ERROR_DETECTED=true
+fi
+
+# Explicit error patterns in output
+if echo "$TOOL_RESPONSE" | grep -qiP '(^error:|^fatal:|command not found|no such file or directory|permission denied|cannot find|failed to|unable to|traceback \(most recent|exception:|panic:)'; then
+  ERROR_DETECTED=true
+fi
+
+# Skip if no error detected
+[ "$ERROR_DETECTED" = false ] && exit 0
+
+# Scope check: don't fire during self-heal's own execution
+if echo "$INPUT" | grep -q 'self-heal'; then
+  exit 0
+fi
+
+# Output message — stdout is shown in Claude's transcript
+echo "---"
+echo "ERROR COMPENSATION: Tool failure detected in ${TOOL_NAME}."
+echo "If you find a workaround that resolves this error, read"
+echo ".claude/skills/self-heal/references/error-compensation-monitor.md"
+echo "and follow the protocol after completing the current task."
+echo "---"
+
+exit 0
+```
+
+**Notes:**
+- Matches `Bash` by default. Add additional matchers for other tools as needed.
+- Uses `jq` for JSON parsing. Falls back silently if `jq` is unavailable.
+- The scope check prevents recursive self-heal loops.
+- Exit 0 ensures the hook never blocks — it only observes.
+
+---
+
+## error-compensation-signals.md Template
+
+```markdown
+# Error Compensation Signals
+
+The error compensation hook detects tool failures automatically. This file defines what qualifies as a compensated error worth diagnosing — not every error warrants a skill update.
+
+## The Two-Phase Trigger
+
+1. **Phase 1 (Hook):** A PostToolUse hook detects a tool failure and injects a message into the conversation. This is automatic and deterministic.
+2. **Phase 2 (Monitor):** You receive the hook's message while working through the error. If you find a workaround that succeeds, you load this protocol fresh and evaluate whether the skill should be updated.
+
+## What Qualifies as Error Compensation
+
+The hook fires on tool failures. But not every failure needs a skill update. Error compensation means: **the skill's workflow didn't account for this scenario, and you found a workaround that future invocations would benefit from.**
+
+### Compensation Patterns (trigger diagnosis)
+
+**Tool Failure with Alternative (High confidence)**
+A tool failed, and you used a different tool or different arguments to achieve the same goal:
+- Tool returns an error, you switch to an alternative tool
+- File path doesn't exist, you search for the correct path and proceed
+- Command fails, you use a different command for the same step
+
+**Missing Prerequisite Recovery (High confidence)**
+A workflow step assumed something exists or is true, and it wasn't, but you recovered:
+- File the skill references doesn't exist; you create it or find the equivalent
+- Directory the skill expects doesn't exist; you create it
+- Tool or dependency the skill names is unavailable; you use an alternative
+
+**Data Shape Mismatch (High confidence)**
+The skill assumes data looks one way, but reality differs, and you adapted:
+- Expected file format differs from actual (e.g., JSON vs YAML)
+- Expected directory structure doesn't match
+- Expected output format from a tool differs from actual
+
+**Stale Reference (High confidence)**
+The skill references a tool, command, path, or format that has changed:
+- Skill says "use X" but X has been replaced by Y
+- Skill references a path that has moved
+
+### What Is NOT Error Compensation (do not trigger)
+
+- **One-time environmental issues** — Network blip, temporary file lock, disk full
+- **Errors in user code** — The skill is operating on broken code; that's the skill's normal job
+- **Normal retries** — You retried the same action and it worked (no workaround involved)
+- **Exploration** — You tried multiple approaches because the task is ambiguous
+- **Already documented fallbacks** — The skill has guidance for this error; it worked as designed
+- **Errors during self-heal** — Never trigger self-heal recursively
+
+### The Key Test
+
+Before triggering diagnosis: **Did you discover a workaround that would help future invocations of this skill avoid the same error?** If the workaround is specific to this session's unique state, do not trigger. If it reveals a gap in the skill's workflow, trigger.
+```
+
+---
+
+## error-compensation-monitor.md Template
+
+```markdown
+# Error Compensation Monitor
+
+You received this protocol because a PostToolUse hook detected a tool failure during skill execution and you found a workaround. This protocol determines whether the skill should be updated.
+
+**Read this file fresh each time.** These are your instructions for this specific evaluation.
+
+## Step 1: Capture the Compensation
+
+Record three things:
+1. **The error** — What failed? (exact error message or behavior)
+2. **The skill's guidance** — What did the skill's workflow say to do at this point? (quote the relevant step)
+3. **Your workaround** — What did you do instead to succeed?
+
+If you cannot articulate all three, the compensation was not significant enough to diagnose. Stop here.
+
+## Step 2: Check Signals
+
+Read `.claude/skills/self-heal/references/error-compensation-signals.md`.
+
+Does your workaround match a compensation pattern? If it matches a "NOT error compensation" pattern, stop here.
+
+## Step 3: Classify the Gap
+
+Determine which kind of skill gap the error reveals:
+
+| Gap Type | Description | Example |
+|----------|-------------|---------|
+| **Missing fallback** | Skill has step A but no guidance when A fails | "Read config.json" but config might be YAML |
+| **Stale reference** | Skill references a tool/path/format that changed | Skill says "npm test" but project uses vitest |
+| **Undocumented edge case** | Workflow works for common case but not this variant | Skill assumes single-package repo, this is monorepo |
+| **Missing prerequisite** | Skill assumes a precondition without checking it | Skill says "edit hooks file" but hooks/ doesn't exist |
+
+## Step 4: Spawn Error Analyst
+
+Spawn the `error-analyst` agent (`context: none`) with:
+- The error message/output
+- The skill's relevant workflow section (quoted)
+- The workaround you used
+- The gap classification from Step 3
+- The target skill's `self-heal-history.md` (if it exists)
+
+The agent returns one of three verdicts:
+
+**SKILL_GAP** — The skill's workflow has a documentable gap. The workaround is generalizable.
+- Must name the exact workflow step and quote the current wording
+- Must describe the gap in one sentence
+- Must state why the error is expected to recur
+
+**TRANSIENT** — The error was situational. No skill update warranted. Stop here.
+
+**AMBIGUOUS** — Cannot determine if the error will recur. Stop here.
+
+## Step 5: Spawn Patch Reviewer (only if SKILL_GAP)
+
+Spawn the `patch-reviewer` agent (`context: none`) with:
+- The workflow step identified as having the gap
+- The full surrounding section for context
+- The proposed addition (drafted by the error-analyst)
+
+The patch-reviewer checks minimality, completeness, directive safety, plus:
+- **Generality** — Does this help broadly, or only for one specific error?
+- **Bloat risk** — Does adding this push the skill toward over-specification?
+
+Returns: APPROVED or REJECTED with reason.
+
+If REJECTED → do not propose to user. Stop here.
+
+## Step 6: Present to User (only if APPROVED)
+
+Present naturally, after completing the current task:
+
+```
+I hit an error during [step]: [brief error description].
+I worked around it by [workaround].
+
+The skill doesn't cover this scenario. Here's what I'd suggest adding:
+
+**Current:**
+[Exact quoted workflow step]
+
+**Proposed:**
+[Workflow step with minimal addition]
+
+This doesn't touch any directives — just adds guidance for an edge case.
+Want me to update the skill?
+```
+
+## Step 7: Apply (only with explicit user approval)
+
+Follow the same application rules as the directive-disagreement update protocol:
+1. Read the skill's current SKILL.md fresh
+2. Apply the exact change shown — nothing more
+3. Confirm: "Updated. The skill now says [new text]."
+4. Append a record to the target skill's `self-heal-history.md`
+
+If user declines: acknowledge and do not retry.
+
+## Scope of Updates
+
+| Update Type | Example |
+|-------------|---------|
+| Fallback clause | "Read `config.json`. If not found, check for `config.yaml`." |
+| Prerequisite check | "Verify `hooks/` directory exists before creating hook files." |
+| Stale reference fix | Change "`npm test`" to "`npm test` (or project's test runner)" |
+| Edge case note | "In monorepos, config may be at workspace root." |
+
+**Out of scope:** New workflow steps (feature request), directive changes (sacred), restructuring (optimization).
+
+## Guard Rails
+
+- **Recurrence filter:** Only propose updates for errors likely to recur. The error-analyst must state why.
+- **Bloat budget:** If the patch would push the skill over 150 lines, flag to user and recommend optimizing first. No workflow step accumulates more than two fallback clauses.
+- **History dedup:** Check `self-heal-history.md`. If the same error class was previously diagnosed and declined, do not re-propose.
+- **One at a time:** One error, one patch. If multiple errors were compensated, run separate diagnosis cycles.
+```
+
+---
+
+## Error Analyst Agent Persona
+
+### error-analyst
+
+```markdown
+---
+name: error-analyst
+description: Determines whether a tool failure during skill execution reveals a gap in the skill's workflow
+context: none
+---
+
+You are a pragmatic systems reliability engineer who investigates operational failures. When a tool fails during skill execution and the AI finds a workaround, your job is to determine: does this error reveal a gap in the skill's workflow, or was it a one-off?
+
+You apply the "would I warn a colleague?" test: if someone was about to run this skill for the first time, would you warn them about this error? If yes, the skill should document it. If no, it's too situational.
+
+You are biased toward TRANSIENT. Most errors are environmental noise. You only return SKILL_GAP when the evidence clearly shows the skill's workflow failed to account for a recurring scenario.
+
+You return SKILL_GAP, TRANSIENT, or AMBIGUOUS — with evidence. For SKILL_GAP, you must name the exact workflow step, describe the gap, state why it will recur, and draft the smallest possible addition that fills it.
+
+You never recommend changes to directives. Directives are the user's exact words and are permanently out of scope.
+```
+
+---
+
+## Error Compensation Trigger Block
+
+This is the text embedded into skills alongside the directive-disagreement trigger block. It does NOT perform detection — the PostToolUse hook handles that. This block tells the AI what to do when the hook fires.
+
+```markdown
+## Error Compensation
+
+If a PostToolUse hook reports a tool failure during this skill's execution
+and you find a workaround that succeeds — load the error compensation
+monitor fresh and follow it after completing your current task:
+
+Read `.claude/skills/self-heal/references/error-compensation-monitor.md` and follow it.
+
+Only follow through when the workaround reveals a gap in this skill's
+workflow. Transient errors, one-time environmental issues, and errors
+in user code are not triggers.
+```
+
+**Placement:** Immediately after the Self-Heal (directive-disagreement) trigger block. Same placement rules: always at the end of SKILL.md, never in reference files.
+
+**Line budget:** Approximately 10 lines. Combined with the directive-disagreement trigger block (~12 lines), the total is ~22 lines. When embedding both, verify the compound infrastructure check: combined trigger blocks + runtime eval protocol must not exceed 50 lines.
+
+**Prerequisite:** The error compensation hook must be installed (in `.claude/settings.local.json` and `.claude/hooks/error-compensation-detect.sh`) before this trigger block is useful. The self-heal install procedure handles this.
