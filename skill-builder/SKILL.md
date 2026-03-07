@@ -70,7 +70,7 @@ Before executing any command, read its procedure file from `references/procedure
 
 Re-run the installer to update skill-builder to the latest version.
 
-1. Tell the user to run the install command shown on the skill's page at skills.sh
+1. Run the installer directly via Bash: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"`
 2. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill loaded in memory, so start a new conversation. Once you're back, run `/skill-builder audit` — updates often add new recommendations that apply to your existing skills.
 <!-- /origin -->
 
