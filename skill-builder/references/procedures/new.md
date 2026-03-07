@@ -45,14 +45,15 @@ Check if `.claude/skills/awareness-ledger/` exists. If it does:
 
 If the ledger does not exist, skip this step silently.
 
-### Step 3d: Embed Self-Heal Trigger
+### Step 3d: Embed Self-Heal Triggers
 
 Check if `.claude/skills/self-heal/SKILL.md` exists. If it does:
 
 1. Append the Trigger Block (from `references/self-heal-templates.md` § "Trigger Block") to the new skill's SKILL.md
-2. Verify total line count stays under 150. If over, flag: "Skill is [N] lines with trigger embedded. Consider optimizing before adding more content."
-3. **Compound infrastructure check:** If the skill also has a runtime eval protocol section, verify combined infrastructure (trigger block + eval protocol) does not exceed 50 lines. If it does, flag to the user and recommend optimizing the skill first.
-4. Add to creation report: `Self-heal trigger: embedded`
+2. Append the Error Compensation Trigger Block (from `references/self-heal-templates.md` § "Error Compensation Trigger Block") immediately after
+3. Verify total line count stays under 150. If over, flag: "Skill is [N] lines with triggers embedded. Consider optimizing before adding more content."
+4. **Compound infrastructure check:** If the skill also has a runtime eval protocol section, verify combined infrastructure (both trigger blocks + eval protocol) does not exceed 50 lines. If it does, flag to the user and recommend optimizing the skill first.
+5. Add to creation report: `Self-heal triggers: embedded (directive + error compensation)`
 
 If self-heal is not installed, skip this step silently.
 

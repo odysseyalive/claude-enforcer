@@ -21,11 +21,13 @@ For each skill found:
 | Line count | Count lines in SKILL.md (exclude reference files) | < 150 |
 | Modes table | If skill has 2+ modes, check for Modes table | Present if needed |
 | Self-heal trigger | Grep SKILL.md for "## Self-Heal" | Present (WARN if absent and self-heal installed) |
+| Error compensation trigger | Grep SKILL.md for "## Error Compensation" | Present (WARN if absent and self-heal installed) |
 
 ### Step 3: Hook Validation
 
 ```bash
 Glob: .claude/skills/**/hooks/*.sh
+Glob: .claude/hooks/*.sh
 Read: .claude/settings.local.json → hooks section
 ```
 
@@ -35,6 +37,11 @@ For each hook script:
 
 For each wired hook in settings.local.json:
 - Does the script file exist?
+
+**Self-heal hook check (if self-heal installed):**
+- Does `.claude/hooks/error-compensation-detect.sh` exist?
+- Is it executable?
+- Is it wired in settings.local.json under `PostToolUse`?
 
 ### Step 3b: Team Validation
 
@@ -76,6 +83,7 @@ For each agent file:
 | Line targets met | [N]/[N] [PASS/WARN] (details if warn) |
 | Hooks wired | [N]/[N] [PASS/FAIL] |
 | Hooks executable | [N]/[N] [PASS/FAIL] |
+| Error compensation hook | [PASS/WARN/N/A] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
 | Agent Teams enabled | [PASS/FAIL/N/A] |
 | Research assistant in teams | [N]/[N] [PASS/WARN/N/A] |
@@ -85,4 +93,5 @@ Overall: [PASS / PASS with warnings / FAIL]
 
 **If any FAIL:** List each failure with the skill name and specific issue.
 **If WARN (self-heal trigger missing):** Note: "WARN: Self-heal trigger missing."
+**If WARN (error compensation trigger missing):** Note: "WARN: Error compensation trigger missing."
 **If all PASS:** Report clean health.

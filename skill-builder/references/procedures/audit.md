@@ -100,27 +100,42 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 
 **If self-heal is installed:**
 1. Scan all skills for the Trigger Block (grep for "## Self-Heal")
-2. Report:
+2. Scan all skills for the Error Compensation Trigger Block (grep for "## Error Compensation")
+3. Check if `.claude/hooks/error-compensation-detect.sh` exists and is wired in `.claude/settings.local.json` under `PostToolUse`
+4. Report:
    ```
    **Self-Heal:** Installed
-   - Skills with trigger embedded: [N]/[total]
-   - Skills missing trigger: [list, or "none"]
-   - Issues: [missing triggers / none]
+   - Skills with directive trigger embedded: [N]/[total]
+   - Skills with error compensation trigger embedded: [N]/[total]
+   - Skills missing directive trigger: [list, or "none"]
+   - Skills missing error compensation trigger: [list, or "none"]
+   - Error compensation hook: [installed and wired / MISSING]
+   - Issues: [missing triggers / missing hook / none]
    ```
-3. If any skills are missing the trigger, add to execution choices:
-   > `self-heal embed` — embed trigger into skills missing it
+5. If any skills are missing triggers or the hook is missing, add to execution choices:
+   > `self-heal embed` — embed triggers into skills missing them and install hook if missing
 
    **When `self-heal embed` is selected for execution:**
-   For each skill missing the trigger:
+
+   **Hook installation (if missing):**
+   a. Create `.claude/hooks/` directory if it doesn't exist
+   b. Write `.claude/hooks/error-compensation-detect.sh` from `references/self-heal-templates.md` § "Error Compensation Hook Script Template"
+   c. Make the script executable (`chmod +x`)
+   d. Add the PostToolUse hook configuration to `.claude/settings.local.json` — merge into existing hooks if present, do not overwrite
+   e. Report: `Error compensation hook installed and wired`
+
+   **Trigger embedding (for each skill missing either trigger):**
    a. Read the skill's SKILL.md
-   b. Verify line count will stay under 150 after embedding (~12 lines). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
-   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (trigger block + eval protocol) does not exceed 50 lines. If it does, flag and skip.
-   d. Append the Trigger Block (from `references/self-heal-templates.md` § "Trigger Block") as the last section of SKILL.md
-   e. Report: `Embedded self-heal trigger into /[skill-name]`
+   b. Verify line count will stay under 150 after embedding (~22 lines for both triggers). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
+   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (both trigger blocks + eval protocol) does not exceed 50 lines. If it does, flag and skip.
+   d. Append the missing Trigger Block(s) (from `references/self-heal-templates.md` § "Trigger Block" and/or § "Error Compensation Trigger Block") as the last section(s) of SKILL.md. Directive-disagreement trigger comes first, error compensation trigger immediately after.
+   e. Report: `Embedded self-heal trigger(s) into /[skill-name]`
 
    After all skills are processed, report summary:
    ```
-   Self-heal trigger embedded: [N] skills
+   Self-heal directive trigger embedded: [N] skills
+   Self-heal error compensation trigger embedded: [N] skills
+   Error compensation hook: [installed / already present]
    Skipped (line budget): [list, or "none"]
    ```
 
@@ -128,9 +143,9 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 1. Report:
    ```
    **Self-Heal:** Not installed
-   - Reactive directive-compliance correction. When a user disagrees with the AI
-     about following a directive, self-heal diagnoses whether the skill's wording
-     caused the misinterpretation and proposes a surgical fix.
+   - Reactive skill correction. Triggers on directive disagreements (user corrections)
+     and error compensation (hook-detected tool failures with workarounds). Diagnoses
+     root cause and proposes surgical fixes.
    - Available in the execution menu below.
    ```
 2. This recommendation MUST appear — do not skip silently. The audit is the orchestrator.
