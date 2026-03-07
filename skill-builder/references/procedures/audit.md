@@ -100,52 +100,46 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 
 **If self-heal is installed:**
 1. Scan all skills for the Trigger Block (grep for "## Self-Heal")
-2. Scan all skills for the Error Compensation Trigger Block (grep for "## Error Compensation")
-3. **Hook health check** — verify the full hook infrastructure:
-   a. Check if `.claude/hooks/error-compensation-detect.sh` exists
-   b. Check if it is wired in `.claude/settings.local.json` under `PostToolUse` for **all three matchers**: Bash, Edit, and Write (not just Bash)
-   c. Check if `.claude/hooks/hook-health-check.sh` (sentinel reader) exists and is wired on `PostToolUse:Read`
-   d. Check if `error-compensation-detect.sh` contains the ERR trap pattern (grep for `CRASH_LOG` or `trap.*ERR`) — indicates defensive hardening
-4. Report:
+2. **Stale artifact check** — detect error compensation artifacts from a previous version:
+   a. Check for `.claude/hooks/error-compensation-detect.sh`
+   b. Check for `.claude/hooks/hook-health-check.sh`
+   c. Check for `.claude/hooks/.crash-log` or `.claude/hooks/.crash-log.reported`
+   d. Check `.claude/settings.local.json` for PostToolUse entries referencing `error-compensation-detect.sh` or `hook-health-check.sh`
+   e. Grep all skills for `## Error Compensation` trigger blocks
+   f. Check for `.claude/skills/self-heal/references/error-compensation-signals.md`, `error-compensation-monitor.md`, or `agents/error-analyst.md`
+3. Report:
    ```
    **Self-Heal:** Installed
-   - Skills with directive trigger embedded: [N]/[total]
-   - Skills with error compensation trigger embedded: [N]/[total]
-   - Skills missing directive trigger: [list, or "none"]
-   - Skills missing error compensation trigger: [list, or "none"]
-   - Error compensation hook: [installed and wired / MISSING]
-   - Hook tool coverage: [Bash, Edit, Write / PARTIAL — missing: Edit, Write]
-   - Sentinel reader (hook-health-check.sh): [installed and wired / MISSING]
-   - Hook hardening (ERR trap): [present / MISSING]
-   - Issues: [missing triggers / missing hook / partial coverage / missing sentinel / unhardened hooks / none]
+   - Skills with trigger embedded: [N]/[total]
+   - Skills missing trigger: [list, or "none"]
+   - Stale error compensation artifacts: [list, or "none"]
+   - Issues: [missing triggers / stale artifacts / none]
    ```
-5. If any skills are missing triggers, hooks are missing, or hook infrastructure is incomplete, add to execution choices:
-   > `self-heal embed` — embed triggers into skills missing them, install/upgrade hooks if needed
+4. If any skills are missing triggers or stale artifacts exist, add to execution choices:
+   > `self-heal embed` — embed triggers into skills missing them, clean up stale artifacts
 
    **When `self-heal embed` is selected for execution:**
 
-   **Hook installation/upgrade:**
-   a. Create `.claude/hooks/` directory if it doesn't exist
-   b. Write `.claude/hooks/error-compensation-detect.sh` from `references/self-heal-templates.md` § "Error Compensation Hook Script Template" (overwrites existing — the template includes defensive hardening and multi-tool patterns)
-   c. Write `.claude/hooks/hook-health-check.sh` from `references/self-heal-templates.md` § "Hook Hardening Pattern" → "Sentinel Reader Hook"
-   d. Make both scripts executable (`chmod +x`)
-   e. Add/update PostToolUse hook configuration in `.claude/settings.local.json` — ensure error-compensation is wired on Bash, Edit, and Write, and sentinel reader is wired on Read. Merge into existing hooks, do not overwrite unrelated entries.
-   f. Report: `Error compensation hook installed (Bash, Edit, Write) + sentinel reader (Read)`
+   **Stale artifact cleanup (if any found):**
+   a. Delete hook scripts: `.claude/hooks/error-compensation-detect.sh`, `.claude/hooks/hook-health-check.sh`
+   b. Delete crash logs: `.claude/hooks/.crash-log`, `.claude/hooks/.crash-log.reported`
+   c. Delete stale self-heal files: `error-compensation-signals.md`, `error-compensation-monitor.md`, `error-analyst.md`
+   d. Remove PostToolUse entries from `.claude/settings.local.json` that reference `error-compensation-detect.sh` or `hook-health-check.sh`. If PostToolUse becomes empty, remove the key entirely. Preserve all other hook entries.
+   e. Strip `## Error Compensation` sections from all skills' SKILL.md files
+   f. Update `.claude/skills/self-heal/SKILL.md` to current single-path version (from `references/self-heal-templates.md` § "self-heal SKILL.md Template")
+   g. Report: `Cleaned up [N] stale error compensation artifacts`
 
-   **Trigger embedding (for each skill missing either trigger):**
+   **Trigger embedding (for each skill missing the trigger):**
    a. Read the skill's SKILL.md
-   b. Verify line count will stay under 150 after embedding (~22 lines for both triggers). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
-   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (both trigger blocks + eval protocol) does not exceed 50 lines. If it does, flag and skip.
-   d. Append the missing Trigger Block(s) (from `references/self-heal-templates.md` § "Trigger Block" and/or § "Error Compensation Trigger Block") as the last section(s) of SKILL.md. Directive-disagreement trigger comes first, error compensation trigger immediately after.
-   e. Report: `Embedded self-heal trigger(s) into /[skill-name]`
+   b. Verify line count will stay under 150 after embedding (~12 lines). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
+   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (trigger block + eval protocol) does not exceed 50 lines. If it does, flag and skip.
+   d. Append the Trigger Block (from `references/self-heal-templates.md` § "Trigger Block") as the last section of SKILL.md.
+   e. Report: `Embedded self-heal trigger into /[skill-name]`
 
    After all skills are processed, report summary:
    ```
-   Self-heal directive trigger embedded: [N] skills
-   Self-heal error compensation trigger embedded: [N] skills
-   Error compensation hook: [installed / upgraded / already current]
-   Hook tool coverage: Bash, Edit, Write
-   Sentinel reader: [installed / already present]
+   Self-heal trigger embedded: [N] skills
+   Stale artifacts cleaned: [N] items
    Skipped (line budget): [list, or "none"]
    ```
 
@@ -153,9 +147,8 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 1. Report:
    ```
    **Self-Heal:** Not installed
-   - Reactive skill correction. Triggers on directive disagreements (user corrections)
-     and error compensation (hook-detected tool failures with workarounds). Diagnoses
-     root cause and proposes surgical fixes.
+   - Reactive skill correction. Triggers on directive disagreements (user corrections).
+     Diagnoses root cause and proposes surgical fixes.
    - Available in the execution menu below.
    ```
 2. This recommendation MUST appear — do not skip silently. The audit is the orchestrator.
@@ -250,7 +243,7 @@ Combine all sub-command outputs into a single report:
 [from Step 4a — status, record counts, capture gaps, or installation recommendation]
 
 ## Self-Heal
-[from Step 4b — status, observer coverage, or installation recommendation]
+[from Step 4b — status, trigger coverage, stale artifacts, or installation recommendation]
 
 ## Temporal Reference Risk
 [from Step 4c — per-skill risk levels, missing hooks]
@@ -283,7 +276,7 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 3. `hooks --execute` for [skill(s)]
 > 4. All of the above for [skill]
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
-> 6. `self-heal --execute` — install Self-Heal companion skill *(only if self-heal does not exist)*
+> 6. `self-heal --execute` — install Self-Heal companion skill *(only if self-heal does not exist)*, or clean up stale artifacts *(if self-heal exists with old error compensation infrastructure)*
 > 7. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
 > 8. Skip — just review for now
 

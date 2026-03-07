@@ -80,6 +80,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 /skill-builder inline [skill] [directive]  # Quick-add a directive to a skill
 /skill-builder cascade [skill]  # Detect validation cascade (too many validators)
 /skill-builder ledger           # Create an Awareness Ledger for institutional memory
+/skill-builder self-heal        # Install the Self-Heal companion skill
 /skill-builder update           # Update skill-builder to the latest version
 ```
 
@@ -294,6 +295,21 @@ Three channels feed the ledger:
 ```
 
 The `init` process seeds the ledger by scanning git history, your CLAUDE.md, and TODO/FIXME comments for initial records. A cold-start empty ledger helps nobody, so the system gives you a starting corpus to build on.
+
+## Self-Heal
+
+You correct Claude about a directive. It apologizes, fixes the immediate output, and moves on. But the skill that caused the misinterpretation hasn't changed. Next session, same mistake. The apology was for you. The skill never heard it.
+
+Self-heal closes that loop. It watches for corrections during conversation — whether you name the directive explicitly, redirect behavior, or just express frustration about something you've said before. When it detects a correction, it traces the failure back through the skill's wording to find where the non-directive language (workflow steps, framing, examples) led the AI astray.
+
+Two isolated agents handle the diagnosis. A forensic linguist traces the causal chain from the skill's wording to the misinterpretation. A patch reviewer checks that the proposed fix is the smallest possible change and doesn't touch any directive. If both sign off, you see a before/after diff. Nothing changes without your approval.
+
+The constraint that makes this safe: directives are permanently out of scope. Self-heal only modifies the workflow language *around* your rules — the scaffolding, not the rules themselves. Your exact words stay exactly as you wrote them.
+
+```
+/skill-builder self-heal             # See what would be created (display mode)
+/skill-builder self-heal --execute   # Install the self-heal companion skill
+```
 
 ## Learn More
 
