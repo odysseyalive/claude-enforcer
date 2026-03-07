@@ -101,7 +101,11 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
 **If self-heal is installed:**
 1. Scan all skills for the Trigger Block (grep for "## Self-Heal")
 2. Scan all skills for the Error Compensation Trigger Block (grep for "## Error Compensation")
-3. Check if `.claude/hooks/error-compensation-detect.sh` exists and is wired in `.claude/settings.local.json` under `PostToolUse`
+3. **Hook health check** — verify the full hook infrastructure:
+   a. Check if `.claude/hooks/error-compensation-detect.sh` exists
+   b. Check if it is wired in `.claude/settings.local.json` under `PostToolUse` for **all three matchers**: Bash, Edit, and Write (not just Bash)
+   c. Check if `.claude/hooks/hook-health-check.sh` (sentinel reader) exists and is wired on `PostToolUse:Read`
+   d. Check if `error-compensation-detect.sh` contains the ERR trap pattern (grep for `CRASH_LOG` or `trap.*ERR`) — indicates defensive hardening
 4. Report:
    ```
    **Self-Heal:** Installed
@@ -110,19 +114,23 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
    - Skills missing directive trigger: [list, or "none"]
    - Skills missing error compensation trigger: [list, or "none"]
    - Error compensation hook: [installed and wired / MISSING]
-   - Issues: [missing triggers / missing hook / none]
+   - Hook tool coverage: [Bash, Edit, Write / PARTIAL — missing: Edit, Write]
+   - Sentinel reader (hook-health-check.sh): [installed and wired / MISSING]
+   - Hook hardening (ERR trap): [present / MISSING]
+   - Issues: [missing triggers / missing hook / partial coverage / missing sentinel / unhardened hooks / none]
    ```
-5. If any skills are missing triggers or the hook is missing, add to execution choices:
-   > `self-heal embed` — embed triggers into skills missing them and install hook if missing
+5. If any skills are missing triggers, hooks are missing, or hook infrastructure is incomplete, add to execution choices:
+   > `self-heal embed` — embed triggers into skills missing them, install/upgrade hooks if needed
 
    **When `self-heal embed` is selected for execution:**
 
-   **Hook installation (if missing):**
+   **Hook installation/upgrade:**
    a. Create `.claude/hooks/` directory if it doesn't exist
-   b. Write `.claude/hooks/error-compensation-detect.sh` from `references/self-heal-templates.md` § "Error Compensation Hook Script Template"
-   c. Make the script executable (`chmod +x`)
-   d. Add the PostToolUse hook configuration to `.claude/settings.local.json` — merge into existing hooks if present, do not overwrite
-   e. Report: `Error compensation hook installed and wired`
+   b. Write `.claude/hooks/error-compensation-detect.sh` from `references/self-heal-templates.md` § "Error Compensation Hook Script Template" (overwrites existing — the template includes defensive hardening and multi-tool patterns)
+   c. Write `.claude/hooks/hook-health-check.sh` from `references/self-heal-templates.md` § "Hook Hardening Pattern" → "Sentinel Reader Hook"
+   d. Make both scripts executable (`chmod +x`)
+   e. Add/update PostToolUse hook configuration in `.claude/settings.local.json` — ensure error-compensation is wired on Bash, Edit, and Write, and sentinel reader is wired on Read. Merge into existing hooks, do not overwrite unrelated entries.
+   f. Report: `Error compensation hook installed (Bash, Edit, Write) + sentinel reader (Read)`
 
    **Trigger embedding (for each skill missing either trigger):**
    a. Read the skill's SKILL.md
@@ -135,7 +143,9 @@ Check if `.claude/skills/self-heal/SKILL.md` exists.
    ```
    Self-heal directive trigger embedded: [N] skills
    Self-heal error compensation trigger embedded: [N] skills
-   Error compensation hook: [installed / already present]
+   Error compensation hook: [installed / upgraded / already current]
+   Hook tool coverage: Bash, Edit, Write
+   Sentinel reader: [installed / already present]
    Skipped (line budget): [list, or "none"]
    ```
 

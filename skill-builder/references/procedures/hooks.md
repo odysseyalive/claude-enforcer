@@ -28,6 +28,11 @@ For each hook script found:
 | **Reads stdin** | Captures `INPUT=$(cat)` for tool input |
 | **Permission** | Script is executable (`chmod +x`) |
 | **Error output** | Writes block reason to stderr (`>&2`) |
+| **Hardened** | Has ERR trap writing to crash sentinel (grep for `trap.*ERR` or `CRASH_LOG`). See `references/self-heal-templates.md` § "Hook Hardening Pattern" |
+| **No set -e** | Does NOT use `set -e` (causes immediate exit, bypasses ERR trap logging) |
+| **Defensive I/O** | Uses `2>/dev/null` and `|| exit 0` on fallible operations |
+
+Unhardened hooks should be flagged as: "Hook lacks defensive hardening — vulnerable to silent crashes. See Hook Hardening Pattern."
 
 #### Step 3: Identify New Opportunities
 
@@ -181,15 +186,20 @@ When running `/skill-builder hooks [skill] --execute`:
 #!/bin/bash
 # Hook: [purpose] per /[skill] directive
 # Scope: Project content files only (skips .claude/ infrastructure)
-INPUT=$(cat)
+
+# Defensive hardening (see self-heal-templates.md § "Hook Hardening Pattern")
+CRASH_LOG="${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/.crash-log"
+trap 'echo "$(date -Is) HOOK_CRASH $(basename "$0")" >> "$CRASH_LOG" 2>/dev/null' ERR
+
+INPUT=$(cat 2>/dev/null) || exit 0
 
 # Scope check: skip .claude/ infrastructure files
 FILE_PATH=$(echo "$INPUT" | grep -oP '"file_path"\s*:\s*"[^"]*"' | head -1 | sed 's/.*"file_path"\s*:\s*"//;s/"$//')
-if echo "$FILE_PATH" | grep -q '\.claude/'; then
+if echo "$FILE_PATH" | grep -q '\.claude/' 2>/dev/null; then
   exit 0
 fi
 
-if echo "$INPUT" | grep -q "FORBIDDEN_VALUE"; then
+if echo "$INPUT" | grep -q "FORBIDDEN_VALUE" 2>/dev/null; then
   echo "BLOCKED: [reason] per /[skill] directive" >&2
   exit 2
 fi

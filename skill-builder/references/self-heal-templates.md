@@ -464,6 +464,24 @@ A PostToolUse hook that detects tool failures and injects a message telling Clau
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/error-compensation-detect.sh"
           }
         ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/error-compensation-detect.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/error-compensation-detect.sh"
+          }
+        ]
       }
     ]
   }
@@ -476,35 +494,53 @@ A PostToolUse hook that detects tool failures and injects a message telling Clau
 #!/bin/bash
 # Error Compensation Detection Hook
 # PostToolUse hook — detects tool failures and prompts self-heal monitoring.
-# Conservative: only fires on clear error indicators.
+# Registered on Bash, Edit, and Write. Conservative: only fires on clear error indicators.
+# Defensive: every fallible operation exits gracefully. Never crashes, never blocks.
 
-INPUT=$(cat)
+# Crash sentinel — if this hook itself errors, other hooks can detect it
+CRASH_LOG="${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/.crash-log"
+trap 'echo "$(date -Is) HOOK_CRASH error-compensation-detect.sh" >> "$CRASH_LOG" 2>/dev/null' ERR
 
-# Extract tool response
-TOOL_RESPONSE=$(echo "$INPUT" | jq -r '.tool_response // empty' 2>/dev/null)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"' 2>/dev/null)
+INPUT=$(cat 2>/dev/null) || exit 0
 
-# Skip if no response or jq not available
+# Guard: jq must be available
+command -v jq >/dev/null 2>&1 || exit 0
+
+# Extract tool info
+TOOL_RESPONSE=$(echo "$INPUT" | jq -r '.tool_response // empty' 2>/dev/null) || exit 0
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"' 2>/dev/null) || exit 0
+
+# Skip if no response
 [ -z "$TOOL_RESPONSE" ] && exit 0
 
 # Conservative error detection: check for clear error indicators
 ERROR_DETECTED=false
 
-# Non-zero exit code in Bash tool responses
-if echo "$TOOL_RESPONSE" | grep -qiP '(exit code|exited with|return code)\s*[^0]'; then
+# --- Bash-specific patterns ---
+if [ "$TOOL_NAME" = "Bash" ]; then
+  # Non-zero exit code
+  if echo "$TOOL_RESPONSE" | grep -qiP '(exit code|exited with|return code)\s*[^0]' 2>/dev/null; then
+    ERROR_DETECTED=true
+  fi
+fi
+
+# --- Universal error patterns (all tools) ---
+if echo "$TOOL_RESPONSE" | grep -qiP '(^error:|^fatal:|command not found|no such file or directory|permission denied|cannot find|failed to|unable to|traceback \(most recent|exception:|panic:)' 2>/dev/null; then
   ERROR_DETECTED=true
 fi
 
-# Explicit error patterns in output
-if echo "$TOOL_RESPONSE" | grep -qiP '(^error:|^fatal:|command not found|no such file or directory|permission denied|cannot find|failed to|unable to|traceback \(most recent|exception:|panic:)'; then
-  ERROR_DETECTED=true
+# --- Edit/Write-specific patterns ---
+if [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "Write" ]; then
+  if echo "$TOOL_RESPONSE" | grep -qiP '(file not found|does not exist|read-only|is a directory|invalid path|not unique|old_string.*not found)' 2>/dev/null; then
+    ERROR_DETECTED=true
+  fi
 fi
 
 # Skip if no error detected
 [ "$ERROR_DETECTED" = false ] && exit 0
 
 # Scope check: don't fire during self-heal's own execution
-if echo "$INPUT" | grep -q 'self-heal'; then
+if echo "$INPUT" | grep -q 'self-heal' 2>/dev/null; then
   exit 0
 fi
 
@@ -520,8 +556,11 @@ exit 0
 ```
 
 **Notes:**
-- Matches `Bash` by default. Add additional matchers for other tools as needed.
-- Uses `jq` for JSON parsing. Falls back silently if `jq` is unavailable.
+- Registered on `Bash`, `Edit`, and `Write` via separate matchers in the hook config.
+- **Defensive hardening:** every fallible line uses `2>/dev/null` and `|| exit 0`. The hook degrades to "allow" rather than crashing.
+- **Crash sentinel:** ERR trap writes to `.claude/hooks/.crash-log` so the hook-health-check can detect failures. See § "Hook Hardening Pattern" below.
+- Uses `jq` for JSON parsing. Exits cleanly if `jq` is unavailable.
+- Tool-specific detection patterns: Bash gets exit code checks, Edit/Write get file operation errors, all tools share universal patterns.
 - The scope check prevents recursive self-heal loops.
 - Exit 0 ensures the hook never blocks — it only observes.
 
@@ -752,3 +791,94 @@ in user code are not triggers.
 **Line budget:** Approximately 10 lines. Combined with the directive-disagreement trigger block (~12 lines), the total is ~22 lines. When embedding both, verify the compound infrastructure check: combined trigger blocks + runtime eval protocol must not exceed 50 lines.
 
 **Prerequisite:** The error compensation hook must be installed (in `.claude/settings.local.json` and `.claude/hooks/error-compensation-detect.sh`) before this trigger block is useful. The self-heal install procedure handles this.
+
+---
+
+## Hook Hardening Pattern
+
+All self-heal hooks (and any hooks skill-builder creates) follow this defensive pattern. The goal: hooks **never crash** and hook crashes are **always detectable**.
+
+### Three-Layer Defense
+
+| Layer | Addresses | Mechanism |
+|-------|-----------|-----------|
+| **Crash sentinel + ERR trap** | Hook infrastructure errors (invisible to tool_response) | ERR trap writes to `.crash-log` → sentinel reader reports on next Read |
+| **Multi-tool coverage** | Blind spots (Edit/Write unmonitored) | Register error-compensation on Bash, Edit, Write |
+| **Defensive shell hardening** | Self-referential paradox (hook detecting its own crash) | `2>/dev/null` and `|| exit 0` on every fallible line |
+
+### ERR Trap (add to every hook)
+
+```bash
+# Crash sentinel — add after #!/bin/bash, before any logic
+CRASH_LOG="${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/.crash-log"
+trap 'echo "$(date -Is) HOOK_CRASH $(basename "$0")" >> "$CRASH_LOG" 2>/dev/null' ERR
+```
+
+When a hook crashes, the ERR trap fires and appends to the sentinel file. The hook still exits non-zero (Claude Code reports the error in the sidebar), but now the crash is also recorded in a file that another hook can read.
+
+### Sentinel Reader Hook
+
+A lightweight PostToolUse:Read hook that checks for accumulated hook crashes. Read fires frequently and almost never fails, making it a reliable carrier for cross-event detection.
+
+**Hook configuration (merged into `.claude/settings.local.json`):**
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/hook-health-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Hook script (`.claude/hooks/hook-health-check.sh`):**
+
+```bash
+#!/bin/bash
+# Hook Health Check — sentinel reader
+# PostToolUse:Read hook. Checks for hook crashes recorded by ERR traps.
+# Lightweight: only reads a file and exits. Never blocks.
+
+CRASH_LOG="${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/.crash-log"
+
+# No crash log = no crashes
+[ -f "$CRASH_LOG" ] || exit 0
+
+CRASHES=$(wc -l < "$CRASH_LOG" 2>/dev/null) || exit 0
+[ "$CRASHES" -eq 0 ] && exit 0
+
+echo "---"
+echo "HOOK HEALTH: $CRASHES hook crash(es) detected."
+cat "$CRASH_LOG" 2>/dev/null
+echo ""
+echo "Hook infrastructure errors are not visible in tool_response."
+echo "If these crashes affected your current task, read"
+echo ".claude/skills/self-heal/references/error-compensation-monitor.md"
+echo "and follow the protocol after completing the current task."
+echo "---"
+
+# Rotate after reporting — prevents repeated alerts
+mv "$CRASH_LOG" "${CRASH_LOG}.reported" 2>/dev/null
+exit 0
+```
+
+**Why Read?** Read is the most frequent PostToolUse event in a typical session. It almost never errors itself, so the sentinel reader is unlikely to crash. Even if it does, the crash log persists on disk for the next invocation.
+
+### Defensive Shell Rules
+
+Every hook script must follow these rules:
+
+1. **`2>/dev/null`** on every `grep`, `jq`, `echo` to file, and pipe operation
+2. **`|| exit 0`** after `cat`, `jq`, and any command that could fail on malformed input
+3. **Never use `set -e`** — it causes immediate exit on any failure, bypassing the ERR trap's ability to log gracefully
+4. **Guard external dependencies** — `command -v jq >/dev/null 2>&1 || exit 0` before using jq
+5. **`INPUT=$(cat 2>/dev/null) || exit 0`** — stdin read can fail if the hook runner has issues

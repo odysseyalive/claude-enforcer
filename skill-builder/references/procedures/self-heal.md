@@ -37,7 +37,8 @@ In display mode, show the proposed structure. In execute mode (`--execute`), cre
 
 ```
 .claude/hooks/
-└── error-compensation-detect.sh
+├── error-compensation-detect.sh
+└── hook-health-check.sh
 ```
 
 `self-heal-history.md` files are created per target skill (e.g., `.claude/skills/[target-skill]/self-heal-history.md`) when self-heal first runs diagnosis on that skill — not during install. See `references/self-heal-templates.md` § "self-heal-history.md Format" for the record format.
@@ -62,14 +63,15 @@ In display mode, show the proposed structure. In execute mode (`--execute`), cre
 
 ### Step 2b: Install Error Compensation Hook
 
-Create the hook script and add the hook configuration:
+Create the hook scripts and add the hook configuration:
 
 1. Create `.claude/hooks/` directory if it doesn't exist
 2. Write `.claude/hooks/error-compensation-detect.sh` from `references/self-heal-templates.md` § "Error Compensation Hook Script Template"
-3. Make the script executable (`chmod +x`)
-4. Add the PostToolUse hook configuration to `.claude/settings.local.json` — merge into existing hooks if present, do not overwrite
+3. Write `.claude/hooks/hook-health-check.sh` from `references/self-heal-templates.md` § "Hook Hardening Pattern" → "Sentinel Reader Hook"
+4. Make both scripts executable (`chmod +x`)
+5. Add PostToolUse hook configuration to `.claude/settings.local.json` — merge into existing hooks if present, do not overwrite. Three matchers for error-compensation (Bash, Edit, Write) and one for sentinel reader (Read).
 
-See `references/self-heal-templates.md` § "Error Compensation Hook Script Template" for the hook config JSON and script content.
+See `references/self-heal-templates.md` § "Error Compensation Hook Script Template" for the error-compensation hook config and script, and § "Hook Hardening Pattern" for the sentinel reader hook config and script.
 
 ### Step 3: Report
 
@@ -78,8 +80,9 @@ Created Self-Heal:
   .claude/skills/self-heal/SKILL.md ([X] lines)
   .claude/skills/self-heal/references/ (5 files)
   .claude/skills/self-heal/agents/ (3 agents)
-  .claude/hooks/error-compensation-detect.sh (hook installed)
-  PostToolUse hook added to .claude/settings.local.json
+  .claude/hooks/error-compensation-detect.sh (error detection — Bash, Edit, Write)
+  .claude/hooks/hook-health-check.sh (crash sentinel reader — Read)
+  PostToolUse hooks added to .claude/settings.local.json (4 matchers)
   Self-heal history: created per skill on first diagnosis
 ```
 
