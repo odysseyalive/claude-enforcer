@@ -46,9 +46,9 @@ Skip Steps 3–5 (they require existing skills) and go directly to Step 6 with t
 
 ```markdown
 ## Skills Summary
-| Skill | Lines | Description | Directives | Reference Inline | Hooks | Teams | Status |
-|-------|-------|-------------|------------|------------------|-------|-------|--------|
-| /skill-1 | X | single/multi | Y | Z tables | yes/no | yes/no/N/A | OK/NEEDS WORK |
+| Skill | Lines | Description | Directives | Reference Inline | Hooks | Status |
+|-------|-------|-------------|------------|------------------|-------|--------|
+| /skill-1 | X | single/multi | Y | Z tables | yes/no | OK/NEEDS WORK |
 
 **Description column:** Flag `multi` if uses `|` or `>` syntax (needs optimization to single line)
 ```
@@ -203,6 +203,8 @@ Each agent reads the aggregated findings from optimize, agents, and hooks across
 
 Combine all sub-command outputs into a single report:
 
+**Reporting principle — absence vs. gap:** Capability sections (Teams, Temporal Hooks, Validation Cascade) that have nothing to report should be omitted entirely rather than displayed with "none" values. A capability that doesn't apply is correctly absent, not missing. Sections that are always included regardless of state (Awareness Ledger, Self-Heal) have explicit installation recommendations and are exceptions — they are surfaced by design as the audit is the orchestrator for companion skill adoption.
+
 ```markdown
 # Skill System Audit Report
 
@@ -219,18 +221,19 @@ Combine all sub-command outputs into a single report:
 [aggregated from optimize display mode per skill]
 
 ## Agent Opportunities
-| Skill | Agent Type | Purpose | Routing | Priority |
-|-------|------------|---------|---------|----------|
-| /skill-1 | id-lookup | Enforce grounding for IDs | Individual/Team/Both | High |
+| Skill | Agent Type | Purpose | Priority |
+|-------|------------|---------|----------|
+| /skill-1 | id-lookup | Enforce grounding for IDs | High |
 [from agents display mode per skill]
 
 ## Hooks Status
 [aggregated from hooks display mode]
 
 ## Teams Status
-- **Env var enabled:** [yes/no]
-- **Skills using teams:** [list or "none"]
-- **Research assistant present:** [per-team status or N/A]
+*(Include this section only if agent teams are actively configured — i.e., `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set AND at least one skill uses team routing. If no skills use teams, omit this section entirely. Team routing is evaluated per-skill during Step 4 via the agents sub-command, which applies the routing decision framework from `references/agents-teams.md`. Absence of teams is not a gap — it means individual agent routing is correct for the current workloads.)*
+
+- **Skills using teams:** [list]
+- **Research assistant present:** [per-team status]
 - **Issues:** [any team-related issues or "none"]
 
 ## Awareness Ledger
