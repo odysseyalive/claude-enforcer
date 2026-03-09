@@ -40,7 +40,16 @@ If no `.claude/skills/*/SKILL.md` files exist (excluding skill-builder itself):
 5. Present the CLAUDE.md optimization report with proposed skill extractions
 6. Offer execution: "Should I extract these sections into skills?"
 
-Skip Steps 3–5 (they require existing skills) and go directly to Step 6 with the CLAUDE.md-focused execution choices.
+Skip Steps 3, 4 (sub-commands), 4c–4f (they require existing skills).
+
+**Still run Steps 4a and 4b** (Awareness Ledger and Self-Heal status checks). These are companion skill installations — they don't depend on existing skills and the audit is the orchestrator for surfacing them.
+
+Go to Step 6 with execution choices that include:
+- CLAUDE.md extraction candidates (from above)
+- Awareness Ledger installation (from Step 4a, if not installed)
+- Self-Heal installation (from Step 4b, if not installed)
+
+**Post-bootstrap chaining:** When CLAUDE.md extraction is executed and new skills are created, post-action chaining (per § Display/Execute Mode Convention rule 6) fires automatically — running optimize, agents, and hooks in display mode for each newly created skill, then offering execution choices. This ensures agents and hooks are surfaced in the same session, not deferred to a second audit.
 
 ### Step 3: Skills Summary Table
 
