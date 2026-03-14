@@ -298,13 +298,20 @@ The `init` process seeds the ledger by scanning git history, your CLAUDE.md, and
 
 ## Self-Heal
 
-You correct Claude about a directive. It apologizes, fixes the immediate output, and moves on. But the skill that caused the misinterpretation hasn't changed. Next session, same mistake. The apology was for you. The skill never heard it.
+You know the complaints. Claude adds a summary paragraph you didn't ask for. It uses "I'd be happy to help" before doing the thing you already asked it to do. It over-engineers a three-line function into an abstraction layer. You correct it, it apologizes, and next session it does the same thing again.
 
-Self-heal closes that loop. It watches for corrections during conversation — whether you name the directive explicitly, redirect behavior, or just express frustration about something you've said before. When it detects a correction, it traces the failure back through the skill's wording to find where the non-directive language (workflow steps, framing, examples) led the AI astray.
+The correction was for you. The skill never heard it.
 
-Two isolated agents handle the diagnosis. A forensic linguist traces the causal chain from the skill's wording to the misinterpretation. A patch reviewer checks that the proposed fix is the smallest possible change and doesn't touch any directive. If both sign off, you see a before/after diff. Nothing changes without your approval.
+`/self-heal` turns that correction into a permanent fix. When you tell Claude what you don't like, self-heal traces the problem back to the skill's wording and proposes a surgical change — so the behavior actually stops.
 
-The constraint that makes this safe: directives are permanently out of scope. Self-heal only modifies the workflow language *around* your rules — the scaffolding, not the rules themselves. Your exact words stay exactly as you wrote them.
+```
+"Stop adding trailing summaries after every response."
+"I said use snake_case. Why are you still using camelCase?"
+"Don't refactor code I didn't ask you to touch."
+"I've told you three times not to add docstrings."
+```
+
+Any of these will trigger a diagnosis. Self-heal finds the workflow language that led Claude astray, drafts the smallest possible fix, and shows you a before/after diff. Nothing changes without your approval. Your directives — your exact words — are permanently off-limits. Only the scaffolding around them gets touched.
 
 ```
 /skill-builder self-heal             # See what would be created (display mode)
