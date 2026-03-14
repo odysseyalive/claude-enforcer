@@ -305,18 +305,14 @@ The correction was for you. The skill never heard it.
 `/self-heal` turns that correction into a permanent fix. When you tell Claude what you don't like, self-heal traces the problem back to the skill's wording and proposes a surgical change — so the behavior actually stops.
 
 ```
-"Stop adding trailing summaries after every response."
-"I said use snake_case. Why are you still using camelCase?"
-"Don't refactor code I didn't ask you to touch."
-"I've told you three times not to add docstrings."
+/self-heal Stop adding trailing summaries after every response.
+/self-heal I said use snake_case. Why are you still using camelCase?
+/self-heal Don't refactor code I didn't ask you to touch.
+/self-heal I've told you three times not to add docstrings.
 ```
 
-Any of these will trigger a diagnosis. Self-heal finds the workflow language that led Claude astray, drafts the smallest possible fix, and shows you a before/after diff. Nothing changes without your approval. Your directives — your exact words — are permanently off-limits. Only the scaffolding around them gets touched.
+Each one triggers a diagnosis. Self-heal finds the workflow language that led Claude astray, drafts the smallest possible fix, and shows you a before/after diff. Nothing changes without your approval. Your directives — your exact words — are permanently off-limits. Only the scaffolding around them gets touched.
 
-```
-/skill-builder self-heal             # See what would be created (display mode)
-/skill-builder self-heal --execute   # Install the self-heal companion skill
-```
 
 ## Learn More
 
