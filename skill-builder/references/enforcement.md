@@ -14,8 +14,11 @@ CLAUDE.md and skills load at conversation start. Under long context windows, Cla
 
 ### What's Immutable (External Enforcement)
 
-- **Hooks** — Bash scripts run outside Claude's context, block regardless of drift
+- **Command hooks** — Shell scripts run outside Claude's context, block regardless of drift
+- **Prompt hooks** — LLM evaluates a prompt with tool context; runs outside conversation context
+- **Agent hooks** — Subagent with Read/Grep/Glob access verifies conditions; isolated from conversation
 - **Agents with `context: none`** — Fresh subprocess, reads files without inherited drift
+- **PostCompact hooks** — Fire after context compaction, re-inject critical awareness at the exact moment drift occurs
 
 ### Enforcement Hierarchy
 
@@ -24,7 +27,10 @@ CLAUDE.md and skills load at conversation start. Under long context windows, Cla
 | Guidance | Directives in SKILL.md | No | Soft preferences |
 | Grounding | "State which ID you'll use" | No | Important but not critical |
 | Validation | Agent (`context: none`) | Yes | Important rules |
-| Hard block | Hook (PreToolUse) | Yes | Critical/never-violate |
+| Hard block — deterministic | Command hook (PreToolUse) | Yes | Rules expressible as pattern/regex |
+| Hard block — semantic | Prompt hook (PreToolUse) | Yes | Rules requiring judgment (paraphrasing, intent) |
+| Hard block — analytical | Agent hook (PreToolUse) | Yes | Rules requiring multi-file analysis |
+| Drift re-injection | PostCompact hook | Yes | Re-state critical rules after context compaction |
 
 ### Planning-Phase Activation
 
@@ -50,8 +56,11 @@ The CLAUDE.md line survives context compression (it reloads at the start of ever
 When optimizing or creating skills:
 
 - **Soft guidance** → Directives only
-- **Important rules** → Directives + agent validation
-- **Critical rules** → Directives + hook enforcement
+- **Important rules** → Directives + agent validation (`context: none`)
+- **Critical deterministic rules** → Directives + command hook (checksum, regex)
+- **Critical semantic rules** → Directives + prompt hook (meaning-aware)
+- **Critical multi-file rules** → Directives + agent hook (cross-reference analysis)
+- **Drift-sensitive rules** → Above + PostCompact re-injection
 
 ### Why Not Rules?
 
@@ -144,26 +153,114 @@ The optimize command protects directives (verbatim text), workflows (step order)
 
 ## Content Provenance Model
 
-Skill-builder's own SKILL.md uses HTML comment markers to distinguish sacred user directives from generated machinery. This model applies to **skill-builder internals only** — user skills do not get provenance markers.
+Skill files contain two kinds of content with different modification rights. HTML comment markers identify which is which.
 
-### How User Directives Are Identified in User Skills
+### Provenance Markers
 
-User directives are identified structurally:
-- Located in the `## Directives` section
-- Blockquote format: `> **"..."**`
-- Attribution line: `*— Added YYYY-MM-DD, source: ...*`
+```markdown
+<!-- origin: user | added: 2026-02-22 | immutable: true -->
+> **"When a decision needs to be made..."**
+*— Added 2026-02-22, source: user directive*
+<!-- /origin -->
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## Commands
+[routing table]
+<!-- /origin -->
+```
 
 ### Permission Model
 
-| Content Type | Skill-builder can... | Cannot... |
-|--------------|---------------------|-----------|
-| User directives (in `## Directives`) | Move (preserving exact wording) | Reword, compress, remove |
-| Generated sections (workflow, grounding) | Modify, remove, replace, restructure | — |
-| Unrecognized content | Treat as user-origin (safe default) | — |
+| Origin | Skill-builder can... | Cannot... |
+|--------|---------------------|-----------|
+| `user` | Move (preserving exact wording) | Reword, compress, remove |
+| `skill-builder` | Modify, remove, replace, restructure | — |
+| Unmarked (legacy) | Treat as user-origin (safe default) | — |
+
+### Rules
+
+1. **New directives** added via `inline` are tagged `origin: user`
+2. **Generated sections** from `new`, `optimize`, or any skill-builder procedure are tagged `origin: skill-builder`
+3. **During optimization**, markers are preserved — content moves between files but keeps its origin tag
+4. **Legacy files** without markers are treated as user-origin (safe default) until explicitly tagged
 
 ---
 
 ## Enforcement Mechanisms
+
+### Hook Handler Types
+
+Claude Code supports four hook handler types. Choose based on what the check requires:
+
+| Type | How It Works | Best For | Cost |
+|------|-------------|----------|------|
+| **command** | Run shell script, check exit code | Deterministic checks (regex, checksums, file existence) | Free |
+| **prompt** | Send prompt + `$ARGUMENTS` to LLM for single-turn evaluation | Semantic checks (paraphrasing detection, intent classification) | 1 LLM call |
+| **agent** | Spawn subagent with Read/Grep/Glob tools | Multi-file analysis (cross-reference checks, pattern compliance) | 1+ LLM calls |
+| **http** | POST hook input JSON to a URL endpoint | External service integration (CI, logging, webhooks) | Network call |
+
+**Decision guide:**
+- Can you express it as a regex or exit code? → **command**
+- Does it require understanding meaning? → **prompt**
+- Does it need to read multiple files? → **agent**
+- Does it need to reach an external service? → **http**
+
+### Hook Lifecycle Events (Relevant to Skills)
+
+| Event | When | Can Block? | Skill-Builder Use |
+|-------|------|-----------|-------------------|
+| `PreToolUse` | Before tool executes | Yes | Directive protection, persona uniqueness |
+| `PostToolUse` | After tool succeeds | No | Post-edit verification, formatting |
+| `PostCompact` | After context compaction | No | Re-inject directive awareness (drift resistance) |
+| `InstructionsLoaded` | When CLAUDE.md/rules load | No | Validate directive checksums at session start |
+| `SubagentStop` | When subagent finishes | No | Validate agent output |
+| `TaskCompleted` | When task marked complete | No | Post-action chain triggers |
+| `Stop` | When Claude finishes responding | No | Final quality checks |
+
+Full event list (25 events): SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, SubagentStart, SubagentStop, TaskCreated, TaskCompleted, Stop, StopFailure, TeammateIdle, InstructionsLoaded, ConfigChange, CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, PreCompact, PostCompact, Elicitation, ElicitationResult, SessionEnd.
+
+### Frontmatter Hooks (Portable Enforcement)
+
+Skills can declare hooks directly in YAML frontmatter. These hooks are active while the skill is loaded — no `settings.local.json` wiring needed.
+
+```yaml
+---
+name: my-skill
+description: Example skill with embedded enforcement
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: prompt
+          prompt: "Check if this edit alters sacred directives: $ARGUMENTS"
+          if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
+          statusMessage: "Checking directives..."
+  PostCompact:
+    - hooks:
+        - type: command
+          command: "echo '{\"additionalContext\": \"REMINDER: Directives are sacred.\"}'"
+---
+```
+
+**Frontmatter-first strategy:** When skill-builder generates hooks, embed them in the skill's frontmatter by default. Use `settings.local.json` only for global hooks that must apply across all skills (like the directive checksum command hook).
+
+**`if` field:** Narrows when a hook fires within its matcher. Uses permission rule syntax (e.g., `Edit(**/SKILL.md)` only fires for SKILL.md edits, not all Edit calls).
+
+**`$ARGUMENTS` placeholder:** Replaced with the hook input JSON, giving prompts and agents access to tool name, file path, content, etc.
+
+### PostCompact Drift Resistance
+
+Context compaction is the exact moment instruction drift occurs. A `PostCompact` hook can re-inject critical rules into the active context immediately after compaction:
+
+```yaml
+hooks:
+  PostCompact:
+    - hooks:
+        - type: command
+          command: "echo '{\"additionalContext\": \"CRITICAL RULES: [your rules here]\"}'"
+```
+
+The `additionalContext` field in the JSON output injects text into Claude's context. This ensures core rules survive compaction regardless of what was compressed away.
 
 ### 1. PreToolUse Hooks (Strongest)
 

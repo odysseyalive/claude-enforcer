@@ -26,6 +26,7 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 | "Conversational tone" / "No promotional language" | **Text Evaluation Pair** | Two-agent adversarial evaluation before user sees content |
 | Awareness-ledger skill exists in project | **Ledger Consultation Agents** | Cross-reference changes against institutional memory (incidents, decisions, patterns, flows) |
 | Skill produces findings/decisions AND awareness-ledger exists | **Capture Recommender Agent** | Evaluate skill output for institutional knowledge worth recording in the ledger |
+| Skill uses `optimize --execute` | **Optimize Diff Auditor** | Verify semantic equivalence after optimization (directives verbatim, workflow order, content moved not rewritten) |
 
 **Ledger integration (bidirectional):** When `.claude/skills/awareness-ledger/` exists, the agents command evaluates two directions:
 

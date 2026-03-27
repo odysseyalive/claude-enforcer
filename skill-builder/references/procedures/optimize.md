@@ -148,4 +148,16 @@ When running `/skill-builder optimize [skill] --execute`:
    e. Delete original `reference.md` only after verification passes
    f. Generate enforcement recommendations per split file (hook, agent, or none based on priority from step 4)
 5. Report before/after line counts
+5b. **Post-optimize: Semantic equivalence verification**
+    Spawn the optimize-diff-auditor agent (`context: none`):
+    - Read `.claude/skills/skill-builder/agents/optimize-diff-auditor/AGENT.md` for instructions
+    - Verify that the optimization preserved semantic equivalence
+    - Use `git show HEAD:.claude/skills/[skill]/SKILL.md` for the pre-optimization version
+    - Compare against the current file
+    - If agent returns FAIL: present violations to user with option to revert (`git checkout`)
+    - If agent returns PASS: proceed to step 5c
+5c. **Post-optimize: Regenerate directive checksums**
+    Regenerate the `.directives.sha` sidecar following the spec in `references/procedures/checksums.md` § "Execute Mode" step 2.
+    This confirms directives survived intact and updates the sidecar for continued protection.
+
 **Grounding:** `references/optimization-examples.md`, `references/templates.md`

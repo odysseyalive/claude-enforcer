@@ -45,6 +45,10 @@ Check if `.claude/skills/awareness-ledger/` exists. If it does:
 
 If the ledger does not exist, skip this step silently.
 
+### Step 3d: Generate Directive Checksums
+
+If the new SKILL.md includes directives (user-provided during creation), generate the `.directives.sha` sidecar file following the spec in [checksums.md](checksums.md) § "Execute Mode" step 2. If no directives yet, skip (no sidecar needed).
+
 ### Step 4: Report Creation
 
 ```

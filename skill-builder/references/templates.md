@@ -18,6 +18,19 @@
 name: skill-name
 description: "Brief description. Modes: mode1, mode2, mode3. Usage: /skill-name [mode] [args]"
 allowed-tools: [minimum needed]
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: prompt
+          prompt: "Check if this edit alters any text between <!-- origin: user | immutable: true --> and <!-- /origin --> markers: $ARGUMENTS. If directive content was changed, DENY. Otherwise APPROVE."
+          if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
+          statusMessage: "Checking directive integrity..."
+  PostCompact:
+    - hooks:
+        - type: command
+          command: "echo '{\"additionalContext\": \"REMINDER: Directives are sacred. Never reword text between <!-- origin: user | immutable: true --> markers.\"}'"
+          statusMessage: "Re-injecting directive awareness..."
 ---
 
 # Skill Name
@@ -42,6 +55,7 @@ Default mode is `mode1` if not specified.
 
 ---
 
+<!-- origin: user | added: YYYY-MM-DD | immutable: true -->
 ## Directives
 
 > **[User's exact rule, verbatim]**
@@ -51,9 +65,11 @@ Default mode is `mode1` if not specified.
 > **[Another directive]**
 
 *— Added YYYY-MM-DD, source: [where this came from]*
+<!-- /origin -->
 
 ---
 
+<!-- origin: skill-builder | version: 1.0 | modifiable: true -->
 ## Workflow: Mode1
 
 1. Step one
@@ -66,9 +82,11 @@ Default mode is `mode1` if not specified.
 
 1. Step one
 2. Step two
+<!-- /origin -->
 
 ---
 
+<!-- origin: skill-builder | version: 1.0 | modifiable: true -->
 ## Grounding
 
 Before using any ID or value from reference.md:
@@ -76,24 +94,77 @@ Before using any ID or value from reference.md:
 2. State: "I will use [VALUE] for [PURPOSE], found under [SECTION]"
 
 See [reference.md](reference.md) for IDs and mappings.
+<!-- /origin -->
 ```
 
 **For single-purpose skills (no modes):** Omit the Usage/Modes section entirely.
 
-### Content-Creation Detection
+### Content-Creation Skill Template
 
-For skills that produce written content (articles, posts, captions, descriptions), the `new` command uses the standard template with voice directive placeholders added to the Directives section:
+For skills that produce written content (articles, posts, captions, descriptions). Includes voice directive placeholders and voice validation integration.
 
 ```markdown
+---
+name: skill-name
+description: "Brief description. Usage: /skill-name [args]"
+allowed-tools: Read, Glob, Grep, Edit, Write, Task
+---
+
+# Skill Name
+
+Brief one-line description of what this skill does.
+
+---
+
+<!-- origin: user | added: YYYY-MM-DD | immutable: true -->
 ## Directives
 
 > **[Voice/style directive — e.g., "Never produce overbuilt, constructed, or AI-sounding prose."]**
 > **[Tone directive — e.g., "All drafts must be conversational and natural."]**
 
 *— Added YYYY-MM-DD, source: [where this came from]*
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.0 | modifiable: true -->
+## Workflow
+
+1. [Content creation steps]
+2. [...]
+3. **Text evaluation** — Before presenting any draft to the user, spawn the text evaluation agent pair (see below)
+4. Synthesize findings from both agents, fix all flagged issues, then present the clean draft
+
+---
+
+## Text Evaluation (Enforced via Agent Pair)
+
+After generating any draft content, spawn both agents in parallel:
+
+Task tool #1 with subagent_type: "general-purpose"
+Prompt: "You are The Reducer — a ruthless editor who has cut 50,000 words from
+        manuscripts without losing meaning. Read directives from
+        .claude/skills/[skill]/SKILL.md § Directives. Then read [content file].
+        Flag every overbuilt, bloated, or unnecessarily complex sentence.
+        Report with line numbers and quoted text. If no issues, say PASS."
+
+Task tool #2 with subagent_type: "general-purpose"
+Prompt: "You are The Clarifier — a technical writer who has untangled
+        contradictory specifications for 20 years. Read directives from
+        .claude/skills/[skill]/SKILL.md § Directives. Then read [content file].
+        Flag every confusing, ambiguous, or contradictory passage.
+        Report with line numbers and quoted text. If no issues, say PASS."
+
+Synthesize both agents' findings. Fix all flagged issues before presenting to user.
+
+---
+
+## Grounding
+
+[If applicable — reference files for IDs, style guides, etc.]
 ```
 
-The Text Evaluation agent pair and temporal validation hooks are **not** embedded at creation time. They are recommended by the `agents` and `hooks` procedures respectively, only when the skill already has voice/style directives or produces date-sensitive citations.
+**When to use this template:** The `new` command should use this template when the user's description or skill name suggests content creation (writing, articles, posts, editorial, newsletter, social media, captions, copy).
 
 ---
 

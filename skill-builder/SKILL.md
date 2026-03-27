@@ -1,7 +1,31 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger, cascade"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger, cascade, checksums"
 allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: prompt
+          prompt: "This edit targets a SKILL.md file: $ARGUMENTS. Check if any text between <!-- origin: user | immutable: true --> and <!-- /origin --> markers has been reworded, paraphrased, summarized, or deleted. Compare the original directive text to the proposed version. If directive content was altered in ANY way, DENY with explanation of what changed. If only non-directive content changed, or this is not a SKILL.md file, APPROVE."
+          if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
+          statusMessage: "Checking directive integrity..."
+        - type: agent
+          prompt: "A file is being written: $ARGUMENTS. If this is an AGENT.md file, extract its persona field from the YAML frontmatter. Then use Glob to find all .claude/skills/*/agents/*/AGENT.md files and Read each to extract their persona fields. If the new persona duplicates or closely resembles an existing one (excluding the same file path being overwritten), DENY with the conflicting agent name and file path. If unique or not an AGENT.md file, APPROVE."
+          if: "Write(**/AGENT.md)|Edit(**/AGENT.md)"
+          statusMessage: "Checking persona uniqueness..."
+  PostToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: agent
+          prompt: "An edit was just made to a SKILL.md file: $ARGUMENTS. Read the file. Check: (1) All <!-- origin: user | immutable: true --> blocks still contain their original text. (2) No workflow steps were reordered. (3) No content was rewritten vs. moved. Report any violations as warnings via additionalContext."
+          if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
+          statusMessage: "Verifying optimization integrity..."
+  PostCompact:
+    - hooks:
+        - type: command
+          command: "echo '{\"additionalContext\": \"REMINDER: Directives are sacred. Never reword, paraphrase, or summarize text between <!-- origin: user | immutable: true --> markers. Optimization is restructuring, not rewriting. Move content — never rewrite it.\"}'"
+          statusMessage: "Re-injecting directive awareness..."
 ---
 
 # Skill Builder
@@ -59,6 +83,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `list [skill]` | [list.md](references/procedures/list.md) | Show modes/options |
 | `verify` | [verify.md](references/procedures/verify.md) | Health check (headless-compatible) |
 | `ledger` | [ledger.md](references/procedures/ledger.md) | Create Awareness Ledger |
+| `checksums [skill]` | [checksums.md](references/procedures/checksums.md) | Generate/verify directive checksums |
 | `update` | *(inline below)* | Update to latest version |
 <!-- /origin -->
 
@@ -209,5 +234,7 @@ Reference files:
 - [references/patterns.md](references/patterns.md) — Lessons learned
 - [references/temporal-validation.md](references/temporal-validation.md) — Temporal risk classification, phrase mappings, hook generation spec
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
-- [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, etc.)
+- [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, checksums, etc.)
+- [references/procedures/checksums.md](references/procedures/checksums.md) — Directive checksum generation spec (scripts generated at runtime, not shipped)
+- [agents/optimize-diff-auditor/](agents/optimize-diff-auditor/) — Post-optimize semantic equivalence verification agent
 <!-- /origin -->

@@ -36,27 +36,41 @@ Unhardened hooks should be flagged as: "Hook lacks defensive hardening — vulne
 
 #### Step 3: Identify New Opportunities
 
+**Handler type decision guide** (see `references/enforcement.md` § "Hook Handler Types"):
+
+| Check Requirement | Handler Type | Cost |
+|-------------------|-------------|------|
+| Pattern/regex match (deterministic) | `command` | Free |
+| Meaning/intent evaluation (semantic) | `prompt` | 1 LLM call |
+| Multi-file cross-reference (analytical) | `agent` | 1+ LLM calls |
+| External service call | `http` | Network call |
+
 Scan each skill's SKILL.md for directive patterns that can be enforced with hooks:
 
-| Directive Pattern | Hook Type | Example |
-|-------------------|-----------|---------|
-| "Never use X" / "Never assign to X" | **Grep-block** | Block forbidden IDs/values |
-| "Always use script Y" | **Require-pattern** | Block direct API calls, require helper |
-| "Never call Z directly" | **Grep-block** | Block forbidden endpoints |
-| "Must include X" | **Require-pattern** | Ensure required fields present |
-| "Never exceed N" | **Threshold** | Block values above limit |
+| Directive Pattern | Handler Type | Example |
+|-------------------|-------------|---------|
+| "Never use X" / "Never assign to X" | **command** (grep-block) | Block forbidden IDs/values |
+| "Always use script Y" | **command** (require-pattern) | Block direct API calls, require helper |
+| "Never call Z directly" | **command** (grep-block) | Block forbidden endpoints |
+| "Must include X" | **command** (require-pattern) | Ensure required fields present |
+| "Never exceed N" | **command** (threshold) | Block values above limit |
+| "Never alter/reword directives" | **prompt** (semantic) | Block paraphrasing of sacred text |
+| "Each X must be unique across Y" | **agent** (cross-reference) | Scan multiple files for duplicates |
+| "No promotional language" | **prompt** (semantic) | LLM evaluates tone/style |
+| "Verify dates are correct" | **command** (temporal) | Arithmetic check on date phrases |
 
-**Cannot be hooks — recommend agents instead:**
-- "Choose the best X" → judgment call → **Matcher Agent**
+**Prompt hooks unlock new enforcement:** Directives previously classified as "needs agent, not hook" may now be enforceable via prompt hooks. Re-evaluate style/tone/meaning directives — if a single-turn LLM evaluation suffices, a prompt hook is cheaper than a full agent and fires automatically.
+
+**Still cannot be hooks — recommend agents instead:**
+- "Choose the best X" → judgment call requiring context → **Matcher Agent**
 - "If unclear, ask" → context-dependent → **Triage Agent**
-- "Match X to Y" → reasoning required → **Matcher Agent**
-- "Never produce overbuilt/AI prose" → style judgment → **Text Evaluation Pair**
-- "Conversational tone" / "No promotional language" → voice enforcement → **Text Evaluation Pair**
-- "Plain language" / "Natural writing" → style constraint → **Text Evaluation Pair**
+- Complex multi-step evaluation → **Text Evaluation Pair** or **context: none agent**
 
 These MUST appear in the hooks report under a **"Needs Agent, Not Hook"** section (see report template below) so the recommendation isn't lost.
 
-**Scoping requirement:** Hooks that enforce writing/voice style rules must skip `.claude/` infrastructure files. Style hooks apply to project content output, not skill machinery. Use the scope check pattern from the grep-block template above.
+**Scoping requirement:** Hooks that enforce writing/voice style rules must skip `.claude/` infrastructure files. Style hooks apply to project content output, not skill machinery. Use the scope check pattern from the grep-block template or the `if` field for frontmatter hooks.
+
+**PostCompact opportunity:** For every skill with sacred directives, consider a PostCompact hook that re-injects critical rules after context compaction. This is low-cost (command hook echoing JSON) and addresses the root cause of drift.
 
 #### Step 3a: Detect Awareness Ledger Hook Opportunities
 
@@ -174,23 +188,28 @@ Scan each skill for temporal exposure — patterns that indicate the skill produ
 When running `/skill-builder hooks [skill] --execute`:
 
 1. Run display mode analysis first (Steps 1-4 above)
-2. **Generate task list from findings** using TaskCreate — one task per discrete action (e.g., "Create no-uncategorized.sh hook", "Wire hook in settings.local.json", "Fix exit code in validate-org-id.sh")
+2. **Generate task list from findings** using TaskCreate — one task per discrete action
 3. Execute each task sequentially, marking complete via TaskUpdate as it goes
-4. Each task for new hooks:
-   - Create the script in `.claude/skills/[skill]/hooks/[name].sh`
-   - Make executable: `chmod +x [script]`
-   - Wire in settings.local.json under `hooks.PreToolUse`
 
-**Template for grep-block hooks:**
+**Frontmatter-first strategy:** Embed hooks in the skill's SKILL.md frontmatter by default. Use `settings.local.json` only for:
+- Global hooks that must apply across ALL skills (e.g., directive checksum protection)
+- Command hooks that need shell scripts on disk
+
+**For frontmatter hooks (prompt/agent/PostCompact):**
+- Add `hooks:` section to the skill's YAML frontmatter
+- Use `if` field to scope (e.g., `if: "Edit(**/SKILL.md)"`)
+- Use `$ARGUMENTS` placeholder for hook input data
+
+**For command hooks (grep-block, require-pattern, threshold):**
+- Create the script in `.claude/skills/[skill]/hooks/[name].sh`
+- Make executable: `chmod +x [script]`
+- Wire in settings.local.json under appropriate event
+
+**Template for command hooks (grep-block):**
 ```bash
 #!/bin/bash
 # Hook: [purpose] per /[skill] directive
 # Scope: Project content files only (skips .claude/ infrastructure)
-
-# Defensive hardening
-CRASH_LOG="${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/.crash-log"
-trap 'echo "$(date -Is) HOOK_CRASH $(basename "$0")" >> "$CRASH_LOG" 2>/dev/null' ERR
-
 INPUT=$(cat 2>/dev/null) || exit 0
 
 # Scope check: skip .claude/ infrastructure files
@@ -204,6 +223,40 @@ if echo "$INPUT" | grep -q "FORBIDDEN_VALUE" 2>/dev/null; then
   exit 2
 fi
 exit 0
+```
+
+**Template for prompt hooks (semantic enforcement):**
+```yaml
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: prompt
+          prompt: "[Describe what to check]: $ARGUMENTS. If [violation condition], DENY with explanation. Otherwise APPROVE."
+          if: "[scope filter]"
+          statusMessage: "[description]..."
+```
+
+**Template for agent hooks (multi-file verification):**
+```yaml
+hooks:
+  PreToolUse:
+    - matcher: "Write|Edit"
+      hooks:
+        - type: agent
+          prompt: "[Describe analysis task]: $ARGUMENTS. Scan [files/patterns]. If [violation], DENY. If [ok], APPROVE."
+          if: "[scope filter]"
+          statusMessage: "[description]..."
+```
+
+**Template for PostCompact hooks (drift re-injection):**
+```yaml
+hooks:
+  PostCompact:
+    - hooks:
+        - type: command
+          command: "echo '{\"additionalContext\": \"REMINDER: [critical rules to re-inject after compaction]\"}'"
+          statusMessage: "Re-injecting [skill] awareness..."
 ```
 
 **Grounding:** `references/enforcement.md`

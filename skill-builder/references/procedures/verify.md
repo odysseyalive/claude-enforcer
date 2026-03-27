@@ -21,6 +21,28 @@ For each skill found:
 | Line count | Count lines in SKILL.md (exclude reference files) | < 150 |
 | Modes table | If skill has 2+ modes, check for Modes table | Present if needed |
 
+### Step 2b: Directive Checksum Validation
+
+For each skill found in Step 1, check for directive protection:
+
+```bash
+# For each skill at .claude/skills/[name]/SKILL.md
+# Check: .claude/skills/[name]/.directives.sha
+```
+
+**If `.directives.sha` exists:**
+1. Extract all `<!-- origin: user ... immutable: true -->` blocks from the skill's SKILL.md
+2. Compute SHA-256 checksums using the same normalization as `generate-checksums.sh` (strip markers, trim whitespace, collapse blank lines)
+3. Compare against stored checksums in `.directives.sha`
+4. **Match** → PASS
+5. **Mismatch** → FAIL — "Directive fingerprint mismatch: directives may have been modified since last checksum. Run `/skill-builder checksums [skill] --execute` to investigate."
+
+**If `.directives.sha` does not exist but skill has `<!-- origin: user ... immutable: true -->` blocks:**
+- WARN — "Directives found without checksum protection. Run `/skill-builder checksums [skill] --execute` to generate."
+
+**If skill has no immutable directive blocks:**
+- PASS (N/A) — no directives to fingerprint.
+
 ### Step 3: Hook Validation
 
 ```bash
@@ -74,6 +96,7 @@ For each agent file:
 | Skills found | [N] |
 | Frontmatter valid | [N]/[N] [PASS/FAIL] |
 | Line targets met | [N]/[N] [PASS/WARN] (details if warn) |
+| Directive checksums | [N]/[N] [PASS/WARN/FAIL] |
 | Hooks wired | [N]/[N] [PASS/FAIL] |
 | Hooks executable | [N]/[N] [PASS/FAIL] |
 | Stale artifacts | [NONE/WARN — list] |
@@ -85,4 +108,6 @@ Overall: [PASS / PASS with warnings / FAIL]
 ```
 
 **If any FAIL:** List each failure with the skill name and specific issue.
+**If FAIL (directive checksum mismatch):** List each skill with mismatched fingerprint. This may indicate unauthorized directive modification.
+**If WARN (no directive checksum):** Note: "WARN: Directives without checksum protection in [skill]. Run `/skill-builder checksums [skill] --execute`."
 **If all PASS:** Report clean health.
