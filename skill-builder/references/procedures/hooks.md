@@ -28,7 +28,7 @@ For each hook script found:
 | **Reads stdin** | Captures `INPUT=$(cat)` for tool input |
 | **Permission** | Script is executable (`chmod +x`) |
 | **Error output** | Writes block reason to stderr (`>&2`) |
-| **Hardened** | Has ERR trap writing to crash sentinel (grep for `trap.*ERR` or `CRASH_LOG`). See `references/self-heal-templates.md` § "Hook Hardening Pattern" |
+| **Hardened** | Has ERR trap writing to crash sentinel (grep for `trap.*ERR` or `CRASH_LOG`) |
 | **No set -e** | Does NOT use `set -e` (causes immediate exit, bypasses ERR trap logging) |
 | **Defensive I/O** | Uses `2>/dev/null` and `|| exit 0` on fallible operations |
 
@@ -187,7 +187,7 @@ When running `/skill-builder hooks [skill] --execute`:
 # Hook: [purpose] per /[skill] directive
 # Scope: Project content files only (skips .claude/ infrastructure)
 
-# Defensive hardening (see self-heal-templates.md § "Hook Hardening Pattern")
+# Defensive hardening
 CRASH_LOG="${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/.crash-log"
 trap 'echo "$(date -Is) HOOK_CRASH $(basename "$0")" >> "$CRASH_LOG" 2>/dev/null' ERR
 

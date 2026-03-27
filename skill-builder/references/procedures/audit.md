@@ -42,12 +42,11 @@ If no `.claude/skills/*/SKILL.md` files exist (excluding skill-builder itself):
 
 Skip Steps 3, 4 (sub-commands), 4c–4f (they require existing skills).
 
-**Still run Steps 4a and 4b** (Awareness Ledger and Self-Heal status checks). These are companion skill installations — they don't depend on existing skills and the audit is the orchestrator for surfacing them.
+**Still run Step 4a** (Awareness Ledger status check). This is a companion skill installation — it doesn't depend on existing skills and the audit is the orchestrator for surfacing it.
 
 Go to Step 6 with execution choices that include:
 - CLAUDE.md extraction candidates (from above)
 - Awareness Ledger installation (from Step 4a, if not installed)
-- Self-Heal installation (from Step 4b, if not installed)
 
 **Post-bootstrap chaining:** When CLAUDE.md extraction is executed and new skills are created, post-action chaining (per § Display/Execute Mode Convention rule 6) fires automatically — running optimize, agents, and hooks in display mode for each newly created skill, then offering execution choices. This ensures agents and hooks are surfaced in the same session, not deferred to a second audit.
 
@@ -103,66 +102,7 @@ Per-skill ledger integration recommendations (capture gaps, grounding notes) are
    ```
 2. This recommendation MUST appear in the report — do NOT skip silently. The audit is the orchestrator; even though optimize/agents/hooks correctly skip ledger analysis when no ledger exists, the audit is responsible for surfacing the gap.
 
-### Step 4b: Self-Heal Status
-
-Check if `.claude/skills/self-heal/SKILL.md` exists.
-
-**If self-heal is installed:**
-1. Scan all skills for the Trigger Block (grep for "## Self-Heal")
-2. **Stale artifact check** — detect error compensation artifacts from a previous version:
-   a. Check for `.claude/hooks/error-compensation-detect.sh`
-   b. Check for `.claude/hooks/hook-health-check.sh`
-   c. Check for `.claude/hooks/.crash-log` or `.claude/hooks/.crash-log.reported`
-   d. Check `.claude/settings.local.json` for PostToolUse entries referencing `error-compensation-detect.sh` or `hook-health-check.sh`
-   e. Grep all skills for `## Error Compensation` trigger blocks
-   f. Check for `.claude/skills/self-heal/references/error-compensation-signals.md`, `error-compensation-monitor.md`, or `agents/error-analyst.md`
-3. Report:
-   ```
-   **Self-Heal:** Installed
-   - Skills with trigger embedded: [N]/[total]
-   - Skills missing trigger: [list, or "none"]
-   - Stale error compensation artifacts: [list, or "none"]
-   - Issues: [missing triggers / stale artifacts / none]
-   ```
-4. If any skills are missing triggers or stale artifacts exist, add to execution choices:
-   > `self-heal embed` — embed triggers into skills missing them, clean up stale artifacts
-
-   **When `self-heal embed` is selected for execution:**
-
-   **Stale artifact cleanup (if any found):**
-   a. Delete hook scripts: `.claude/hooks/error-compensation-detect.sh`, `.claude/hooks/hook-health-check.sh`
-   b. Delete crash logs: `.claude/hooks/.crash-log`, `.claude/hooks/.crash-log.reported`
-   c. Delete stale self-heal files: `error-compensation-signals.md`, `error-compensation-monitor.md`, `error-analyst.md`
-   d. Remove PostToolUse entries from `.claude/settings.local.json` that reference `error-compensation-detect.sh` or `hook-health-check.sh`. If PostToolUse becomes empty, remove the key entirely. Preserve all other hook entries.
-   e. Strip `## Error Compensation` sections from all skills' SKILL.md files
-   f. Update `.claude/skills/self-heal/SKILL.md` to current single-path version (from `references/self-heal-templates.md` § "self-heal SKILL.md Template")
-   g. Report: `Cleaned up [N] stale error compensation artifacts`
-
-   **Trigger embedding (for each skill missing the trigger):**
-   a. Read the skill's SKILL.md
-   b. Verify line count will stay under 150 after embedding (~12 lines). If it would exceed, flag the skill and recommend running `optimize --execute` on it first to free line budget. Skip embedding for that skill.
-   c. If the skill also has a runtime eval protocol section, verify combined infrastructure (trigger block + eval protocol) does not exceed 50 lines. If it does, flag and skip.
-   d. Append the Trigger Block (from `references/self-heal-templates.md` § "Trigger Block") as the last section of SKILL.md.
-   e. Report: `Embedded self-heal trigger into /[skill-name]`
-
-   After all skills are processed, report summary:
-   ```
-   Self-heal trigger embedded: [N] skills
-   Stale artifacts cleaned: [N] items
-   Skipped (line budget): [list, or "none"]
-   ```
-
-**If self-heal is NOT installed:**
-1. Report:
-   ```
-   **Self-Heal:** Not installed
-   - Reactive skill correction. Triggers on directive disagreements (user corrections).
-     Diagnoses root cause and proposes surgical fixes.
-   - Available in the execution menu below.
-   ```
-2. This recommendation MUST appear — do not skip silently. The audit is the orchestrator.
-
-### Step 4c: Temporal Reference Risk
+### Step 4b: Temporal Reference Risk
 
 For each skill, assess temporal reference risk:
 
@@ -174,9 +114,9 @@ Skip silently for LOW-risk skills or skills with temporal hooks already in place
 
 **Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) for risk classification criteria.
 
-### Step 4d: Per-Skill Integration Checks
+### Step 4c: Per-Skill Integration Checks
 
-These checks run only for skills **explicitly targeted** by the user (e.g., `/skill-builder optimize [skill]`, `/skill-builder agents [skill]`). During a full audit, skip per-skill integration checks — companion skill status is reported in Steps 4a and 4b.
+These checks run only for skills **explicitly targeted** by the user (e.g., `/skill-builder optimize [skill]`, `/skill-builder agents [skill]`). During a full audit, skip per-skill integration checks — companion skill status is reported in Step 4a.
 
 When running for a targeted skill:
 
@@ -187,7 +127,7 @@ When running for a targeted skill:
 
 **Capture Integration gap** — If the awareness-ledger exists, check whether the targeted skill produces institutional knowledge but lacks a capture mechanism. If gap found, include in report with recommended mechanism per hierarchy: workflow step > agent > hook.
 
-### Step 4e: Validation Cascade Analysis
+### Step 4d: Validation Cascade Analysis
 
 For each skill with 2+ validators or evaluation agents:
 1. Run the cascade analysis per [cascade.md](cascade.md)
@@ -196,7 +136,7 @@ For each skill with 2+ validators or evaluation agents:
 
 Skip silently for skills with 0-1 validators.
 
-### Step 4f: Agent panel — priority ranking
+### Step 4e: Agent panel — priority ranking
 
 After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
 
@@ -215,7 +155,7 @@ Each agent reads the aggregated findings from optimize, agents, and hooks across
 
 Combine all sub-command outputs into a single report:
 
-**Reporting principle — absence vs. gap:** Capability sections (Teams, Temporal Hooks, Validation Cascade) that have nothing to report should be omitted entirely rather than displayed with "none" values. A capability that doesn't apply is correctly absent, not missing. Sections that are always included regardless of state (Awareness Ledger, Self-Heal) have explicit installation recommendations and are exceptions — they are surfaced by design as the audit is the orchestrator for companion skill adoption.
+**Reporting principle — absence vs. gap:** Capability sections (Teams, Temporal Hooks, Validation Cascade) that have nothing to report should be omitted entirely rather than displayed with "none" values. A capability that doesn't apply is correctly absent, not missing. The Awareness Ledger section is always included regardless of state — it has an explicit installation recommendation and is surfaced by design as the audit is the orchestrator for companion skill adoption.
 
 ```markdown
 # Skill System Audit Report
@@ -251,17 +191,14 @@ Combine all sub-command outputs into a single report:
 ## Awareness Ledger
 [from Step 4a — status, record counts, capture gaps, or installation recommendation]
 
-## Self-Heal
-[from Step 4b — status, trigger coverage, stale artifacts, or installation recommendation]
-
 ## Temporal Reference Risk
-[from Step 4c — per-skill risk levels, missing hooks]
+[from Step 4b — per-skill risk levels, missing hooks]
 | Skill | Risk Level | Exposure | Temporal Hook |
 |-------|-----------|----------|---------------|
 | /skill-1 | HIGH/MEDIUM | [temporal patterns found] | present/MISSING |
 
 ## Validation Cascade
-[from Step 4e — per-skill cascade risk]
+[from Step 4d — per-skill cascade risk]
 | Skill | Validators | Cascade Risk | Top Finding |
 |-------|-----------|-------------|-------------|
 | /skill-1 | [count] | [NONE/LOW/MODERATE/HIGH] | [summary] |
@@ -285,8 +222,7 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 3. `hooks --execute` for [skill(s)]
 > 4. All of the above for [skill]
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
-> 6. `self-heal --execute` — install Self-Heal companion skill *(only if self-heal does not exist)*, or clean up stale artifacts *(if self-heal exists with old error compensation infrastructure)*
-> 7. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
+> 6. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
 > 8. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.

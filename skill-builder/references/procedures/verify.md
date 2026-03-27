@@ -20,7 +20,6 @@ For each skill found:
 | `allowed-tools` present | Check frontmatter field exists | Present |
 | Line count | Count lines in SKILL.md (exclude reference files) | < 150 |
 | Modes table | If skill has 2+ modes, check for Modes table | Present if needed |
-| Self-heal trigger | Grep SKILL.md for "## Self-Heal" | Present (WARN if absent and self-heal installed) |
 
 ### Step 3: Hook Validation
 
@@ -36,12 +35,6 @@ For each hook script:
 
 For each wired hook in settings.local.json:
 - Does the script file exist?
-
-**Stale artifact check (if self-heal installed):**
-- Does `.claude/hooks/error-compensation-detect.sh` exist? → WARN: stale artifact from previous version
-- Does `.claude/hooks/hook-health-check.sh` exist? → WARN: stale artifact from previous version
-- Are there PostToolUse entries referencing either script? → WARN: stale hook wiring
-- Do any skills have `## Error Compensation` trigger blocks? → WARN: stale trigger blocks
 
 ### Step 3b: Team Validation
 
@@ -92,6 +85,4 @@ Overall: [PASS / PASS with warnings / FAIL]
 ```
 
 **If any FAIL:** List each failure with the skill name and specific issue.
-**If WARN (self-heal trigger missing):** Note: "WARN: Self-heal trigger missing."
-**If WARN (stale artifacts):** Note: "WARN: Stale error compensation artifacts found. Run `/skill-builder self-heal` to clean up."
 **If all PASS:** Report clean health.

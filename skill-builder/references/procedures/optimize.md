@@ -148,12 +148,4 @@ When running `/skill-builder optimize [skill] --execute`:
    e. Delete original `reference.md` only after verification passes
    f. Generate enforcement recommendations per split file (hook, agent, or none based on priority from step 4)
 5. Report before/after line counts
-6. **Post-optimize: Self-Heal Trigger check**
-   - Check if self-heal is installed (`.claude/skills/self-heal/SKILL.md` exists)
-   - Check if the optimized skill already has the Trigger Block (grep for "## Self-Heal")
-   - If self-heal installed AND trigger missing → embed from `references/self-heal-templates.md` § "Trigger Block" at the end of SKILL.md
-   - If self-heal installed AND trigger present → verify it's still the last section; if optimization moved it, move it back
-   - If self-heal not installed → skip silently
-   - **Compound infrastructure check:** When embedding, verify combined infrastructure (trigger block + runtime eval protocol, if present) does not exceed 50 lines. If it does, flag to user. Also check the target skill's `self-heal-history.md` — if recent patches modified instructions that the eval rubric covers, flag: "Self-heal patched this skill recently. Eval rubric calibration may need review."
-
 **Grounding:** `references/optimization-examples.md`, `references/templates.md`

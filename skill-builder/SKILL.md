@@ -59,7 +59,6 @@ Before executing any command, read its procedure file from `references/procedure
 | `list [skill]` | [list.md](references/procedures/list.md) | Show modes/options |
 | `verify` | [verify.md](references/procedures/verify.md) | Health check (headless-compatible) |
 | `ledger` | [ledger.md](references/procedures/ledger.md) | Create Awareness Ledger |
-| `self-heal` | [self-heal.md](references/procedures/self-heal.md) | Install Self-Heal companion |
 | `update` | *(inline below)* | Update to latest version |
 <!-- /origin -->
 
@@ -88,8 +87,6 @@ Re-run the installer to update skill-builder to the latest version.
 - `/skill-builder dev optimize skill-builder` → allowed
 
 **Detection:** If the first argument after the command is `dev`, strip it and proceed with self-inclusion enabled. Otherwise, skip any skill whose name is `skill-builder` when iterating skills, and refuse if `skill-builder` is explicitly named as a target.
-
-**Self-heal exception:** `/skill-builder self-heal` installs self-heal and is not subject to exclusion — this is installation, not analysis. However, self-heal integration embedded in other skills IS subject to self-exclusion — skill-builder does not embed self-heal awareness into itself.
 
 **Post-dev check:** After any `dev` command that modifies skill-builder files, verify that the `install` script still covers all files. Glob `skill-builder/**/*.md`, compare against the files downloaded in the installer's loop, and flag any new/renamed/removed files that the installer doesn't handle. This prevents drift between the repo and what users receive on install.
 <!-- /origin -->
@@ -187,7 +184,7 @@ When a user gives you a rule, store it unchanged in a `## Directives` section wi
 ### Rules
 
 1. **Own-skill actions** (optimize, agents, hooks, ledger for skills managed by skill-builder): Always cascade into the current execution flow via AskUserQuestion + TaskCreate. Never present as standalone slash commands for manual invocation.
-2. **Cross-skill actions** (commands belonging to other skills like `/awareness-ledger`, `/self-heal`): Present in a clearly separated "Related Suggestions" footer, labeled as informational. Never mix into execution menus.
+2. **Cross-skill actions** (commands belonging to other skills like `/awareness-ledger`): Present in a clearly separated "Related Suggestions" footer, labeled as informational. Never mix into execution menus.
 3. **Informational recommendations** in conditional notes (e.g., "Run X to fix this"): Reframe as what the *current procedure* will do, or defer to the execution menu. Example: instead of "Run `/skill-builder optimize` to add eval protocol", say "Missing runtime eval protocol — flagged for optimization."
 4. **Anti-pattern**: Never end any procedure output with a list of slash commands the user must copy-paste and run manually. If an action is worth recommending, it's worth cascading.
 <!-- /origin -->
@@ -212,7 +209,5 @@ Reference files:
 - [references/patterns.md](references/patterns.md) — Lessons learned
 - [references/temporal-validation.md](references/temporal-validation.md) — Temporal risk classification, phrase mappings, hook generation spec
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
-- [references/procedures/self-heal.md](references/procedures/self-heal.md) — Self-Heal companion skill installation procedure
-- [references/self-heal-templates.md](references/self-heal-templates.md) — Directive disagreement signals, diagnosis protocol, update protocol templates
 - [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, etc.)
 <!-- /origin -->

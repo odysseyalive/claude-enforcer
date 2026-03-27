@@ -80,7 +80,6 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 /skill-builder inline [skill] [directive]  # Quick-add a directive to a skill
 /skill-builder cascade [skill]  # Detect validation cascade (too many validators)
 /skill-builder ledger           # Create an Awareness Ledger for institutional memory
-/skill-builder self-heal        # Install the Self-Heal companion skill
 /skill-builder update           # Update skill-builder to the latest version
 ```
 
@@ -295,24 +294,6 @@ Three channels feed the ledger:
 ```
 
 The `init` process seeds the ledger by scanning git history, your CLAUDE.md, and TODO/FIXME comments for initial records. A cold-start empty ledger helps nobody, so the system gives you a starting corpus to build on.
-
-## Self-Heal
-
-You know the complaints. Claude adds a summary paragraph you didn't ask for. It uses "I'd be happy to help" before doing the thing you already asked it to do. It over-engineers a three-line function into an abstraction layer. You correct it, it apologizes, and next session it does the same thing again.
-
-The correction was for you. The skill never heard it.
-
-`/self-heal` turns that correction into a permanent fix. When you tell Claude what you don't like, self-heal traces the problem back to the skill's wording and proposes a surgical change — so the behavior actually stops.
-
-```
-/self-heal Stop adding trailing summaries after every response.
-/self-heal I said use snake_case. Why are you still using camelCase?
-/self-heal Don't refactor code I didn't ask you to touch.
-/self-heal I've told you three times not to add docstrings.
-```
-
-Each one triggers a diagnosis. Self-heal finds the workflow language that led Claude astray, drafts the smallest possible fix, and shows you a before/after diff. Nothing changes without your approval. Your directives — your exact words — are permanently off-limits. Only the scaffolding around them gets touched.
-
 
 ## Learn More
 
