@@ -1,15 +1,14 @@
 ---
 name: skill-builder
 description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger, cascade, checksums"
+when_to_use: "When creating, auditing, or optimizing Claude Code skills, or when working with SKILL.md files, hooks, or agents"
+argument-hint: "[command] [skill] [--execute]"
+version: "1.5"
 allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"
       hooks:
-        - type: prompt
-          prompt: "This edit targets a SKILL.md file: $ARGUMENTS. Check if any text between <!-- origin: user | immutable: true --> and <!-- /origin --> markers has been reworded, paraphrased, summarized, or deleted. Compare the original directive text to the proposed version. If directive content was altered in ANY way, DENY with explanation of what changed. If only non-directive content changed, or this is not a SKILL.md file, APPROVE."
-          if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
-          statusMessage: "Checking directive integrity..."
         - type: agent
           prompt: "A file is being written: $ARGUMENTS. If this is an AGENT.md file, extract its persona field from the YAML frontmatter. Then use Glob to find all .claude/skills/*/agents/*/AGENT.md files and Read each to extract their persona fields. If the new persona duplicates or closely resembles an existing one (excluding the same file path being overwritten), DENY with the conflicting agent name and file path. If unique or not an AGENT.md file, APPROVE."
           if: "Write(**/AGENT.md)|Edit(**/AGENT.md)"
@@ -18,9 +17,9 @@ hooks:
     - matcher: "Edit|Write"
       hooks:
         - type: agent
-          prompt: "An edit was just made to a SKILL.md file: $ARGUMENTS. Read the file. Check: (1) All <!-- origin: user | immutable: true --> blocks still contain their original text. (2) No workflow steps were reordered. (3) No content was rewritten vs. moved. Report any violations as warnings via additionalContext."
+          prompt: "A SKILL.md file was just edited: $ARGUMENTS. Read the file and verify all three: (1) Text between <!-- origin: user | immutable: true --> and <!-- /origin --> markers has not been reworded, paraphrased, summarized, or deleted — directive content must be verbatim. (2) No workflow steps were reordered. (3) Content was moved, not rewritten. If any violation found, report via additionalContext with what changed. If all checks pass or this is not a SKILL.md file, approve silently."
           if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
-          statusMessage: "Verifying optimization integrity..."
+          statusMessage: "Verifying directive and structural integrity..."
   PostCompact:
     - hooks:
         - type: command
@@ -121,19 +120,24 @@ Re-run the installer to update skill-builder to the latest version.
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
 ## Display/Execute Mode Convention
 
-**All sub-commands (`optimize`, `agents`, `hooks`) operate in two modes:**
+**Commands are classified by risk level, which determines their default mode:**
+
+| Risk | Commands | Default Mode |
+|------|----------|-------------|
+| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums` | **Execute directly** |
+| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade` | **Display mode** (requires `--execute`) |
 
 | Mode | Behavior | Flag |
 |------|----------|------|
-| **Display** (default) | Read-only plan of what would change | *(none)* |
-| **Execute** | Apply changes to files | `--execute` |
+| **Display** | Read-only plan of what would change | *(default for high-risk)* |
+| **Execute** | Apply changes to files | `--execute` or *(default for low-risk)* |
 
 ### Rules
 
-1. **Default is always display mode.** Running `/skill-builder optimize my-skill` shows what *would* change without modifying anything.
-2. **`--execute` triggers modifications.** Running `/skill-builder optimize my-skill --execute` applies the changes.
+1. **Low-risk commands execute immediately.** `new`, `inline`, `skills`, `list`, `verify`, `ledger`, and `checksums` do their work directly without requiring `--execute`. They are additive or read-only — there is nothing to preview.
+2. **High-risk commands default to display mode.** Running `/skill-builder optimize my-skill` shows what *would* change without modifying anything. Add `--execute` to apply.
 3. **Audit always calls sub-commands in display mode**, then offers the user a choice of which to execute.
-4. **Execution requires a task plan.** When `--execute` is invoked, the command MUST:
+4. **Execution requires a task plan.** When a high-risk command runs with `--execute`, the command MUST:
    - First produce a numbered task list using TaskCreate, one task per discrete action
    - Execute each task sequentially, marking progress via TaskUpdate
    - This ensures context can be refreshed mid-execution without losing track, no tasks get forgotten during long context windows, and the user can see progress and resume if interrupted
@@ -232,6 +236,7 @@ Reference files:
 - [references/optimization-examples.md](references/optimization-examples.md) — Before/after examples, optimization targets
 - [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion
 - [references/patterns.md](references/patterns.md) — Lessons learned
+- [references/platform.md](references/platform.md) — Claude Code skill platform architecture, frontmatter fields, listing budget, invocation flow
 - [references/temporal-validation.md](references/temporal-validation.md) — Temporal risk classification, phrase mappings, hook generation spec
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
 - [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, checksums, etc.)

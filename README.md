@@ -79,11 +79,14 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enfo
 /skill-builder hooks [skill]    # Inventory existing hooks + identify new opportunities
 /skill-builder inline [skill] [directive]  # Quick-add a directive to a skill
 /skill-builder cascade [skill]  # Detect validation cascade (too many validators)
+/skill-builder checksums [skill] # Generate/verify directive checksums
 /skill-builder ledger           # Create an Awareness Ledger for institutional memory
 /skill-builder update           # Update skill-builder to the latest version
 ```
 
 The audit scans your `CLAUDE.md`, any `.claude/rules/` files, and existing skills. It identifies what can be extracted, what needs enforcement, and where context drift is likely to cause problems.
+
+Not every command makes you confirm before it acts. Commands that create, list, or validate — `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums` — execute directly. There's nothing destructive to preview. Commands that restructure existing files — `optimize`, `agents`, `hooks` — show you what they'd change first. Add `--execute` when you're ready.
 
 The `--quick` flag runs a lightweight version: frontmatter checks, line counts, hook wiring validation, and a priority fix list. No deep structural analysis. Use it for iterative work sessions where a full audit would slow you down.
 
@@ -182,7 +185,7 @@ Keep rules lean. Use them for lightweight, always-on guidance that doesn't fit i
 | Agents | Subprocesses with isolated context | Independent evaluation without drift | Yes |
 | Teams | Coordinated parallel instances | Collaborative implementation | Yes |
 
-The goal: soft guidance where drift is acceptable, hard enforcement where it isn't.
+There's a tension here worth naming. Validation keeps AI honest, but too much of it keeps AI from working. Three hooks firing on every SKILL.md edit means three Claude invocations before anything lands. Skill-builder consolidates where it can — checking directive integrity and structural preservation in a single pass after the edit, not gating it beforehand. The enforcement still happens. It just stops being the bottleneck.
 
 ## Optimization Structure
 
