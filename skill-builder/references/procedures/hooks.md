@@ -31,6 +31,7 @@ For each hook script found:
 | **Hardened** | Has ERR trap writing to crash sentinel (grep for `trap.*ERR` or `CRASH_LOG`) |
 | **No set -e** | Does NOT use `set -e` (causes immediate exit, bypasses ERR trap logging) |
 | **Defensive I/O** | Uses `2>/dev/null` and `|| exit 0` on fallible operations |
+| **Path-safe quoting** | Command string in `settings.local.json` wraps `$CLAUDE_PROJECT_DIR` (or any other path-bearing variable) in escaped double quotes (`"\"$CLAUDE_PROJECT_DIR/...\""`). Unquoted commands fail silently when the project root contains a space (Google Drive / Insync, iCloud, OneDrive). See `references/enforcement.md` § "Path-with-spaces safety". |
 
 Unhardened hooks should be flagged as: "Hook lacks defensive hardening — vulnerable to silent crashes. See Hook Hardening Pattern."
 
@@ -160,6 +161,7 @@ Scan each skill for temporal exposure — patterns that indicate the skill produ
 ## Wiring Issues
 - [List any scripts not in settings.json]
 - [List any settings.json entries pointing to missing scripts]
+- [List any command strings that reference `$CLAUDE_PROJECT_DIR` (or any other path-bearing variable) without escaped-quote wrapping. Remediation: rewrite each `"$VAR/..."` as `"\"$VAR/...\""`. Mechanical, no semantic change.]
 
 ## New Opportunities
 
@@ -203,7 +205,13 @@ When running `/skill-builder hooks [skill] --execute`:
 **For command hooks (grep-block, require-pattern, threshold):**
 - Create the script in `.claude/skills/[skill]/hooks/[name].sh`
 - Make executable: `chmod +x [script]`
-- Wire in settings.local.json under appropriate event
+- Wire in settings.local.json under appropriate event using the escaped-quote form per `references/enforcement.md` § "Self-Contained Hook Paths". Command strings referencing `$CLAUDE_PROJECT_DIR` MUST wrap the expansion in `\"...\"` so the path stays a single shell argument when the project root contains whitespace (Google Drive, iCloud, OneDrive sync mounts).
+
+**Existing-hook remediation (when Path-safe quoting check fails in Step 2):**
+- Add one task per affected `settings.local.json` matcher block to the execute task list
+- Mechanical rewrite via Python (preserves JSON structure): for each command string starting with `$CLAUDE_PROJECT_DIR` (and not already wrapped in `"`), replace it with `f'"{cmd}"'`
+- Back up the file as `settings.local.json.bak` before writing
+- Validate the rewritten JSON parses before completing the task
 
 **Template for command hooks (grep-block):**
 ```bash

@@ -57,6 +57,7 @@ For each hook script:
 
 For each wired hook in settings.local.json:
 - Does the script file exist?
+- **Path-safe quoting:** If the command string references `$CLAUDE_PROJECT_DIR` (or any other path-bearing variable), is the expansion wrapped in escaped double quotes (`"\"$CLAUDE_PROJECT_DIR/...\""`)? Unquoted commands fail silently when the expanded path contains whitespace (Google Drive / Insync, iCloud, OneDrive sync mounts). FAIL on any unquoted command, with remediation pointer to `/skill-builder hooks --execute`.
 
 ### Step 3b: Team Validation
 
@@ -99,6 +100,7 @@ For each agent file:
 | Directive checksums | [N]/[N] [PASS/WARN/FAIL] |
 | Hooks wired | [N]/[N] [PASS/FAIL] |
 | Hooks executable | [N]/[N] [PASS/FAIL] |
+| Hook commands path-safe | [N]/[N] [PASS/FAIL] |
 | Stale artifacts | [NONE/WARN — list] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
 | Agent Teams enabled | [PASS/FAIL/N/A] |
@@ -110,4 +112,5 @@ Overall: [PASS / PASS with warnings / FAIL]
 **If any FAIL:** List each failure with the skill name and specific issue.
 **If FAIL (directive checksum mismatch):** List each skill with mismatched fingerprint. This may indicate unauthorized directive modification.
 **If WARN (no directive checksum):** Note: "WARN: Directives without checksum protection in [skill]. Run `/skill-builder checksums [skill] --execute`."
+**If FAIL (hook commands not path-safe):** List each unquoted command with the matcher block it lives under. Remediation: `/skill-builder hooks --execute` will rewrite them in place. Reason this matters: hook runner invokes commands via `/bin/sh -c`, so unquoted `$CLAUDE_PROJECT_DIR` splits at whitespace and silently fails on synced project roots (Google Drive, iCloud, OneDrive).
 **If all PASS:** Report clean health.

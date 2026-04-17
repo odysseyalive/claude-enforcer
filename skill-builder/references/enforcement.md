@@ -404,7 +404,7 @@ context: fork
 
 ## Self-Contained Hook Paths
 
-Hooks should use relative paths from project root:
+Hooks should use relative paths from project root. The expanded `$CLAUDE_PROJECT_DIR` MUST be wrapped in escaped double quotes inside the JSON string:
 
 ```json
 {
@@ -413,7 +413,7 @@ Hooks should use relative paths from project root:
       "matcher": "Bash",
       "hooks": [{
         "type": "command",
-        "command": "$CLAUDE_PROJECT_DIR/.claude/skills/api-client/hooks/validate.sh"
+        "command": "\"$CLAUDE_PROJECT_DIR/.claude/skills/api-client/hooks/validate.sh\""
       }]
     }]
   }
@@ -421,6 +421,22 @@ Hooks should use relative paths from project root:
 ```
 
 `$CLAUDE_PROJECT_DIR` resolves to the project root, making hooks portable.
+
+### Path-with-spaces safety (REQUIRED quoting)
+
+The hook runner invokes the command via `/bin/sh -c "<command>"`. If `$CLAUDE_PROJECT_DIR` expands to a path containing whitespace, an unquoted command silently splits at the first space. The shell treats the path prefix as the program name and everything after the space as arguments, producing errors like:
+
+```
+/bin/sh: line 1: /home/user/Sync/My Project: No such file or directory
+```
+
+This is common on:
+- macOS iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/...`)
+- Linux Insync / rclone mounts of Google Drive (`~/Insync/.../Google Drive/...`)
+- Windows OneDrive (`C:\Users\name\OneDrive - Org Name\...`)
+- Any path with a literal space, hyphen-space, or non-ASCII whitespace
+
+**Rule:** every hook command that references `$CLAUDE_PROJECT_DIR` (or any other shell variable that may expand to a path) MUST wrap the expansion in escaped double quotes (`"\"$CLAUDE_PROJECT_DIR/...\""`), so the entire path is a single shell argument after expansion. The unquoted form is never acceptable, even on systems where the path happens to contain no spaces today, because user environments move.
 
 ---
 
