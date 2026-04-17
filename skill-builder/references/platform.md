@@ -41,18 +41,26 @@ Deduplication uses `realpath()` — symlinks and overlapping parent directories 
 | `description` | string | Brief description — max **250 chars** shown in listing |
 | `when_to_use` | string | Tells Claude when to proactively invoke via SkillTool |
 | `model` | string | Model override (`'inherit'`, `'haiku'`, `'sonnet'`, `'opus'`) |
-| `effort` | string | Reasoning effort for forked skills (`'low'`–`'max'` or integer) |
+| `effort` | string | Reasoning effort (`'low'`, `'medium'`, `'high'`, `'xhigh'`, `'max'`) |
 | `context` | `'inline'` \| `'fork'` | Execution context |
 | `agent` | string | Agent type for forked execution |
 | `user-invocable` | string | Can user type `/skill-name`? (default: `true`) |
 | `disable-model-invocation` | string | Prevent model from using via SkillTool |
 | `allowed-tools` | string/array | Tools this skill can use |
+| `disallowedTools` | string/array | Tools explicitly denied to this skill |
 | `argument-hint` | string | Hint for command arguments in menu |
 | `arguments` | string/array | Named argument substitution |
 | `hooks` | object | Hook configurations (PreToolUse, PostToolUse, PostCompact, etc.) |
 | `paths` | string/array | Glob patterns — skill activates only when matching files touched |
 | `version` | string | Skill version |
 | `shell` | `'bash'` \| `'powershell'` | Shell for `!` code blocks |
+| `memory` | `'project'` \| `'local'` \| `'user'` | Persistent cross-session memory for subagents |
+| `background` | boolean | Run without blocking parent (subagents only) |
+| `isolation` | `'worktree'` | Git worktree isolation for parallel editing |
+| `initialPrompt` | string | Auto-submitted first turn for subagents |
+| `color` | string | Visual identification in task list |
+| `skills` | string/array | Skills available to this subagent |
+| `mcpServers` | object | MCP servers scoped to this subagent |
 
 ## Listing Budget
 
@@ -100,4 +108,9 @@ Skills with `paths` frontmatter are held separately until matching files are tou
 4. **`paths` for contextual skills** — only activate when relevant files are being worked on
 5. **Inline `!` blocks for dynamic loading** — load procedure content at invocation time instead of requiring explicit Read steps
 6. **PostToolUse over PreToolUse for validation** — PostToolUse agents see the actual result and can warn; PreToolUse agents block before the action, which is more expensive and can create false denials
+7. **`effort` for cost control** — use `low` for simple lookups, `high` for complex reasoning
+8. **`memory` for learning agents** — enable cross-session learning for agents that benefit from pattern recognition
+9. **`background: true` for non-blocking validation** — let long-running checks complete while work continues
+10. **`isolation: worktree` for parallel editing** — prevent merge conflicts in agent teams
+11. **`if` field over bash scoping** — more efficient, declarative, platform-independent
 <!-- /origin -->

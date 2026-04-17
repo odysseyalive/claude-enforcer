@@ -160,6 +160,67 @@ Wait for all teammates to complete before proceeding.
 | Permission mode | Inherits from caller | Inherits from lead |
 | Session lifecycle | Single turn | Persistent until shutdown |
 | Research access | Not built-in (agents are isolated) | Always available via mandatory research assistant |
+| Git isolation | Shared working directory | Optional worktree isolation |
+
+## Git Worktree Isolation (`isolation: worktree`)
+
+Agent teams can use git worktree isolation to prevent conflicts when multiple agents edit the same repository. Each teammate works in an isolated worktree that gets merged back.
+
+### When to Use Worktree Isolation
+
+| Scenario | Use Worktree? | Why |
+|----------|--------------|-----|
+| Teammates editing different files | No | No conflict risk |
+| Teammates editing overlapping files | **Yes** | Prevents merge conflicts |
+| Teammates editing same file | **Yes** | Each gets clean state |
+| Large refactoring across many files | **Yes** | Cleaner change tracking |
+| Quick fixes in separate modules | No | Overhead not worth it |
+
+### Worktree Architecture
+
+```
+project/                          # Lead's working directory
+├── .git/worktrees/
+│   ├── teammate-a/              # Teammate A's isolated worktree
+│   └── teammate-b/              # Teammate B's isolated worktree
+```
+
+Each worktree is a full checkout with its own HEAD. Changes are merged back to the main branch when the teammate completes.
+
+### Enabling Worktree Isolation
+
+In the teammate spawn configuration:
+
+```yaml
+---
+name: isolated-teammate
+isolation: worktree
+---
+```
+
+Or in natural language team creation:
+
+```markdown
+"Create an agent team to refactor the API layer. Spawn teammates with worktree isolation:
+- [Persona A] to refactor auth endpoints (worktree isolated)
+- [Persona B] to refactor data endpoints (worktree isolated)
+- [Persona C] to update tests (worktree isolated)
+Have each teammate work in their own worktree and merge changes when complete."
+```
+
+### Worktree Merge Strategy
+
+1. **Teammate completes work** in isolated worktree
+2. **Lead reviews changes** via diff
+3. **Merge to main** — fast-forward if clean, or resolve conflicts
+4. **Worktree cleanup** — removed after successful merge
+
+### When NOT to Use Worktree Isolation
+
+- **Read-only evaluation** — no edits, no conflicts
+- **Sequential editing** — one teammate at a time
+- **Non-git repositories** — worktrees require git
+- **Small, quick tasks** — worktree overhead exceeds benefit
 
 ## Routing Decision Framework
 

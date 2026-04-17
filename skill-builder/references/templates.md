@@ -265,6 +265,82 @@ Reference files:
 | `description` | Yes | Single-line summary shown in help output |
 | `allowed-tools` | Yes | Tools the skill can use |
 
+### Optional Frontmatter Fields
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `paths` | Only activate when matching files touched | `"**/*.ts"` |
+| `effort` | Reasoning effort for forked skills | `low`, `medium`, `high`, `max` |
+| `context` | Execution context | `inline` (default), `fork` |
+| `memory` | Persistent cross-session memory | `project`, `local`, `user` |
+| `background` | Run without blocking parent | `true` |
+| `when_to_use` | Tells Claude when to proactively invoke | Free text |
+| `model` | Model override | `haiku`, `sonnet`, `opus` |
+
+### Conditional Activation (`paths:` Field)
+
+Skills with `paths:` frontmatter only activate when matching files are touched. This reduces context cost for domain-specific skills.
+
+```yaml
+---
+name: typescript-helpers
+description: "TypeScript utility patterns and type helpers"
+paths: "**/*.ts"
+allowed-tools: Read, Grep, Glob, Edit
+---
+```
+
+**Path patterns:**
+- `"**/*.ts"` — Any TypeScript file
+- `"**/components/**"` — Files under any components directory
+- `"src/api/**/*.ts"` — TypeScript files under src/api
+- `["**/*.test.ts", "**/*.spec.ts"]` — Array of patterns (match any)
+
+**When to use `paths:`:**
+- Language-specific skills (TypeScript, Python, Rust)
+- Directory-specific skills (components, API routes, tests)
+- File-type-specific skills (Markdown, JSON, YAML)
+
+**When NOT to use `paths:`:**
+- Skills invoked by slash command (user decides when to load)
+- Cross-cutting skills that apply regardless of file type
+- Skills with complex workflows that need full context
+
+### Effort Level (`effort:` Field)
+
+The `effort:` field controls reasoning depth for forked skills and agents. Lower effort = faster and cheaper. Higher effort = more thorough reasoning.
+
+| Level | Use For | Cost | Speed |
+|-------|---------|------|-------|
+| `low` | Simple lookups, ID validation, format checks | Lowest | Fastest |
+| `medium` | Standard tasks, most skills | Default | Normal |
+| `high` | Complex analysis, evaluation agents | Higher | Slower |
+| `xhigh` | Deep reasoning, architectural decisions | High | Slow |
+| `max` | Most thorough reasoning, critical decisions | Highest | Slowest |
+
+**Recommendations by agent type:**
+
+| Agent Type | Recommended Effort |
+|-----------|-------------------|
+| ID Lookup Agent | `low` — simple pattern matching |
+| Matcher Agent | `low` to `medium` — category matching |
+| Pre-flight Validator | `medium` — rule checking |
+| Text Evaluation Pair | `high` — quality judgment |
+| Capture Recommender | `medium` — pattern matching |
+| Architectural analysis | `high` to `xhigh` — complex reasoning |
+
+```yaml
+---
+name: id-lookup
+description: "Look up IDs from reference files"
+effort: low
+context: fork
+allowed-tools: Read, Grep
+---
+```
+
+**Audit check:** Skills and agents without `effort:` default to `medium`. Flag forked skills without explicit effort settings.
+
 ### Description Field Pattern
 
 **ALWAYS use a single quoted line.** Include modes/usage inline:
@@ -379,3 +455,60 @@ description: Brief description without special characters
               Long multi-line text...
    Fix to:  description: "Condensed single line. Modes: x, y, z"
 ```
+
+---
+
+## Shell Preprocessing (`!` Code Blocks)
+
+Skills can execute shell commands at load time using `!` code blocks. The output replaces the block in the injected content.
+
+**Use cases:**
+- Dynamically load procedure content at invocation
+- Inject system information or timestamps
+- Load content that changes frequently
+
+### Example: Dynamic Procedure Loading
+
+Instead of duplicating procedure content in SKILL.md, load it dynamically:
+
+```markdown
+---
+name: my-skill
+description: "Skill with dynamic procedure loading"
+shell: bash
+---
+
+# My Skill
+
+## Procedure
+
+!`cat ${CLAUDE_SKILL_DIR}/procedures/main.md`
+```
+
+The `${CLAUDE_SKILL_DIR}` variable resolves to the skill's directory, making paths portable.
+
+### Example: Injecting Build Info
+
+```markdown
+## Current State
+
+!`echo "Last commit: $(git log -1 --format='%h %s' 2>/dev/null || echo 'not a git repo')"`
+!`echo "Branch: $(git branch --show-current 2>/dev/null || echo 'unknown')"`
+```
+
+### Example: Conditional Content
+
+```markdown
+## Environment
+
+!`if [ -f .env ]; then echo "Environment: $(grep -c '^[A-Z]' .env) variables configured"; else echo "No .env file found"; fi`
+```
+
+### Shell Preprocessing Rules
+
+1. **Runs at load time** — before Claude sees the skill content
+2. **Output replaces the block** — whatever the command prints becomes skill content
+3. **MCP skills cannot use this** — security boundary prevents shell execution
+4. **Use `shell: powershell`** for Windows compatibility
+5. **Errors are visible** — stderr output appears in the skill content
+6. **Keep commands fast** — slow commands delay skill loading

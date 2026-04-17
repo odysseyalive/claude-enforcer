@@ -24,6 +24,39 @@ CLAUDE.md loads into EVERY conversation. Keep it lean — move domain-specific c
 | Vendor-specific instructions | Vendor skill |
 | Complex procedures | Dedicated skill |
 
+### What Should Move to Rules (`.claude/rules/`)
+
+Rules are modular instruction files that load automatically. Use them for content that:
+- Applies globally but isn't domain-specific enough for a skill
+- Benefits from path-scoping (only load for matching file types)
+- Doesn't need invocation — just passive guidance
+
+| Content | Move To | Path Scope |
+|---------|---------|------------|
+| TypeScript conventions | `.claude/rules/typescript.md` | `paths: "**/*.ts"` |
+| Testing standards | `.claude/rules/testing.md` | `paths: "**/*.test.*"` |
+| Code review guidelines | `.claude/rules/review.md` | *(none — always load)* |
+| Security requirements | `.claude/rules/security.md` | *(none — always load)* |
+| Component patterns | `.claude/rules/components.md` | `paths: "**/components/**"` |
+
+### Decision Framework: Rules vs Skills vs CLAUDE.md
+
+| Question | If Yes → | If No → |
+|----------|----------|---------|
+| Does it apply to EVERY task? | CLAUDE.md | ↓ |
+| Is it invoked on-demand with arguments? | Skill | ↓ |
+| Does it only apply to specific file types? | Rule with `paths:` | ↓ |
+| Is it passive guidance (no workflow)? | Rule | Skill |
+| Does it have complex workflows or agents? | Skill | Rule |
+
+**Context cost comparison:**
+- CLAUDE.md: Always loaded (~100% of sessions)
+- Rules without `paths:`: Always loaded
+- Rules with `paths:`: Only loaded when matching files touched
+- Skills: Only loaded when invoked
+
+**Prefer path-scoped rules** for language-specific or directory-specific guidance — they reduce context cost significantly.
+
 ### CLAUDE.md Optimization Workflow
 
 When asked to optimize CLAUDE.md:
@@ -41,7 +74,30 @@ Scan for:
 - Procedures longer than 10 lines
 - Rules that only apply to specific tasks
 
-**Step 3: For each extraction candidate**
+**Step 3: For each extraction candidate, decide: Rule or Skill?**
+
+Use the decision framework above. Then:
+
+**If extracting to a Rule:**
+
+1. Create the rule file:
+   ```
+   .claude/rules/[topic].md
+   ```
+
+2. Add frontmatter with optional path scope:
+   ```yaml
+   ---
+   description: "Brief description of what this rule covers"
+   paths: "**/*.ts"  # Optional — only load for matching files
+   ---
+   ```
+
+3. Move content (verbatim) to the rule file
+
+4. Remove the section from CLAUDE.md (rules load automatically)
+
+**If extracting to a Skill:**
 
 1. Create skill if doesn't exist:
    ```
@@ -80,6 +136,9 @@ If `.claude/skills/awareness-ledger/` exists and has records:
 Before: [X] lines
 After: [Y] lines
 Savings: [Z] lines ([%]%)
+
+Extracted to rules:
+- .claude/rules/[topic].md (paths: [scope]) — [description]
 
 Extracted to skills:
 - /skill-1: [description]

@@ -11,6 +11,142 @@ Agents are specialized subprocesses that handle specific tasks with isolation an
 
 **Rule of thumb:** Use hooks for "never do X", use agents for "figure out the right X".
 
+## Agent Persistent Memory
+
+Subagents can maintain their own memory across sessions using the `memory:` frontmatter field. This enables specialized agents to learn patterns over time.
+
+### Memory Scopes
+
+| Scope | Location | Use For |
+|-------|----------|---------|
+| `project` | `.claude/memory/agents/[name]/` | Project-specific patterns |
+| `local` | `~/.claude/local/memory/agents/[name]/` | Machine-local learnings |
+| `user` | `~/.claude/memory/agents/[name]/` | User-wide preferences |
+
+### Memory Structure
+
+When an agent has `memory: project`, Claude Code creates:
+
+```
+.claude/memory/agents/[agent-name]/
+├── MEMORY.md        # Index of topics (first 200 lines auto-loaded)
+└── [topic].md       # Detailed topic files
+```
+
+### Agent Types That Benefit from Memory
+
+| Agent Type | Memory Scope | What It Learns |
+|-----------|--------------|----------------|
+| ID Lookup Agent | `project` | Common lookups, frequently used IDs |
+| Code Review Agent | `project` | Codebase patterns, recurring issues |
+| Style Evaluator | `user` | User's writing preferences |
+| Matcher Agent | `project` | Category assignments, edge cases |
+| Test Generator | `project` | Testing patterns, framework idioms |
+
+### Memory-Enabled Agent Template
+
+```markdown
+---
+name: code-reviewer
+description: "Review code for patterns and issues"
+persona: "Senior engineer who has reviewed this codebase for years"
+memory: project
+effort: high
+allowed-tools: Read, Grep, Glob
+context: fork
+---
+
+# Code Review Agent
+
+You review code for patterns and potential issues. You have access to your
+memory from previous reviews in this project.
+
+## Memory Usage
+
+1. At session start, check MEMORY.md for known patterns
+2. During review, reference patterns you've seen before
+3. After review, note any new patterns worth remembering
+
+## What to Remember
+
+- Recurring code smells specific to this codebase
+- Project-specific conventions not in documentation
+- Common mistakes that keep appearing
+- Patterns that work well in this architecture
+```
+
+### When NOT to Use Memory
+
+- **ID Lookup Agents** with static reference files — the reference.md is already persistent
+- **Evaluation agents** where independence matters — memory could bias assessments
+- **One-shot agents** that run once per session — no benefit from persistence
+- **Agents with `context: none`** that must start fresh — memory defeats isolation
+
+## Background Agents (`background: true`)
+
+Agents can run in the background without blocking the parent conversation. The parent continues working while the agent completes its task.
+
+### When to Use Background Agents
+
+| Scenario | Why Background? |
+|----------|-----------------|
+| Long-running validation | Don't block the user waiting for checks |
+| Parallel research | Gather information while working |
+| Deferred quality checks | Run after content is drafted |
+| Bulk operations | Process many files without blocking |
+
+### Background Agent Template
+
+```markdown
+---
+name: async-validator
+description: "Validate changes in the background"
+background: true
+effort: medium
+allowed-tools: Read, Grep, Glob
+context: fork
+---
+
+# Async Validator
+
+You validate changes without blocking the main conversation.
+
+## Output
+
+Write results to a known location that the parent can check:
+- `.claude/tmp/validation-[timestamp].md`
+
+Or use the task system to report back.
+```
+
+### Implementation Pattern
+
+```markdown
+## Step N: Background Validation
+
+Spawn a background validator while continuing:
+
+Task tool with subagent_type: "general-purpose", background: true
+Prompt: "Validate [target] against [criteria].
+        Write results to .claude/tmp/validation-results.md"
+
+Continue with the next step while validation runs.
+Check validation results before finalizing.
+```
+
+### Collecting Background Agent Results
+
+Background agents can report results via:
+1. **File output** — Write to a known path, parent reads later
+2. **Task completion** — Use TaskUpdate to mark completion with notes
+3. **Notification** — If configured, triggers a notification hook
+
+### When NOT to Use Background
+
+- **Blocking decisions** — If the next step depends on the agent's output
+- **User-facing validation** — User should see results immediately
+- **Quick checks** — Overhead of background isn't worth it for fast operations
+
 ## Agent Opportunity Detection
 
 When auditing a skill, look for these patterns that suggest an agent would help:

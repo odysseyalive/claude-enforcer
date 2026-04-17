@@ -211,13 +211,66 @@ Claude Code supports four hook handler types. Choose based on what the check req
 |-------|------|-----------|-------------------|
 | `PreToolUse` | Before tool executes | Yes | Directive protection, persona uniqueness |
 | `PostToolUse` | After tool succeeds | No | Post-edit verification, formatting |
+| `PreCompact` | Before context compaction | No | Capture context state for diagnostics |
 | `PostCompact` | After context compaction | No | Re-inject directive awareness (drift resistance) |
 | `InstructionsLoaded` | When CLAUDE.md/rules load | No | Validate directive checksums at session start |
+| `ConfigChange` | When config files change | No | **Drift detection** — validate CLAUDE.md/settings integrity |
+| `FileChanged` | When watched files change | No | Trigger skill re-validation on external edits |
+| `SubagentStart` | When subagent spawns | No | Log agent invocations |
 | `SubagentStop` | When subagent finishes | No | Validate agent output |
+| `TaskCreated` | When task added to list | No | Validate task structure for teams |
 | `TaskCompleted` | When task marked complete | No | Post-action chain triggers |
+| `TeammateIdle` | When teammate has no tasks | No | Rebalance work in teams |
 | `Stop` | When Claude finishes responding | No | Final quality checks |
 
 Full event list (25 events): SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, SubagentStart, SubagentStop, TaskCreated, TaskCompleted, Stop, StopFailure, TeammateIdle, InstructionsLoaded, ConfigChange, CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, PreCompact, PostCompact, Elicitation, ElicitationResult, SessionEnd.
+
+### ConfigChange Drift Detection
+
+The `ConfigChange` event fires when configuration files are modified. Use it to detect unauthorized changes to CLAUDE.md or settings files.
+
+```yaml
+hooks:
+  ConfigChange:
+    - hooks:
+        - type: command
+          command: |
+            INPUT=$(cat)
+            FILE=$(echo "$INPUT" | grep -oP '"path"\s*:\s*"[^"]*"' | head -1 | sed 's/.*"path"\s*:\s*"//;s/"$//')
+
+            # Check if CLAUDE.md was modified
+            if echo "$FILE" | grep -q 'CLAUDE.md'; then
+              # Verify directive checksums still match
+              if [ -f ".claude/skills/*/hooks/checksum.sh" ]; then
+                .claude/skills/*/hooks/checksum.sh --verify || echo '{"warning": "CLAUDE.md directives may have changed. Run /skill-builder checksums to verify."}'
+              fi
+            fi
+            exit 0
+          statusMessage: "Checking config integrity..."
+```
+
+**Use cases:**
+- Detect when CLAUDE.md is edited outside a session
+- Validate settings.local.json hasn't been tampered with
+- Re-verify directive checksums after any instruction file changes
+
+### InstructionsLoaded Validation
+
+The `InstructionsLoaded` event fires when CLAUDE.md and rules are loaded at session start. Use it for session-start validation.
+
+```yaml
+hooks:
+  InstructionsLoaded:
+    - hooks:
+        - type: command
+          command: ".claude/skills/my-skill/hooks/verify-checksums.sh"
+          statusMessage: "Validating directive integrity..."
+```
+
+**Use cases:**
+- Validate directive checksums at session start
+- Check that required rules files exist
+- Verify skill dependencies are present
 
 ### Frontmatter Hooks (Portable Enforcement)
 
@@ -244,7 +297,37 @@ hooks:
 
 **Frontmatter-first strategy:** When skill-builder generates hooks, embed them in the skill's frontmatter by default. Use `settings.local.json` only for global hooks that must apply across all skills (like the directive checksum command hook).
 
-**`if` field:** Narrows when a hook fires within its matcher. Uses permission rule syntax (e.g., `Edit(**/SKILL.md)` only fires for SKILL.md edits, not all Edit calls).
+**`if` field (preferred over bash scoping):** Narrows when a hook fires within its matcher. Uses permission rule syntax (e.g., `Edit(**/SKILL.md)` only fires for SKILL.md edits, not all Edit calls).
+
+**Why prefer `if` over bash self-scoping:**
+- More efficient — hook doesn't spawn if condition fails
+- Declarative — intent is clear in the YAML
+- No bash dependency — works on all platforms
+- Easier to audit — scope is visible in frontmatter
+
+```yaml
+# GOOD: Use if field for scoping
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: prompt
+          prompt: "Check directive integrity: $ARGUMENTS"
+          if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
+
+# AVOID: Bash self-scoping (slower, platform-dependent)
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: |
+            INPUT=$(cat)
+            FILE=$(echo "$INPUT" | grep -oP '"file_path"...')
+            if echo "$FILE" | grep -q 'SKILL.md'; then
+              # actual check here
+            fi
+```
 
 **`$ARGUMENTS` placeholder:** Replaced with the hook input JSON, giving prompts and agents access to tool name, file path, content, etc.
 
