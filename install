@@ -11,6 +11,7 @@ set -e
 
 REPO_URL="https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main"
 SKILL_DIR=".claude/skills/skill-builder"
+SHELL_SAFETY_DIR=".claude/skills/shell-safety"
 
 echo "Claude Enforcer Installer"
 echo "========================="
@@ -52,6 +53,14 @@ for proc in audit verify quick-audit skills list optimize agents hooks new direc
     curl -fsSL "$REPO_URL/skill-builder/references/procedures/${proc}.md" -o "$SKILL_DIR/references/procedures/${proc}.md"
 done
 curl -fsSL "$REPO_URL/skill-builder/agents/optimize-diff-auditor/AGENT.md" -o "$SKILL_DIR/agents/optimize-diff-auditor/AGENT.md"
+
+# Install shell-safety companion skill (rules + templates + audit patterns)
+echo "Installing shell-safety companion skill..."
+mkdir -p "$SHELL_SAFETY_DIR/references"
+curl -fsSL "$REPO_URL/shell-safety/SKILL.md" -o "$SHELL_SAFETY_DIR/SKILL.md"
+for ref in rules templates audit-patterns; do
+    curl -fsSL "$REPO_URL/shell-safety/references/${ref}.md" -o "$SHELL_SAFETY_DIR/references/${ref}.md"
+done
 
 # Enable agent teams and auto-approve research tools
 SETTINGS_FILE=".claude/settings.local.json"
@@ -109,4 +118,6 @@ echo "    /skill-builder                    Full audit (display mode)"
 echo "    /skill-builder optimize [skill]   Show optimization plan (--execute to apply)"
 echo "    /skill-builder agents [skill]     Show agent opportunities (--execute to create)"
 echo "    /skill-builder hooks [skill]      Show hooks inventory (--execute to create)"
+echo "    /shell-safety lint [file]         Check shell or settings.json for pitfalls"
+echo "    /shell-safety audit [path]        Scan and patch fragility (--execute to fix)"
 echo

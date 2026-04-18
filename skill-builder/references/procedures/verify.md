@@ -57,7 +57,7 @@ For each hook script:
 
 For each wired hook in settings.local.json:
 - Does the script file exist?
-- **Path-safe quoting:** If the command string references `$CLAUDE_PROJECT_DIR` (or any other path-bearing variable), is the expansion wrapped in escaped double quotes (`"\"$CLAUDE_PROJECT_DIR/...\""`)? Unquoted commands fail silently when the expanded path contains whitespace (Google Drive / Insync, iCloud, OneDrive sync mounts). FAIL on any unquoted command, with remediation pointer to `/skill-builder hooks --execute`.
+- **Shell-safety lint:** If `shell-safety` is installed, run `/shell-safety lint .claude/settings.local.json` and `/shell-safety lint .claude/skills/*/hooks/*.sh`. Surface any HARD findings as FAIL and SOFT findings as WARN. Fallback when not installed: check that command strings referencing `$CLAUDE_PROJECT_DIR` are wrapped in escaped double quotes (`"\"$CLAUDE_PROJECT_DIR/...\""`) and that hook script bodies have ERR traps and no `set -e`. Recommend installing shell-safety for the full rule set.
 
 ### Step 3b: Team Validation
 
@@ -100,7 +100,7 @@ For each agent file:
 | Directive checksums | [N]/[N] [PASS/WARN/FAIL] |
 | Hooks wired | [N]/[N] [PASS/FAIL] |
 | Hooks executable | [N]/[N] [PASS/FAIL] |
-| Hook commands path-safe | [N]/[N] [PASS/FAIL] |
+| Shell-safety lint (hooks/settings) | [N]/[N] [PASS/WARN/FAIL] |
 | Stale artifacts | [NONE/WARN — list] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
 | Agent Teams enabled | [PASS/FAIL/N/A] |
@@ -112,5 +112,5 @@ Overall: [PASS / PASS with warnings / FAIL]
 **If any FAIL:** List each failure with the skill name and specific issue.
 **If FAIL (directive checksum mismatch):** List each skill with mismatched fingerprint. This may indicate unauthorized directive modification.
 **If WARN (no directive checksum):** Note: "WARN: Directives without checksum protection in [skill]. Run `/skill-builder checksums [skill] --execute`."
-**If FAIL (hook commands not path-safe):** List each unquoted command with the matcher block it lives under. Remediation: `/skill-builder hooks --execute` will rewrite them in place. Reason this matters: hook runner invokes commands via `/bin/sh -c`, so unquoted `$CLAUDE_PROJECT_DIR` splits at whitespace and silently fails on synced project roots (Google Drive, iCloud, OneDrive).
+**If FAIL (shell-safety findings):** List each finding with file path, line number, and the rule it violates (e.g., R1 path resolution, R2 path-with-spaces). Remediation: `/shell-safety audit [path] --execute` rewrites the mechanical (HARD) findings in place; SOFT findings need human review. Reason this matters: hook runner invokes commands via `/bin/sh -c`; unquoted relative or `$CLAUDE_PROJECT_DIR` paths fail silently on synced project roots and any non-project-root CWD.
 **If all PASS:** Report clean health.

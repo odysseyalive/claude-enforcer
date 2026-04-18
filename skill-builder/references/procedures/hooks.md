@@ -18,22 +18,22 @@ Scan for hook scripts and their wiring:
 
 #### Step 2: Validate Existing Hooks
 
-For each hook script found:
+**Delegation:** the shell-level pitfall checks (path quoting, ERR trap, `set -e`, defensive I/O, stdin parsing) are owned by the `shell-safety` skill. Run `/shell-safety audit .claude/settings*.json .claude/skills/*/hooks/` and merge its findings into this report rather than duplicating the rule logic here. If `shell-safety` is not installed, fall back to the in-line table below and recommend installation.
 
-| Check | What to Verify |
-|-------|----------------|
-| **Wired** | Listed in settings.local.json `hooks` section |
-| **Matcher** | Correct tool matcher (Bash, Edit, etc.) |
-| **Exit codes** | Uses `exit 2` to block, `exit 0` to allow |
-| **Reads stdin** | Captures `INPUT=$(cat)` for tool input |
-| **Permission** | Script is executable (`chmod +x`) |
-| **Error output** | Writes block reason to stderr (`>&2`) |
-| **Hardened** | Has ERR trap writing to crash sentinel (grep for `trap.*ERR` or `CRASH_LOG`) |
-| **No set -e** | Does NOT use `set -e` (causes immediate exit, bypasses ERR trap logging) |
-| **Defensive I/O** | Uses `2>/dev/null` and `|| exit 0` on fallible operations |
-| **Path-safe quoting** | Command string in `settings.local.json` wraps `$CLAUDE_PROJECT_DIR` (or any other path-bearing variable) in escaped double quotes (`"\"$CLAUDE_PROJECT_DIR/...\""`). Unquoted commands fail silently when the project root contains a space (Google Drive / Insync, iCloud, OneDrive). See `references/enforcement.md` § "Path-with-spaces safety". |
+| Check | What to Verify | Owned By |
+|-------|----------------|----------|
+| **Wired** | Listed in settings.local.json `hooks` section | this procedure |
+| **Matcher** | Correct tool matcher (Bash, Edit, etc.) | this procedure |
+| **Exit codes** | Uses `exit 2` to block, `exit 0` to allow | this procedure |
+| **Reads stdin** | Captures `INPUT=$(cat ...)` for tool input | shell-safety R5 |
+| **Permission** | Script is executable (`chmod +x`) | this procedure |
+| **Error output** | Writes block reason to stderr (`>&2`) | this procedure |
+| **Hardened** | Has ERR trap (shell-safety R3) | shell-safety P3 |
+| **No set -e** | Does NOT use `set -e` (shell-safety R4) | shell-safety P4 |
+| **Defensive I/O** | Uses `2>/dev/null` and `|| exit 0` on fallible ops | shell-safety R5/R7 |
+| **Path-safe quoting** | Command string wraps `$CLAUDE_PROJECT_DIR` in escaped double quotes (shell-safety R1+R2+R8). Unquoted commands fail silently when CWD ≠ project root or path contains whitespace. | shell-safety P1/P2 |
 
-Unhardened hooks should be flagged as: "Hook lacks defensive hardening — vulnerable to silent crashes. See Hook Hardening Pattern."
+Unhardened hooks should be flagged as: "Hook lacks defensive hardening — see `shell-safety/references/rules.md` § R3 and templates T1/T2."
 
 #### Step 3: Identify New Opportunities
 
@@ -203,15 +203,16 @@ When running `/skill-builder hooks [skill] --execute`:
 - Use `$ARGUMENTS` placeholder for hook input data
 
 **For command hooks (grep-block, require-pattern, threshold):**
-- Create the script in `.claude/skills/[skill]/hooks/[name].sh`
+- Generate the script body via `/shell-safety write` using template T1 (advisory) or T2 (blocking) from `shell-safety/references/templates.md`. Do not hand-roll the boilerplate (ERR trap, defensive stdin, scope check); the template has it.
+- Save to `.claude/skills/[skill]/hooks/[name].sh`
 - Make executable: `chmod +x [script]`
-- Wire in settings.local.json under appropriate event using the escaped-quote form per `references/enforcement.md` § "Self-Contained Hook Paths". Command strings referencing `$CLAUDE_PROJECT_DIR` MUST wrap the expansion in `\"...\"` so the path stays a single shell argument when the project root contains whitespace (Google Drive, iCloud, OneDrive sync mounts).
+- Wire the settings.local.json entry using template T3 from `shell-safety/references/templates.md` (the escaped-quoted `$CLAUDE_PROJECT_DIR` form). This satisfies shell-safety R1, R2, and R8 in one step.
+- Before writing the entry to disk, run `/shell-safety lint` on the generated artifacts.
 
-**Existing-hook remediation (when Path-safe quoting check fails in Step 2):**
-- Add one task per affected `settings.local.json` matcher block to the execute task list
-- Mechanical rewrite via Python (preserves JSON structure): for each command string starting with `$CLAUDE_PROJECT_DIR` (and not already wrapped in `"`), replace it with `f'"{cmd}"'`
-- Back up the file as `settings.local.json.bak` before writing
-- Validate the rewritten JSON parses before completing the task
+**Existing-hook remediation (when Step 2 surfaces shell-safety findings):**
+- For HARD findings reported by `shell-safety audit`, add one task per file to the execute task list and run `/shell-safety audit [file] --execute`. shell-safety performs the mechanical rewrite (path quoting, `$CLAUDE_PROJECT_DIR` wrapping) and creates `.bak` files.
+- For SOFT findings (missing ERR traps, `set -e` removal, stdin parsing changes), surface them in the report for the user to address. Do not auto-patch.
+- Validate the rewritten JSON or script parses before marking the task complete.
 
 **Template for command hooks (grep-block):**
 ```bash
