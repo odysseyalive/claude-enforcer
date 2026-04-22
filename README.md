@@ -115,7 +115,7 @@ Now the part that matters more than this release. Anthropic shipped Mythos Previ
 ### Upgrade in two commands
 
 ```bash
-# 1. Upgrade Claude Enforcer
+# 1. Install or Upgrade Claude Enforcer
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 
 # 2. Convert every installed skill to 4.7 compatibility
