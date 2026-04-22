@@ -74,6 +74,22 @@ Scan for:
 - Procedures longer than 10 lines
 - Rules that only apply to specific tasks
 
+**Step 2b: Flag 4.7-incompatible language (Opus 4.7)**
+
+Scan CLAUDE.md for soft/conversational phrasing that Opus 4.7 will under-execute. CLAUDE.md loads at the start of every conversation, so soft phrasing here degrades every interaction on 4.7. Flag:
+
+- Subjective terms: "appropriate", "clean", "when needed", "as applicable", "naturally"
+- Conversational phrasing: "keep it X", "organize around Y", "the right way to do Z"
+- Implicit cross-references: "see X" without an explicit "Read X before Y" instruction
+- Classification gates without criteria: "if it makes sense", "when warranted"
+
+Disposition rules:
+
+- **If the flagged content is a user-authored rule/directive** — preserve verbatim, but recommend either (a) extracting it to a Skill's `## Directives` section where enforcement annotations can be attached, or (b) adding a model-contract preamble to CLAUDE.md (see Target CLAUDE.md Structure below) that forces Claude to ask rather than infer.
+- **If the flagged content is skill-builder machinery** (descriptive prose, procedure text, tables) — rewrite for 4.7 explicit language directly in CLAUDE.md, following [enforcement.md](../enforcement.md) § "Opus 4.7 Behavioral Contract".
+
+Report flagged items in the final optimization report under a new **"4.7 Language Fixes"** section, distinct from extractions.
+
 **Step 3: For each extraction candidate, decide: Rule or Skill?**
 
 Use the decision framework above. Then:
@@ -106,11 +122,16 @@ Use the decision framework above. Then:
    └── reference.md
    ```
 
-2. Move directives (verbatim) to skill's `## Directives` section
+2. Move directives (verbatim) to skill's `## Directives` section, wrapped in `<!-- origin: user | immutable: true -->` markers. User-authored directive text remains sacred in transit — CLAUDE.md content that reads as a user rule (imperatives, "never/always" rules, opinion statements) is preserved verbatim in the skill copy.
 
-3. Move reference tables to `reference.md`
+3. Move reference tables to `reference.md`.
 
-4. Replace CLAUDE.md section with skill pointer:
+4. **4.7 language pass (Opus 4.7+):** skill-builder machinery content being extracted (descriptive prose, procedural language, grounding statements, workflow steps) is NOT sacred and IS rewritten for 4.7 explicit language during extraction. Apply the same classification used by `/skill-builder convert`:
+   - Directive-like content (user rules, "never/always" statements) → preserve verbatim; generate enforcement annotation beneath it if soft. See [templates.md](../templates.md) § "Enforcement Annotation Template".
+   - Machinery content (explanatory prose, procedure steps) → rewrite for 4.7 explicit execution on the way out. Replace conversational phrasing with numbered steps and explicit conditions.
+   - Grounding statements → convert "see X" to "Read X § [section] before [action]".
+
+5. Replace CLAUDE.md section with skill pointer:
    ```markdown
    ### [Domain] Integration
 
@@ -147,10 +168,12 @@ Extracted to skills:
 
 ### Target CLAUDE.md Structure
 
-After optimization, CLAUDE.md should be ~100-150 lines:
+After optimization, CLAUDE.md should be ~100-150 lines and open with a one-line model contract statement (required on Opus 4.7+):
 
 ```markdown
 # CLAUDE.md
+
+> This project targets Opus 4.7+. All instructions are written for literal execution. If an instruction is ambiguous, ask — do not infer.
 
 ## Commands
 [3-5 essential commands]

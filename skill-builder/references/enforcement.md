@@ -1,5 +1,39 @@
 # Enforcement Mechanisms & Context Mutability
 
+## Opus 4.7 Behavioral Contract
+
+Skill-builder and every skill it produces targets Opus 4.7+. The behavioral contract:
+
+- **Literal execution.** 4.7 executes instructions as written. It does not infer intent from conversational phrasing, does not bridge implicit connections between steps, and does not substitute "the obvious thing" for a vague instruction.
+- **No implicit inference.** Directives like "organize around the discovery arc", "keep it conversational", "appropriate persona" are under-executed on 4.7. On 4.6 the model supplied the missing logic; on 4.7 the model executes only what the text explicitly says.
+- **Effort-sensitive tool invocation.** At lower effort levels, 4.7 reasons internally instead of making tool calls. Skills that depend on grounding reads, agent spawns, or hook triggers must declare `minimum-effort-level` in their frontmatter. See [templates.md](templates.md) § "Frontmatter Requirements".
+
+  **When `xhigh` is justified vs. `high`.** `xhigh` costs roughly 2x to 3x the tokens of `high` per invocation. Use `xhigh` only for content-creation workflows where the output-quality delta is observable (voice profile loading, prose generation, evaluation against subjective rubrics). Use `high` for everything else: skills that spawn agents, invoke hooks, do analytical workflows, or depend on grounding reads but do not produce subjective prose. For per-procedure granularity (some workflows in a skill need `xhigh`, others are fine at `high`), use `strictness: thorough` at the skill level and let individual procedures document their own effort expectations rather than pinning the whole skill at `xhigh`. See [token-efficiency.md](token-efficiency.md) § "P2: xhigh effort without a content-creation profile" for the detection rule.
+
+### Impact on the Enforcement Hierarchy
+
+Every row of the hierarchy table is affected, but not equally:
+
+| Level | 4.7 impact |
+|-------|------------|
+| Guidance (directives in SKILL.md) | Most affected. Soft directives need enforcement annotations to translate intent into explicit checkpoints. |
+| Grounding ("state which ID you'll use") | "State" is conversational. Replace with explicit "Read X before Y" instructions. |
+| Validation (agent with `context: none`) | The agent itself runs on 4.7. Its prompt language must be 4.7-explicit. |
+| Hard block — deterministic (command hook) | Minimally affected — shell exit codes are deterministic. |
+| Hard block — semantic (prompt hook) | The hook's LLM runs on 4.7. Prompt language must be 4.7-explicit. |
+| Hard block — analytical (agent hook) | Same as validation — the agent is itself 4.7. |
+| Drift re-injection (PostCompact) | The re-injected text reaches 4.7 literally. Write it explicitly. |
+
+**Key consequence:** external enforcement (hooks, `context: none` agents) is NOT automatically 4.7-compatible. The mechanism is drift-resistant, but the prompt/agent language running inside the mechanism must itself be 4.7-explicit.
+
+### The Fix Is Annotation, Not Rewriting
+
+User directives in the `## Directives` section are sacred — verbatim, never reworded. They CAN be augmented with a machine-generated enforcement annotation that translates intent into explicit numbered steps. See [templates.md](templates.md) § "Enforcement Annotation Template" for the format.
+
+Skill-builder machinery (workflow steps, grounding statements, enforcement language) is NOT sacred — it is rewritten in-place to 4.7-explicit language during `/skill-builder convert` and during `/skill-builder optimize`'s Directive Annotation Scan step.
+
+---
+
 ## Context Mutability & Enforcement Hierarchy
 
 CLAUDE.md and skills load at conversation start. Under long context windows, Claude's adherence to these instructions **drifts** — directives get forgotten or reinterpreted.
@@ -20,6 +54,8 @@ CLAUDE.md and skills load at conversation start. Under long context windows, Cla
 - **Agents with `context: none`** — Fresh subprocess, reads files without inherited drift
 - **PostCompact hooks** — Fire after context compaction, re-inject critical awareness at the exact moment drift occurs
 
+**4.7 note:** Immutability here refers to *drift resistance* — the mechanism fires regardless of how the conversation evolved. It does NOT mean the mechanism's internal language is immune to misinterpretation. The prompt evaluated by a prompt hook, the agent invoked by an agent hook, and the fresh subprocess reading a `context: none` agent's prompt all run on 4.7 themselves. If the hook or agent prompt uses inference-dependent phrasing, it still fires — but produces 4.7-literal output. See § "Opus 4.7 Behavioral Contract" above.
+
 ### Enforcement Hierarchy
 
 | Level | Mechanism | Drift-Resistant? | Use For |
@@ -31,6 +67,32 @@ CLAUDE.md and skills load at conversation start. Under long context windows, Cla
 | Hard block — semantic | Prompt hook (PreToolUse) | Yes | Rules requiring judgment (paraphrasing, intent) |
 | Hard block — analytical | Agent hook (PreToolUse) | Yes | Rules requiring multi-file analysis |
 | Drift re-injection | PostCompact hook | Yes | Re-state critical rules after context compaction |
+
+### Analytical Phase Prompting
+
+When a skill must handle vague or exploratory user input (e.g., "help me think about X", a one-line feature request with no spec, any argument containing subjective terms), it should include an explicit **Phase 0 — Assessment** step that runs before any execution.
+
+**Format:**
+
+    PHASE 0 — ASSESSMENT: Before executing the workflow, analyze [what]:
+    1. Read [explicit inputs].
+    2. State findings: [what to surface to the user].
+    3. WAIT for user confirmation before proceeding to Phase 1.
+
+**Rationale:** 4.7 executes literally. If the user's input is vague, a 4.6-era skill often compensated by inferring missing specification and proceeding. 4.7 instead executes the literal input and produces an off-target result. Phase 0 forces the skill to surface its interpretation of vague input and wait for user confirmation. This is the 4.7-compatible replacement for implicit "assumed intent".
+
+**When to use Phase 0:**
+
+- Skill is invoked with conversational or exploratory arguments (no structured input)
+- Skill produces output in multiple possible directions and there's no default
+- Skill's cost to run is high (long-running research, large content generation) and mis-specification is expensive
+- User's request contains subjective terms ("good", "appropriate", "better") that require interpretation
+
+**When NOT to use Phase 0:**
+
+- Skill takes structured arguments that fully specify intent (specific ID, file path, explicit mode)
+- Skill is a quick lookup or format check where execution is faster than a Phase 0 question
+- Skill is invoked from a chain where Phase 0 was already run upstream
 
 ### Planning-Phase Activation
 
@@ -56,6 +118,7 @@ The CLAUDE.md line survives context compression (it reloads at the start of ever
 When optimizing or creating skills:
 
 - **Soft guidance** → Directives only
+- **Soft guidance with unambiguous intent** → Directives + enforcement annotation (no agent). Use when the directive's *meaning* is clear but its *execution* relies on inference that 4.7 no longer supplies. The annotation encodes the execution steps explicitly. See [templates.md](templates.md) § "Enforcement Annotation Template".
 - **Important rules** → Directives + agent validation (`context: none`)
 - **Critical deterministic rules** → Directives + command hook (checksum, regex)
 - **Critical semantic rules** → Directives + prompt hook (meaning-aware)

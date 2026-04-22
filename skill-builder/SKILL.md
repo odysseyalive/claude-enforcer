@@ -1,25 +1,26 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger, cascade, checksums"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger, cascade, checksums, convert"
 when_to_use: "When creating, auditing, or optimizing Claude Code skills, or when working with SKILL.md files, hooks, or agents"
 argument-hint: "[command] [skill] [--execute]"
 version: "1.5"
+minimum-effort-level: high
 allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"
       hooks:
-        - type: agent
-          prompt: "A file is being written: $ARGUMENTS. If this is an AGENT.md file, extract its persona field from the YAML frontmatter. Then use Glob to find all .claude/skills/*/agents/*/AGENT.md files and Read each to extract their persona fields. If the new persona duplicates or closely resembles an existing one (excluding the same file path being overwritten), DENY with the conflicting agent name and file path. If unique or not an AGENT.md file, APPROVE."
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/check-persona-uniqueness.sh\""
           if: "Write(**/AGENT.md)|Edit(**/AGENT.md)"
           statusMessage: "Checking persona uniqueness..."
   PostToolUse:
     - matcher: "Edit|Write"
       hooks:
-        - type: agent
-          prompt: "A SKILL.md file was just edited: $ARGUMENTS. Read the file and verify all three: (1) Text between <!-- origin: user | immutable: true --> and <!-- /origin --> markers has not been reworded, paraphrased, summarized, or deleted — directive content must be verbatim. (2) No workflow steps were reordered. (3) Content was moved, not rewritten. If any violation found, report via additionalContext with what changed. If all checks pass or this is not a SKILL.md file, approve silently."
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/verify-directive-integrity.sh\""
           if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
-          statusMessage: "Verifying directive and structural integrity..."
+          statusMessage: "Verifying directive integrity..."
   PostCompact:
     - hooks:
         - type: command
@@ -59,6 +60,38 @@ hooks:
 *— Added 2026-02-23, source: user directive (tool specifics in references/agents-teams.md)*
 <!-- /origin -->
 
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "When a decision needs to be made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY, in order to provide additional input in decision making." -->
+CHECKPOINT — Non-Obvious Decision Gate:
+1. Before committing to any classification, structural change, or content-removal decision that depends on interpretation, list the decision's alternatives in one sentence each.
+2. IF exactly one alternative matches a concrete, measurable criterion (ID match, regex match, frontmatter field present/absent, file exists/absent) → CONTINUE without an agent.
+3. IF two or more alternatives are plausible AND the selection requires judgment on wording, scope, priority, or fit → STOP. Spawn at least one agent via the Task tool (or an agent panel per the relevant procedure — e.g., optimize.md § 4b, § 5b) to supply independent input.
+4. Read the agent findings. Where agents agree → proceed with the agreed alternative. Where agents disagree → default to the safer/conservative alternative.
+5. IF an agent was required but skipped → STOP. Report to user: "Agent consultation skipped for a non-obvious decision. Respawn with agent input before proceeding."
+<!-- END ENFORCEMENT ANNOTATION -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "Each agent being created by this system always has to have an appropriate persona that is not being used anywhere else." -->
+CHECKPOINT — Persona Assignment Gate:
+1. Before writing or editing any AGENT.md file, extract the proposed persona string from the agent frontmatter.
+2. Read references/agents-personas.md § "Persona assignment rules" to confirm the persona fits the agent's stated role (task, scope, perspective).
+3. Glob .claude/skills/*/agents/*/AGENT.md and read each file's persona field.
+4. IF the proposed persona string matches any existing persona verbatim OR paraphrases one already in use (same core identity, different words) → STOP. Report: "Persona conflicts with [path]: '[existing persona]'. Choose a different persona."
+5. IF no duplicate AND the persona fits the role (step 2 passed) → CONTINUE to write the AGENT.md.
+6. The Write/Edit PreToolUse hook declared in this SKILL.md frontmatter performs the uniqueness check at tool-call time as a deterministic backstop; the steps above must run during authorship so the hook is never the first signal.
+<!-- END ENFORCEMENT ANNOTATION -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "When deploying a Team, one of the team member's persona is a research assistant who will research the issue using read-only reference tools. Other team members may also make requests from the research assistant to help augment the outcome." -->
+CHECKPOINT — Team Research Assistant Gate:
+1. Detect team deployment: the procedure invokes TeamCreate, uses language like "Spawn teammates", or explicitly assembles multiple parallel agents under one task.
+2. IF detected → read references/agents-teams.md § "Individual vs. team routing" for the allowed research-assistant tool list (read-only reference tools).
+3. Enumerate the planned team members and their personas. IF none are labeled as the research assistant → STOP. Add a research-assistant team member with the read-only reference toolset from step 2 before spawning.
+4. IF a research assistant is present → confirm its allowed-tools contains ONLY read-only reference tools. Strip any write or side-effect tools from the research assistant before spawn.
+5. After spawn, surface to other team members: "Research assistant '[persona]' is available for read-only reference queries. Route lookups through the assistant rather than duplicating research."
+6. IF a team is deployed without a research assistant (step 3 skipped) → STOP. Report: "Team deployment blocked — no research assistant in team composition."
+<!-- END ENFORCEMENT ANNOTATION -->
+
 ---
 
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
@@ -72,6 +105,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `audit` | [audit.md](references/procedures/audit.md) | Full system audit |
 | `audit --quick` | [audit.md](references/procedures/audit.md) | Lightweight: frontmatter + line counts |
 | `cascade [skill]` | [cascade.md](references/procedures/cascade.md) | Validation cascade analysis (diagnostic only) |
+| `convert [skill]` | [convert.md](references/procedures/convert.md) | Convert 4.6-era skill to 4.7-compatible (annotations + explicit steps) |
 | `optimize [skill]` | [optimize.md](references/procedures/optimize.md) | Restructure for context efficiency |
 | `optimize claude.md` | [claude-md.md](references/procedures/claude-md.md) | Extract domain content to skills |
 | `agents [skill]` | [agents.md](references/procedures/agents.md) | Analyze/create agents |
@@ -83,6 +117,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `verify` | [verify.md](references/procedures/verify.md) | Health check (headless-compatible) |
 | `ledger` | [ledger.md](references/procedures/ledger.md) | Create Awareness Ledger |
 | `checksums [skill]` | [checksums.md](references/procedures/checksums.md) | Generate/verify directive checksums |
+| `shell-safety [mode] [path]` | [shell-safety.md](references/procedures/shell-safety.md) | Write / audit / lint shell code and JSON-embedded shell for pitfalls |
 | `update` | *(inline below)* | Update to latest version |
 <!-- /origin -->
 
@@ -95,6 +130,37 @@ Re-run the installer to update skill-builder to the latest version.
 
 1. Run the installer directly via Bash: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"`
 2. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill loaded in memory, so start a new conversation. Once you're back, run `/skill-builder audit` — updates often add new recommendations that apply to your existing skills.
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `convert` Command
+
+Convert existing Opus 4.6-era skills to Opus 4.7-compatible execution. User directives stay verbatim and receive enforcement annotations (machine-generated CHECKPOINT blocks beneath the sacred block); skill-builder machinery (workflow steps, grounding statements) is rewritten in-place for literal execution.
+
+- Display mode (default): `/skill-builder convert [skill]` — report what would change
+- Execute mode: `/skill-builder convert [skill] --execute` — apply changes
+- Batch display: `/skill-builder convert --all` — summary across all skills
+- Batch execute: `/skill-builder convert --all --execute` — convert every skill in sequence (one task per skill; the task list survives context compaction)
+
+High-risk command — defaults to display mode, requires `--execute` to modify files.
+
+**Grounding:** Read [references/procedures/convert.md](references/procedures/convert.md) for the full procedure, [references/templates.md](references/templates.md) § "Enforcement Annotation Template" for the annotation format, and [references/enforcement.md](references/enforcement.md) § "Opus 4.7 Behavioral Contract" for the literal-execution model.
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `shell-safety` Command
+
+Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell strings) against the canonical pitfall rule set. Used internally by `hooks` and `verify`, and available for direct user invocation.
+
+- Write: `/skill-builder shell-safety write [target]` — generate a new script or JSON shell entry from a safe-default template
+- Audit: `/skill-builder shell-safety audit [path]` — scan for pitfalls; with `--execute`, patch the mechanical-safe ones
+- Lint: `/skill-builder shell-safety lint [file]` — read-only single-file check (exit 1 on findings, composes with `&&`)
+
+**Grounding:** Read [references/procedures/shell-safety.md](references/procedures/shell-safety.md) for the full procedure, [references/shell-safety/rules.md](references/shell-safety/rules.md) for the pitfall catalog, [references/shell-safety/templates.md](references/shell-safety/templates.md) for safe scaffolds, and [references/shell-safety/audit-patterns.md](references/shell-safety/audit-patterns.md) for detection regexes.
 <!-- /origin -->
 
 ---
@@ -125,7 +191,7 @@ Re-run the installer to update skill-builder to the latest version.
 | Risk | Commands | Default Mode |
 |------|----------|-------------|
 | **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums` | **Execute directly** |
-| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade` | **Display mode** (requires `--execute`) |
+| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade`, `convert` | **Display mode** (requires `--execute`) |
 
 | Mode | Behavior | Flag |
 |------|----------|------|
@@ -150,72 +216,9 @@ Re-run the installer to update skill-builder to the latest version.
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
 ## Core Principles
 
-**IMPORTANT: Never break anything.**
+**Read [references/principles.md](references/principles.md) before running any high-risk command** (`optimize`, `agents`, `hooks`, `audit`, `cascade`, `convert`). That file contains the full Core Principles, Sacred Directive Pattern, Output Discipline rules, and Grounding Protocol. It was split out of SKILL.md during the 4.7 upgrade to reduce always-loaded context weight.
 
-Optimization is RESTRUCTURING, not REWRITING. The skill must behave identically after optimization.
-
-**YOU MUST:**
-
-1. **MOVE content, don't rewrite it** — Relocate to new location, preserving wording. Exclude secrets, credentials, API keys, tokens, and passwords — these must never appear in output or be relocated.
-2. **PRESERVE all directives exactly** — User's words are sacred
-3. **KEEP all workflows intact** — Same steps, same order, same logic
-4. **TEST nothing changes** — After optimization, skill works identically
-
-**What optimization IS:**
-- Moving reference tables to `reference.md`
-- Moving lookup tables and named references to `reference.md`
-- Adding grounding requirements
-- Creating enforcement hooks
-- Splitting into SKILL.md + reference.md
-
-**What optimization is NOT:**
-- Rewriting instructions "for clarity"
-- Condensing workflows "for brevity"
-- Changing step order "for efficiency"
-- Removing "redundant" content
-- Summarizing user directives
-- Reorganizing workflow structure that enforces directives (see enforcement.md § "Behavior Preservation")
-
-**The test:** If the original author reviewed the optimized skill, they should say "this does exactly what mine did, just organized differently."
-
----
-
-**Directives are sacred.**
-
-When a user says "Never use Uncategorized accounts," those exact words stay in the skill, unchanged, forever.
-
-**YOU MUST distinguish between:**
-
-| Content Type | Can Compress? | Where It Lives |
-|--------------|---------------|----------------|
-| **Directives** (user's exact rules) | NEVER | Top of SKILL.md, unchanged |
-| **Reference** (lookup tables, mappings, theory) | YES | Separate reference.md |
-| **Machinery** (hooks, agents, chains) | YES | settings.json, hooks/, agents |
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The Sacred Directive Pattern
-
-When a user gives you a rule, store it unchanged in a `## Directives` section with exact wording, source, and date. Place at TOP of skill file. NEVER summarize or reword. Enforce with hooks when possible.
-
-**Grounding:** Read [references/templates.md](references/templates.md) § "SKILL.md Template" and [references/procedures/directives.md](references/procedures/directives.md) for format and workflow.
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## § Output Discipline — Cascade, Don't Scatter
-
-**Applies to ALL procedures universally. This is a behavioral constraint on how skill-builder presents its output.**
-
-### Rules
-
-1. **Own-skill actions** (optimize, agents, hooks, ledger for skills managed by skill-builder): Always cascade into the current execution flow via AskUserQuestion + TaskCreate. Never present as standalone slash commands for manual invocation.
-2. **Cross-skill actions** (commands belonging to other skills like `/awareness-ledger`): Present in a clearly separated "Related Suggestions" footer, labeled as informational. Never mix into execution menus.
-3. **Informational recommendations** in conditional notes (e.g., "Run X to fix this"): Reframe as what the *current procedure* will do, or defer to the execution menu. Example: instead of "Run `/skill-builder optimize` to add eval protocol", say "Missing runtime eval protocol — flagged for optimization."
-4. **Anti-pattern**: Never end any procedure output with a list of slash commands the user must copy-paste and run manually. If an action is worth recommending, it's worth cascading.
+**IMPORTANT: Never break anything.** Optimization is RESTRUCTURING, not REWRITING. MOVE content, don't rewrite it. PRESERVE all directives exactly. KEEP all workflows intact. If the original author reviewed the result, they should say "this does exactly what mine did, just organized differently."
 <!-- /origin -->
 
 ---
@@ -223,11 +226,10 @@ When a user gives you a rule, store it unchanged in a `## Directives` section wi
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
 ## Grounding
 
-Before using any template, example, or pattern from reference material:
-1. Read the relevant file from `references/`
-2. State: "I will use [TEMPLATE/PATTERN] from references/[file] under [SECTION]"
+Grounding protocol (read-before-use, state which pattern will be used) is documented in [references/principles.md](references/principles.md) § "Grounding Protocol".
 
 Reference files:
+- [references/principles.md](references/principles.md) — Core Principles, Sacred Directive Pattern, Output Discipline, Grounding Protocol (READ FIRST for high-risk commands)
 - [references/enforcement.md](references/enforcement.md) — Hook JSON, permissions, context mutability, provenance permission model
 - [references/agents.md](references/agents.md) — Agent templates, opportunity detection, creation workflow
 - [references/agents-personas.md](references/agents-personas.md) — Persona assignment rules, selection heuristic, research backing
@@ -237,9 +239,12 @@ Reference files:
 - [references/portability.md](references/portability.md) — Install instructions, rule-to-skill conversion
 - [references/patterns.md](references/patterns.md) — Lessons learned
 - [references/platform.md](references/platform.md) — Claude Code skill platform architecture, frontmatter fields, listing budget, invocation flow
+- [references/token-efficiency.md](references/token-efficiency.md) — Token-intensive pattern catalog and Token Efficiency Scan rules (optimize step 4e)
 - [references/temporal-validation.md](references/temporal-validation.md) — Temporal risk classification, phrase mappings, hook generation spec
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
-- [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, checksums, etc.)
+- [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, checksums, shell-safety, etc.)
 - [references/procedures/checksums.md](references/procedures/checksums.md) — Directive checksum generation spec (scripts generated at runtime, not shipped)
+- [references/procedures/shell-safety.md](references/procedures/shell-safety.md) — Shell-safety subcommand procedure (write / audit / lint)
+- [references/shell-safety/](references/shell-safety/) — Shell-safety rule set (rules.md, templates.md, audit-patterns.md) — the canonical pitfall catalog used by hooks, verify, and shell-safety
 - [agents/optimize-diff-auditor/](agents/optimize-diff-auditor/) — Post-optimize semantic equivalence verification agent
 <!-- /origin -->

@@ -57,7 +57,7 @@ For each hook script:
 
 For each wired hook in settings.local.json:
 - Does the script file exist?
-- **Shell-safety lint:** If `shell-safety` is installed, run `/shell-safety lint .claude/settings.local.json` and `/shell-safety lint .claude/skills/*/hooks/*.sh`. Surface any HARD findings as FAIL and SOFT findings as WARN. Fallback when not installed: check that command strings referencing `$CLAUDE_PROJECT_DIR` are wrapped in escaped double quotes (`"\"$CLAUDE_PROJECT_DIR/...\""`) and that hook script bodies have ERR traps and no `set -e`. Recommend installing shell-safety for the full rule set.
+- **Shell-safety lint:** Run `/skill-builder shell-safety lint .claude/settings.local.json` and `/skill-builder shell-safety lint .claude/skills/*/hooks/*.sh`. Surface any HARD findings as FAIL and SOFT findings as WARN. (Shell-safety ships as a skill-builder subcommand — its rule set is always available without a separate install.)
 
 ### Step 3b: Team Validation
 
@@ -112,5 +112,5 @@ Overall: [PASS / PASS with warnings / FAIL]
 **If any FAIL:** List each failure with the skill name and specific issue.
 **If FAIL (directive checksum mismatch):** List each skill with mismatched fingerprint. This may indicate unauthorized directive modification.
 **If WARN (no directive checksum):** Note: "WARN: Directives without checksum protection in [skill]. Run `/skill-builder checksums [skill] --execute`."
-**If FAIL (shell-safety findings):** List each finding with file path, line number, and the rule it violates (e.g., R1 path resolution, R2 path-with-spaces). Remediation: `/shell-safety audit [path] --execute` rewrites the mechanical (HARD) findings in place; SOFT findings need human review. Reason this matters: hook runner invokes commands via `/bin/sh -c`; unquoted relative or `$CLAUDE_PROJECT_DIR` paths fail silently on synced project roots and any non-project-root CWD.
+**If FAIL (shell-safety findings):** List each finding with file path, line number, and the rule it violates (e.g., R1 path resolution, R2 path-with-spaces). Remediation: `/skill-builder shell-safety audit [path] --execute` rewrites the mechanical (HARD) findings in place; SOFT findings need human review. Reason this matters: hook runner invokes commands via `/bin/sh -c`; unquoted relative or `$CLAUDE_PROJECT_DIR` paths fail silently on synced project roots and any non-project-root CWD.
 **If all PASS:** Report clean health.

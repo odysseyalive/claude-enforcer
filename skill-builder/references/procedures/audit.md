@@ -172,6 +172,12 @@ Combine all sub-command outputs into a single report:
 ## Optimization Findings
 [aggregated from optimize display mode per skill]
 
+## Token Efficiency
+[aggregated from optimize step 4e Token Efficiency Scan per skill — see token-efficiency.md for pattern list]
+| Skill | Agent hooks flagged | Effort downgrade | SKILL.md slim-down | Precheck gates | Strictness |
+|-------|---------------------|------------------|--------------------|----------------|------------|
+| /skill-1 | [count + hook names] | [yes/no] | [lines trimmable] | [count] | [missing/present] |
+
 ## Agent Opportunities
 | Skill | Agent Type | Purpose | Priority |
 |-------|------------|---------|----------|

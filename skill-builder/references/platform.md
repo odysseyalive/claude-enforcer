@@ -70,6 +70,17 @@ Skills are listed in system reminders using **1% of context window** (~8,000 cha
 - Descriptions extracted from first markdown line if not in frontmatter
 - Bundled skills never truncated; other skills truncated if budget exceeded
 
+### Per-Project Skill-Count Discipline
+
+Every installed skill's frontmatter loads into the listing on every turn, whether the skill is used in the session or not. In a project with 30 installed skills the roster preamble alone costs thousands of tokens per turn, compounding into real money over long sessions. Guidance:
+
+- **Target fewer than 15 active skills per project.** Projects that routinely exceed this number are usually carrying skills relevant to a different project's workflow (e.g., voice/edit/writing/text-eval installed in a software-engineering repo that never produces prose content).
+- **Disable rather than uninstall when in doubt.** Renaming `.claude/skills/skill-name/` to `.claude/skills/.disabled-skill-name/` or moving it to a sibling directory takes the skill out of the listing without destroying its config. Re-enable by renaming back.
+- **Prefer `paths:` frontmatter for domain-specific skills.** A skill scoped to `"**/*.ts"` only loads when TypeScript files are touched. This is strictly better than always-active for language- or directory-specific work. See [templates.md](templates.md) § "Conditional Activation".
+- **Audit skills after copying a stack between projects.** When a skill stack is copied from one project to another (as voice/edit often is), review whether each skill is actually needed in the new project before leaving it in the listing.
+
+The `/skill-builder audit` output includes a skill-count check when the installed count exceeds 15, flagging skills that appear unused in recent work.
+
 ## Context & Lifecycle
 
 - Skill content is loaded **on-demand** when invoked, not preloaded

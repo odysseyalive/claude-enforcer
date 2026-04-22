@@ -18,7 +18,7 @@ Scan for hook scripts and their wiring:
 
 #### Step 2: Validate Existing Hooks
 
-**Delegation:** the shell-level pitfall checks (path quoting, ERR trap, `set -e`, defensive I/O, stdin parsing) are owned by the `shell-safety` skill. Run `/shell-safety audit .claude/settings*.json .claude/skills/*/hooks/` and merge its findings into this report rather than duplicating the rule logic here. If `shell-safety` is not installed, fall back to the in-line table below and recommend installation.
+**Delegation:** the shell-level pitfall checks (path quoting, ERR trap, `set -e`, defensive I/O, stdin parsing) are owned by skill-builder's `shell-safety` subcommand (see [shell-safety.md](shell-safety.md)). Run `/skill-builder shell-safety audit .claude/settings*.json .claude/skills/*/hooks/` and merge its findings into this report rather than duplicating the rule logic here.
 
 | Check | What to Verify | Owned By |
 |-------|----------------|----------|
@@ -33,7 +33,7 @@ Scan for hook scripts and their wiring:
 | **Defensive I/O** | Uses `2>/dev/null` and `|| exit 0` on fallible ops | shell-safety R5/R7 |
 | **Path-safe quoting** | Command string wraps `$CLAUDE_PROJECT_DIR` in escaped double quotes (shell-safety R1+R2+R8). Unquoted commands fail silently when CWD ≠ project root or path contains whitespace. | shell-safety P1/P2 |
 
-Unhardened hooks should be flagged as: "Hook lacks defensive hardening — see `shell-safety/references/rules.md` § R3 and templates T1/T2."
+Unhardened hooks should be flagged as: "Hook lacks defensive hardening — see `skill-builder/references/shell-safety/rules.md` § R3 and templates T1/T2."
 
 #### Step 3: Identify New Opportunities
 
@@ -203,14 +203,14 @@ When running `/skill-builder hooks [skill] --execute`:
 - Use `$ARGUMENTS` placeholder for hook input data
 
 **For command hooks (grep-block, require-pattern, threshold):**
-- Generate the script body via `/shell-safety write` using template T1 (advisory) or T2 (blocking) from `shell-safety/references/templates.md`. Do not hand-roll the boilerplate (ERR trap, defensive stdin, scope check); the template has it.
+- Generate the script body via `/skill-builder shell-safety write` using template T1 (advisory) or T2 (blocking) from `skill-builder/references/shell-safety/templates.md`. Do not hand-roll the boilerplate (ERR trap, defensive stdin, scope check); the template has it.
 - Save to `.claude/skills/[skill]/hooks/[name].sh`
 - Make executable: `chmod +x [script]`
-- Wire the settings.local.json entry using template T3 from `shell-safety/references/templates.md` (the escaped-quoted `$CLAUDE_PROJECT_DIR` form). This satisfies shell-safety R1, R2, and R8 in one step.
-- Before writing the entry to disk, run `/shell-safety lint` on the generated artifacts.
+- Wire the settings.local.json entry using template T3 from `skill-builder/references/shell-safety/templates.md` (the escaped-quoted `$CLAUDE_PROJECT_DIR` form). This satisfies shell-safety R1, R2, and R8 in one step.
+- Before writing the entry to disk, run `/skill-builder shell-safety lint` on the generated artifacts.
 
 **Existing-hook remediation (when Step 2 surfaces shell-safety findings):**
-- For HARD findings reported by `shell-safety audit`, add one task per file to the execute task list and run `/shell-safety audit [file] --execute`. shell-safety performs the mechanical rewrite (path quoting, `$CLAUDE_PROJECT_DIR` wrapping) and creates `.bak` files.
+- For HARD findings reported by `/skill-builder shell-safety audit`, add one task per file to the execute task list and run `/skill-builder shell-safety audit [file] --execute`. The shell-safety subcommand performs the mechanical rewrite (path quoting, `$CLAUDE_PROJECT_DIR` wrapping) and creates `.bak` files.
 - For SOFT findings (missing ERR traps, `set -e` removal, stdin parsing changes), surface them in the report for the user to address. Do not auto-patch.
 - Validate the rewritten JSON or script parses before marking the task complete.
 
