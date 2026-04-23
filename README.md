@@ -31,8 +31,12 @@ Works across Claude Code, Cursor, Codex, and [37 other agents](https://skills.sh
 Includes extra setup (agent teams, auto-approved research tools).
 
 ```bash
-claude /init   # if you haven't already
+claude /init
+```
 
+If you haven't already initialized the project. Then run the installer.
+
+```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 ```
 
@@ -54,8 +58,17 @@ Describe what you need in plain language. No structure required.
 
 ```
 /skill-builder I need a skill for deploying to production
+```
+
+```
 /skill-builder add a rule to my deploy skill: always run tests first
+```
+
+```
 /skill-builder my api skill is getting too long, help me split it up
+```
+
+```
 /skill-builder I'm glad that problem got figured out. I never want to deal with that again. Can you make a skill for this and hook it into other skills affected by this?
 ```
 
@@ -67,6 +80,9 @@ Sometimes you notice a pattern violation while you're working. Claude uses a for
 
 ```
 /skill-builder inline writing Never use the phrase "in conclusion" in any article.
+```
+
+```
 /skill-builder inline deploy Always run the test suite before pushing to production.
 ```
 
@@ -81,8 +97,13 @@ Skills age. A directive that worked perfectly on one model gets under-executed o
 The `/skill-builder audit` command is the health check for that. It scans your CLAUDE.md, your rules, and every installed skill, and it flags what's gotten stale. Directives that need enforcement annotations for the current model. Hooks that could downshift from agent to command. Oversized SKILL.md files carrying machinery that should live in a reference. Effort levels that cost more than they return. After every Claude update, run it. After anything fundamental changes in how you work with the tool, run it. Every so often just because.
 
 ```
-/skill-builder audit           # Full scan
-/skill-builder audit --quick   # Lightweight: frontmatter + line counts + priority fixes
+/skill-builder audit
+```
+
+Full scan. For a lightweight pass (frontmatter + line counts + priority fixes only):
+
+```
+/skill-builder audit --quick
 ```
 
 See [COMMANDS.md § Inspection & Diagnostics](COMMANDS.md#inspection--diagnostics) for what each mode covers and when `verify` or `cascade` is the better tool for the job.

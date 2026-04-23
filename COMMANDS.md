@@ -141,9 +141,16 @@ Commands that produce new artifacts. Low-risk, additive only.
 **When to use.** When a project is mature enough that conversations repeat ("didn't we already debug this?"), or when decisions made in one session need to survive into the next.
 
 **Example.**
+See what would be created.
+
 ```
-/skill-builder ledger             # See what would be created
-/skill-builder ledger --execute   # Create it
+/skill-builder ledger
+```
+
+Create it.
+
+```
+/skill-builder ledger --execute
 ```
 
 **Under the hood.** `.claude/skills/skill-builder/references/procedures/ledger.md`. See also [Technical Background § The Awareness Ledger](#the-awareness-ledger).
@@ -161,9 +168,16 @@ Commands that reshape existing skills or add enforcement machinery. High-risk, s
 **When to use.** When a skill has grown past 150 lines. When SKILL.md is carrying machinery that doesn't belong there. When an audit flags it. When you want to see what could be trimmed without actually trimming.
 
 **Example.**
+Display mode.
+
 ```
-/skill-builder optimize writing             # Display mode
-/skill-builder optimize writing --execute   # Apply changes
+/skill-builder optimize writing
+```
+
+Apply changes.
+
+```
+/skill-builder optimize writing --execute
 ```
 
 **Under the hood.** `.claude/skills/skill-builder/references/procedures/optimize.md` plus `.claude/skills/skill-builder/references/token-efficiency.md` for the scan rules.
@@ -177,10 +191,22 @@ Commands that reshape existing skills or add enforcement machinery. High-risk, s
 **When to use.** When a skill's directives involve judgment or cross-file validation that hooks can't mechanically catch. When you want to know whether a skill should spawn validators, and what kind.
 
 **Example.**
+Display mode.
+
 ```
-/skill-builder agents edit                  # Display mode
-/skill-builder agents edit --execute        # Create the agent files
-/skill-builder agents edit --deliberate     # Include agent panels for ambiguity review
+/skill-builder agents edit
+```
+
+Create the agent files.
+
+```
+/skill-builder agents edit --execute
+```
+
+Include agent panels for ambiguity review.
+
+```
+/skill-builder agents edit --deliberate
 ```
 
 **Under the hood.** `.claude/skills/skill-builder/references/procedures/agents.md`. See [Technical Background § Individual Agents vs Agent Teams](#individual-agents-vs-agent-teams).
@@ -194,9 +220,16 @@ Commands that reshape existing skills or add enforcement machinery. High-risk, s
 **When to use.** When a skill has directives that should be mechanically enforced but aren't yet. When an audit flags "directives could be enforced by hooks" for a particular skill.
 
 **Example.**
+Display mode.
+
 ```
-/skill-builder hooks deploy                 # Display mode
-/skill-builder hooks deploy --execute       # Create and wire the hooks
+/skill-builder hooks deploy
+```
+
+Create and wire the hooks.
+
+```
+/skill-builder hooks deploy --execute
 ```
 
 **Under the hood.** `.claude/skills/skill-builder/references/procedures/hooks.md`
@@ -210,9 +243,16 @@ Commands that reshape existing skills or add enforcement machinery. High-risk, s
 **When to use.** After creating or modifying a skill's directives, to seal the sidecar. After any `optimize --execute` or `convert --execute` run, to refresh the sidecar since the surrounding structure may have changed.
 
 **Example.**
+Check whether the sidecar matches.
+
 ```
-/skill-builder checksums voice              # Check whether the sidecar matches
-/skill-builder checksums voice --execute    # Generate or refresh the sidecar
+/skill-builder checksums voice
+```
+
+Generate or refresh the sidecar.
+
+```
+/skill-builder checksums voice --execute
 ```
 
 **Under the hood.** `.claude/skills/skill-builder/references/procedures/checksums.md`
@@ -230,9 +270,16 @@ Commands specific to the 4.6 to 4.7 migration. These recalibrate skills for Opus
 **When to use.** After updating Claude Code to a version that uses Opus 4.7. On any skill that was authored against 4.6 behaviors. When an audit flags "needs convert" on a specific skill.
 
 **Example.**
+Display mode.
+
 ```
-/skill-builder convert voice                # Display mode
-/skill-builder convert voice --execute      # Apply changes
+/skill-builder convert voice
+```
+
+Apply changes.
+
+```
+/skill-builder convert voice --execute
 ```
 
 **Under the hood.** `.claude/skills/skill-builder/references/procedures/convert.md`
@@ -282,6 +329,11 @@ Specialized procedures invoked through skill-builder. The `shell-safety` subcomm
 **Example.**
 ```
 /skill-builder shell-safety lint .claude/settings.local.json
+```
+
+Compose with `&&` for pre-commit or headless use.
+
+```
 claude -p "/skill-builder shell-safety lint my-script.sh" && echo "clean"
 ```
 
@@ -296,8 +348,15 @@ claude -p "/skill-builder shell-safety lint my-script.sh" && echo "clean"
 **When to use.** After generating hooks via `/skill-builder hooks --execute`. After any significant change to `.claude/settings.local.json`. Periodically on `.claude/skills/*/hooks/` to catch drift.
 
 **Example.**
+Display mode.
+
 ```
 /skill-builder shell-safety audit .claude/
+```
+
+Patch the mechanical-safe findings.
+
+```
 /skill-builder shell-safety audit .claude/ --execute
 ```
 
@@ -350,6 +409,9 @@ After the update completes, restart Claude Code so the new SKILL.md loads in a f
 **Example.**
 ```
 /skill-builder dev audit
+```
+
+```
 /skill-builder dev convert skill-builder --execute
 ```
 
