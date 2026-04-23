@@ -4,7 +4,9 @@
 
 When invoked with `/skill-builder skills`:
 
-1. Glob for all `.claude/skills/*/SKILL.md` files
+**Preflight — self-exclusion.** If invoked as `/skill-builder dev skills`, include `skill-builder` in the output. Otherwise exclude `skill-builder` from the glob result. See SKILL.md § Self-Exclusion Rule.
+
+1. Glob for all `.claude/skills/*/SKILL.md` files (exclude `skill-builder` unless `dev` prefix)
 2. Read each skill's frontmatter to extract name and description
 3. Output a table of all available skills
 

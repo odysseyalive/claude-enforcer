@@ -4,6 +4,8 @@
 
 When invoked with `/skill-builder inline [skill] [directive text]`:
 
+**Preflight — self-exclusion.** If the target skill is literally `skill-builder` AND the command was NOT invoked as `/skill-builder dev inline skill-builder …`, REFUSE. Say: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev inline skill-builder …`". Do not proceed. See SKILL.md § Self-Exclusion Rule.
+
 ### Step 1: Validate Target Skill
 
 ```bash

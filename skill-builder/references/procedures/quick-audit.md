@@ -6,7 +6,9 @@ When invoked with `audit --quick`:
 
 ### Step 1: Scan All Skills
 
-Glob for `.claude/skills/*/SKILL.md`. For each skill, check ONLY:
+**Preflight — self-exclusion.** If invoked as `/skill-builder dev audit --quick`, include `skill-builder` in the skill set. Otherwise exclude `skill-builder` from the glob result. See SKILL.md § Self-Exclusion Rule.
+
+Glob for `.claude/skills/*/SKILL.md` (exclude `skill-builder` unless `dev` prefix). For each skill, check ONLY:
 
 ```
 | Skill | Lines | Frontmatter OK | Hooks Wired | Issues |

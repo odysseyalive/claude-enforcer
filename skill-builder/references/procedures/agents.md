@@ -6,6 +6,8 @@
 
 When running `/skill-builder agents [skill]`:
 
+**Preflight — self-exclusion.** If the target skill is literally `skill-builder` AND the command was NOT invoked as `/skill-builder dev agents skill-builder`, REFUSE. Say: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev agents skill-builder`". Do not proceed. See SKILL.md § Self-Exclusion Rule.
+
 1. **Read the skill's SKILL.md** — understand its directives, workflows, and enforcement gaps
 2. **Read `references/agents.md`** — load agent templates, opportunity detection table, persona requirements, and individual-vs-team routing framework
 3. **Evaluate each agent type** against the skill:

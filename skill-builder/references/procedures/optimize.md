@@ -4,6 +4,8 @@
 
 **Special case:** If the target is `claude.md` (e.g., `/skill-builder optimize claude.md`), skip this procedure and run the **CLAUDE.md Optimization Procedure** instead (see [claude-md.md](claude-md.md)).
 
+**Preflight — self-exclusion.** If the target skill is literally `skill-builder` AND the command was NOT invoked as `/skill-builder dev optimize skill-builder`, REFUSE. Say: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev optimize skill-builder`". Do not proceed. See SKILL.md § Self-Exclusion Rule.
+
 ### Display Mode (default)
 
 When running `/skill-builder optimize [skill]`:

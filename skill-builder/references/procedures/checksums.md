@@ -10,8 +10,15 @@ When running `/skill-builder checksums` (all skills) or `/skill-builder checksum
 
 #### Step 1: Discover Skills with Directives
 
+**Preflight — self-exclusion.** Detect invocation form:
+- Invoked as `/skill-builder dev checksums …` → skill-builder may be targeted or iterated normally
+- Invoked as `/skill-builder checksums skill-builder` → REFUSE. Say: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev checksums skill-builder`". Do not proceed.
+- Invoked as `/skill-builder checksums` (all skills, no target) → exclude `skill-builder` from the glob result
+
+See SKILL.md § Self-Exclusion Rule.
+
 ```bash
-Glob: .claude/skills/*/SKILL.md
+Glob: .claude/skills/*/SKILL.md  (exclude skill-builder unless dev prefix)
 ```
 
 For each skill, check for `<!-- origin: user ... immutable: true -->` blocks.

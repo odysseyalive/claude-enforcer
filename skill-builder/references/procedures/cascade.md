@@ -2,6 +2,13 @@
 
 **Validation cascade analysis — diagnostic only. Never modifies files.**
 
+**Preflight — self-exclusion.** Detect invocation form:
+- Invoked as `/skill-builder dev cascade …` → skill-builder may be targeted or iterated normally
+- Invoked as `/skill-builder cascade skill-builder` → REFUSE. Say: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev cascade skill-builder`". Do not proceed.
+- Invoked as `/skill-builder cascade` (no target, all-skills summary mode) → exclude `skill-builder` from the glob result
+
+See SKILL.md § Self-Exclusion Rule.
+
 When running `/skill-builder cascade [skill]` (specific skill) or as part of audit:
 
 ### Step 1: Inventory Validators

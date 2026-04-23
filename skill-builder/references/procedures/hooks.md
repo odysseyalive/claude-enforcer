@@ -2,6 +2,13 @@
 
 **Inventory existing hooks and identify new enforcement opportunities.**
 
+**Preflight — self-exclusion.** Detect invocation form:
+- Invoked as `/skill-builder dev hooks …` → skill-builder may be targeted or iterated normally
+- Invoked as `/skill-builder hooks skill-builder` → REFUSE. Say: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev hooks skill-builder`". Do not proceed.
+- Invoked as `/skill-builder hooks` (all skills, no target) → exclude `skill-builder` from any `.claude/skills/*/SKILL.md` and `.claude/skills/**/hooks/*.sh` glob
+
+See SKILL.md § Self-Exclusion Rule.
+
 When running `/skill-builder hooks` (all skills) or `/skill-builder hooks [skill]` (specific skill):
 
 ### Display Mode (default)

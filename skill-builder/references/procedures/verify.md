@@ -4,8 +4,14 @@
 
 ### Step 1: Discover Skills
 
+**Preflight — self-exclusion.** Detect invocation form:
+- Invoked as `/skill-builder dev verify …` → include `skill-builder` in the skill set
+- Otherwise → exclude `skill-builder` from the glob result
+
+Apply this filter to every step below that iterates skills. See SKILL.md § Self-Exclusion Rule.
+
 ```bash
-Glob: .claude/skills/*/SKILL.md
+Glob: .claude/skills/*/SKILL.md  (exclude skill-builder unless dev prefix)
 ```
 
 ### Step 2: Per-Skill Validation

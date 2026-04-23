@@ -4,11 +4,17 @@
 
 ### Step 1: Gather Metrics
 
+**Preflight — self-exclusion.** Detect invocation form:
+- Invoked as `/skill-builder dev audit …` → include `skill-builder` in the skill set
+- Otherwise → exclude `skill-builder` from any `.claude/skills/*/SKILL.md` glob
+
+Apply this filter to every step below that iterates skills (Steps 2.5, 3, 4, 4b, 4d, Step 5 Skills Summary, Step 5 Directives Inventory). See SKILL.md § Self-Exclusion Rule.
+
 ```
 Files to scan:
 - CLAUDE.md
 - .claude/rules/*.md (if exists)
-- .claude/skills/*/SKILL.md
+- .claude/skills/*/SKILL.md  (exclude skill-builder unless dev prefix)
 ```
 
 ### Step 2: CLAUDE.md & Rules Analysis

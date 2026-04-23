@@ -178,6 +178,21 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
 
 **Detection:** If the first argument after the command is `dev`, strip it and proceed with self-inclusion enabled. Otherwise, skip any skill whose name is `skill-builder` when iterating skills, and refuse if `skill-builder` is explicitly named as a target.
 
+**CHECKPOINT — apply before dispatching to any procedure (Opus 4.7 literal-execution gate):**
+
+1. Parse the invocation. Is the first positional argument the literal string `dev`?
+   - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
+   - NO  → `dev_mode = false`.
+2. Extract the command name (`audit`, `optimize`, `agents`, `hooks`, `cascade`, `checksums`, `inline`, `skills`, `verify`, etc.).
+3. Determine whether a skill target was specified in the remaining arguments.
+4. IF `dev_mode == false`:
+   - IF the skill target is the literal string `skill-builder` → REFUSE and STOP. Print: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev [command] skill-builder`". Do not dispatch.
+   - IF no target was specified (all-skills/iteration mode) → the skill set passed into the procedure MUST have `skill-builder` filtered out before any per-skill iteration begins.
+5. IF `dev_mode == true` → skill-builder is included normally.
+6. Dispatch to the procedure file.
+
+This CHECKPOINT fires every invocation. Procedure files repeat it in their own preflight blocks for defense in depth — 4.7 executes each file literally, so both gates matter.
+
 **Post-dev check:** After any `dev` command that modifies skill-builder files, verify that the `install` script still covers all files. Glob `skill-builder/**/*.md`, compare against the files downloaded in the installer's loop, and flag any new/renamed/removed files that the installer doesn't handle. This prevents drift between the repo and what users receive on install.
 <!-- /origin -->
 

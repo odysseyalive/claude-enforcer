@@ -2,6 +2,8 @@
 
 > **Claude Enforcer is now compatible with Opus 4.7.** [Learn what changed →](#claude-47-upgrade)
 
+> **Content generation skills can fall back to 4.6 if needed.** [See the workaround →](#content-generation-workaround)
+
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's command-line AI assistant for software development. When you run it in a project directory, it reads a `CLAUDE.md` file at the start of every conversation. This file is where you write the rules. Your project's architecture, coding conventions, API keys to avoid, workflows to follow. Everything Claude needs to know before it touches your code.
@@ -112,17 +114,39 @@ Now the part that matters more than this release. Anthropic shipped Mythos Previ
 
 ![A capybara sitting calmly at the edge of a misty river at dawn, birds resting on its back](assets/images/mythos-capybara.png)
 
-### Upgrade in two commands
+### Upgrade in three commands
+
+Stay at the terminal while these run. Each step may pause to ask a follow-up question or wait for your approval before it continues. The upgrade isn't finished until the last prompt clears.
+
+1. Install or Upgrade Claude Enforcer
 
 ```bash
-# 1. Install or Upgrade Claude Enforcer
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
+```
 
-# 2. Convert every installed skill to 4.7 compatibility
+2. Convert every installed skill to 4.7 compatibility
+
+```bash
 claude /skill-builder convert --all --execute
 ```
 
+3. Re-audit every skill after conversion
+
+```bash
+claude /skill-builder audit
+```
+
 Each skill runs through a per-skill conversion with its own precheck and revert path. See [COMMANDS.md § Upgrading to Opus 4.7](COMMANDS.md#upgrading-to-opus-47) for what each conversion does and how to roll back if a particular skill's result looks off.
+
+### Content generation workaround
+
+Some creative work lands thinner on 4.7. Voice skills, writing skills, anything that leans on the model inferring tone from soft directives. Every skill audited by Claude Enforcer stays backwards compatible with Opus 4.6, so when 4.7's output doesn't sound right, step back to 4.6, rerun the same skill, and compare.
+
+```
+/model claude-opus-4-6
+```
+
+Read both outputs side by side. If 4.6 produces the voice you recognize, keep that model on for that kind of work and switch back to 4.7 for everything else.
 
 ## Learn More
 
