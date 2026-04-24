@@ -193,6 +193,13 @@ Combine all sub-command outputs into a single report:
 ## Hooks Status
 [aggregated from hooks display mode]
 
+### Hook Wiring Drift
+*(Include only if the hooks sub-command's Step 2.5 surfaced dead wiring — wired entries pointing at files that do not exist on disk. Omit entirely when every wired entry resolves to a real file. Non-blocking at runtime but silently drops whatever enforcement the missing hook provided; load-bearing cases warrant recovery, advisory cases warrant unwiring.)*
+
+Surface the full Dead Wiring table from the hooks sub-report (Skill | Hook | Event/Matcher | Intent | Intent source | Criticality | Recoverable). Do not summarize the table away — the intent/criticality/recoverability columns are what turn this from "broken reference" into an actionable recommendation.
+
+**Priority Fixes elevation rule:** Every **Load-bearing** dead-wiring finding MUST appear in the Priority Fixes list at or above any optimization or agent-opportunity finding. Rationale: load-bearing hooks enforce sacred directives or content-quality rules whose silent absence is a larger regression than most structural improvements. Protective findings enter Priority Fixes at medium priority; advisory findings do not unless there are enough of them (3+) that the log noise itself is the problem.
+
 ## Teams Status
 *(Include this section only if agent teams are actively configured — i.e., `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set AND at least one skill uses team routing. If no skills use teams, omit this section entirely. Team routing is evaluated per-skill during Step 4 via the agents sub-command, which applies the routing decision framework from `references/agents-teams.md`. Absence of teams is not a gap — it means individual agent routing is correct for the current workloads.)*
 
@@ -235,6 +242,7 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 4. All of the above for [skill]
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
 > 6. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
+> 7. `hooks --execute` for dead wiring — auto-recover load-bearing + recoverable findings, auto-unwire advisory findings, stop on each protective / not-recoverable finding for user decision *(only if Step 2.5 surfaced dead wiring)*
 > 8. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
