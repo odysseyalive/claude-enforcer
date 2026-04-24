@@ -55,6 +55,7 @@ echo "Creating $SKILL_DIR..."
 mkdir -p "$SKILL_DIR/references/procedures"
 mkdir -p "$SKILL_DIR/references/shell-safety"
 mkdir -p "$SKILL_DIR/agents/optimize-diff-auditor"
+mkdir -p "$SKILL_DIR/agents/intent-router"
 mkdir -p "$SKILL_DIR/hooks"
 
 # Download SKILL.md and reference files
@@ -63,13 +64,14 @@ curl -fsSL "$REPO_URL/skill-builder/SKILL.md" -o "$SKILL_DIR/SKILL.md"
 for ref in agents agents-personas agents-teams enforcement eval-history-format eval-rubrics ledger-templates optimization-examples patterns platform portability principles templates temporal-validation token-efficiency; do
     curl -fsSL "$REPO_URL/skill-builder/references/${ref}.md" -o "$SKILL_DIR/references/${ref}.md"
 done
-for proc in audit verify quick-audit skills list optimize agents hooks new directives inline post-action-chain claude-md ledger cascade eval checksums convert shell-safety; do
+for proc in audit verify quick-audit skills list optimize agents hooks new directives inline post-action-chain claude-md ledger cascade eval checksums convert shell-safety intent-router; do
     curl -fsSL "$REPO_URL/skill-builder/references/procedures/${proc}.md" -o "$SKILL_DIR/references/procedures/${proc}.md"
 done
 for ss in rules templates audit-patterns; do
     curl -fsSL "$REPO_URL/skill-builder/references/shell-safety/${ss}.md" -o "$SKILL_DIR/references/shell-safety/${ss}.md"
 done
 curl -fsSL "$REPO_URL/skill-builder/agents/optimize-diff-auditor/AGENT.md" -o "$SKILL_DIR/agents/optimize-diff-auditor/AGENT.md"
+curl -fsSL "$REPO_URL/skill-builder/agents/intent-router/AGENT.md" -o "$SKILL_DIR/agents/intent-router/AGENT.md"
 
 # Ship the skill-builder hook scripts (command-type hooks wired from SKILL.md frontmatter)
 for hook in check-persona-uniqueness verify-directive-integrity; do

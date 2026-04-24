@@ -183,13 +183,21 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
 1. Parse the invocation. Is the first positional argument the literal string `dev`?
    - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
    - NO  → `dev_mode = false`.
-2. Extract the command name (`audit`, `optimize`, `agents`, `hooks`, `cascade`, `checksums`, `inline`, `skills`, `verify`, etc.).
-3. Determine whether a skill target was specified in the remaining arguments.
-4. IF `dev_mode == false`:
+2. Extract the first remaining positional argument as `first_arg`.
+3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, checksums, convert, shell-safety, update }`.
+4. IF `first_arg` is empty (no arguments remaining) → dispatch to the default full-audit flow per § Quick Commands. Do NOT invoke the intent router. STOP this CHECKPOINT.
+5. IF `first_arg` is in the known-command set → treat it as the command name. Determine whether a skill target was specified in the remaining arguments. CONTINUE to step 7.
+6. IF `first_arg` is NOT in the known-command set AND the remaining argument string is non-empty →
+   - STOP normal dispatch.
+   - Ground on [references/procedures/intent-router.md](references/procedures/intent-router.md) (read-before-use).
+   - Invoke the Intent Router procedure, passing the full remaining argument string (including `first_arg`) as the freeform intent, and `dev_mode` as context.
+   - The router is responsible for either re-dispatching to a known command (in which case resume this CHECKPOINT at step 7 with the router's resolved command and target) or halting with an AskUserQuestion / explanatory message.
+   - The router NEVER modifies files; all file-touching work happens in the re-dispatched command.
+7. IF `dev_mode == false`:
    - IF the skill target is the literal string `skill-builder` → REFUSE and STOP. Print: "skill-builder is excluded from its own actions. Use `dev` prefix: `/skill-builder dev [command] skill-builder`". Do not dispatch.
    - IF no target was specified (all-skills/iteration mode) → the skill set passed into the procedure MUST have `skill-builder` filtered out before any per-skill iteration begins.
-5. IF `dev_mode == true` → skill-builder is included normally.
-6. Dispatch to the procedure file.
+8. IF `dev_mode == true` → skill-builder is included normally.
+9. Dispatch to the procedure file.
 
 This CHECKPOINT fires every invocation. Procedure files repeat it in their own preflight blocks for defense in depth — 4.7 executes each file literally, so both gates matter.
 
