@@ -13,7 +13,7 @@ This procedure is the 4.6 → 4.7 migration counterpart to `optimize`. Where `op
 When running `/skill-builder convert [skill]`:
 
 1. **Read the target skill's SKILL.md and all associated files** — including every file referenced from frontmatter, every grounded reference file, every AGENT.md under `agents/`, and every hook script under `hooks/`.
-2. **Classify each directive** using the criteria in [optimize.md](optimize.md) step 4d ("Directive Annotation Scan").
+2. **Classify each directive** using the criteria in [optimize.md](optimize.md) step 4d ("Directive Annotation Scan"), then apply the agent panel in [optimize.md](optimize.md) step 4d' ("Agent panel: directive classification") when its auto-trigger conditions are met (directive matches both HARD and SOFT markers, matches neither cleanly, or skill frontmatter sets `strictness: thorough`). The panel is opt-in and gated by the same `--deliberate` / precheck pattern used by steps 4b and 5b.
 3. **Scan workflow steps** for soft phrasing that 4.7 would under-execute:
    - Conversational phrases ("keep it X", "organize around Y", "when it makes sense")
    - Subjective gates without criteria ("if applicable", "when warranted", "as needed")

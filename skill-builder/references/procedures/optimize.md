@@ -140,6 +140,26 @@ When running `/skill-builder optimize [skill]`:
 
    Reference format: [templates.md](../templates.md) § "Enforcement Annotation Template".
 
+4d'. **Agent panel: directive classification** *(opt-in. Skipped by default. Auto-fires only when auto-trigger conditions below are met, or whenever the user passes `--deliberate`.)*
+
+   Auto-trigger conditions (any one activates the panel):
+   1. At least one directive matches both a HARD marker (concrete ID, regex, boolean check, measurable never/always condition) AND a SOFT marker (subjective term from the list, inference-dependent phrasing, conditional without concrete criteria) from the 4d rubric — genuine classification ambiguity within a single directive.
+   2. At least one directive's wording matches neither the HARD nor the SOFT pattern lists cleanly — outside the rubric and not mechanically classifiable.
+   3. The skill frontmatter sets `strictness: thorough`.
+
+   If neither auto-triggered nor `--deliberate`, proceed to step 4e with the mechanical HARD/SOFT classifications from step 4d as final.
+
+   When the panel does fire, spawn 2 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`), each with a unique persona per the Persona Assignment Gate in SKILL.md. Before spawning, confirm the two personas do not duplicate each other and do not duplicate any existing persona under `.claude/skills/*/agents/*/AGENT.md` (glob and check).
+
+   - **Agent 1** (persona: "Enforcement pragmatist who has watched 4.7 silently under-execute directives that looked specific enough"). Argue for SOFT classification on each ambiguous or outside-rubric directive. The cost of an unnecessary annotation is token overhead on every invocation; the cost of a missing annotation is silent directive under-execution. For ambiguous wording, which asymmetric cost should win?
+   - **Agent 2** (persona: "Annotation minimalist who resists boilerplate CHECKPOINTs on rules that are already concrete"). Argue for HARD classification on each ambiguous or outside-rubric directive. Every annotation compounds per invocation — which of these directives is concrete enough that a CHECKPOINT block would be pure overhead?
+
+   Each agent reads the skill's SKILL.md (for the directive list with surrounding context), the 4d rubric, and the list of ambiguous/outside-rubric directives flagged by the auto-trigger. Agents return per-directive classification verdicts with one-line reasoning. Synthesize per directive:
+   - Where the two agents agree → adopt the agreed classification.
+   - Where the two agents disagree → default to **SOFT** (safer — the asymmetric cost of silent under-execution on 4.7 outweighs the token overhead of an unnecessary CHECKPOINT, and an unnecessary annotation is easier to remove later than a missing one is to notice).
+
+   Record panel outcomes in the audit checklist output. Append a line under **Annotation Status (Opus 4.7)** naming whether the panel fired, which directives it reclassified, and the synthesis reasoning for any disagreements.
+
 4e. **Token Efficiency Scan (Opus 4.7)** — Scan for token-intensive patterns that compound across invocations. On-by-default in `/skill-builder audit` and `/skill-builder optimize [skill]`. Apply detection rules from [token-efficiency.md](../token-efficiency.md) § "Detection Patterns":
 
    - **P1 — Agent-type hook doing mechanical work.** Read SKILL.md frontmatter `hooks:` and settings.local.json `hooks:`. For each `type: agent` entry, read the prompt. Flag as mechanical if the prompt is dominated by pattern-match or byte-comparison verbs (extract/compare, grep, find matching, check marker count). Record the hook name and what it checks.
