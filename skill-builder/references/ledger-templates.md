@@ -5,6 +5,21 @@ Templates for the awareness-ledger skill. Used by the `ledger` command when crea
 
 ---
 
+## Ownership Boundary: Ledger vs. Auto Memory
+
+Claude Code's auto memory (at `~/.claude/projects/<project>/memory/`) and the awareness-ledger are complementary, not redundant. Before capturing, decide which system owns the fact:
+
+- **Auto memory owns** per-user-per-machine ergonomics: writing preferences, notation rules, humor calibration, tool aliases, invocation habits, transient session state. These do not travel via git and should not.
+- **The ledger owns** project-shareable records (INC, DEC, PAT, FLW). These travel with the repo and must be visible to teammates, CI, and fresh checkouts.
+
+When a fact straddles both (e.g. an architectural decision the maintainer also wants always-loaded), the **ledger record is canonical**. The memory entry references the ledger ID (e.g. `See DEC-2026-03-23-edit-skill-creation`) instead of re-narrating the facts. This keeps one source of truth and avoids silent drift between narrative memory and structured record.
+
+**Rule of thumb:** if losing the fact on a laptop reinstall would hurt the project, it belongs in the ledger. If it only affects how one person works with this project on this machine, it belongs in memory.
+
+<!-- Consumed by: procedures/ledger.md Step 2 (SKILL.md body), capture trigger logic below, consultation-briefing formatting for memory-routed suggestions -->
+
+---
+
 ## Record Type Templates
 
 ### Incident Record (INC)
@@ -330,6 +345,18 @@ Conversation signals that suggest a record should be created:
 - Step-by-step debugging: "first it does X, then Y, then Z"
 - User behavior description: "when the user does X," "the flow is"
 - Environment-specific: "only happens when," "requires X to be running"
+
+### Memory Triggers — Route to Auto Memory, Not the Ledger
+
+Some signals look capture-worthy but belong in Claude Code's auto memory (per-user-per-machine ergonomics), not the ledger. When you detect one of these, suggest a memory entry and bail out of ledger capture:
+
+- **Writing tics / preferences:** "I always use…," "don't write it like…," "my voice is…"
+- **Notation / formatting rules:** percent sign vs. spelled-out, capitalization, abbreviation choices
+- **Humor calibration:** when a joke lands or misses; tone preferences
+- **Tool aliases / invocation habits:** shortcut commands, env var defaults, shell aliases, "when I say X I mean Y"
+- **Transient session state:** where we were mid-task, what to resume, open tabs
+
+**Bail-out rule:** if the fact would not survive a teammate opening the repo on a fresh machine — and the project would not suffer from its absence — it belongs in auto memory. Route the user there instead of opening a ledger record. See the Ownership Boundary section near the top of this file.
 
 **Capture is always user-confirmed.** Agents suggest, user decides. Directives are sacred — never auto-record.
 
