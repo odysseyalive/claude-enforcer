@@ -74,7 +74,7 @@ curl -fsSL "$REPO_URL/skill-builder/agents/optimize-diff-auditor/AGENT.md" -o "$
 curl -fsSL "$REPO_URL/skill-builder/agents/intent-router/AGENT.md" -o "$SKILL_DIR/agents/intent-router/AGENT.md"
 
 # Ship the skill-builder hook scripts (command-type hooks wired from SKILL.md frontmatter)
-for hook in check-persona-uniqueness verify-directive-integrity register-skill-agents; do
+for hook in check-persona-uniqueness verify-directive-integrity; do
     curl -fsSL "$REPO_URL/skill-builder/hooks/${hook}.sh" -o "$SKILL_DIR/hooks/${hook}.sh"
     chmod +x "$SKILL_DIR/hooks/${hook}.sh"
 done

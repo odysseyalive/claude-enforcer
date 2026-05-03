@@ -7,12 +7,6 @@ version: "1.5"
 minimum-effort-level: high
 allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
 hooks:
-  SessionStart:
-    - matcher: "startup|resume|clear"
-      hooks:
-        - type: command
-          command: "\"$CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/register-skill-agents.sh\""
-          statusMessage: "Registering skill-bundled agents..."
   PreToolUse:
     - matcher: "Edit|Write"
       hooks:
