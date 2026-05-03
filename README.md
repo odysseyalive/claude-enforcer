@@ -161,13 +161,21 @@ Each skill runs through a per-skill conversion with its own precheck and revert 
 
 ### Content generation workaround
 
-Some creative work lands thinner on 4.7. Voice skills, writing skills, anything that leans on the model inferring tone from soft directives. Every skill audited by Claude Enforcer stays backwards compatible with Opus 4.6, so when 4.7's output doesn't sound right, step back to 4.6, rerun the same skill, and compare.
+Some creative work lands thinner on 4.7. Voice skills, writing skills, anything that leans on the model inferring tone from soft directives. Technical documentation lands the same way. The reader can usually tell.
+
+So skill-builder now does the routing for you. When `/skill-builder audit` or `/skill-builder agents` runs against a skill that produces written content, it spots the writing work and proposes a dedicated subagent that runs on `claude-opus-4-6`. The parent stays on 4.7 and keeps doing what 4.7 is good at. The 4.6 subagent handles the prose and hands a structured payload back. Creative work, technical docs, dialogue, lessons, all of it.
+
+Detection looks for two of four signals before recommending the split. The skill grounds against a voice or writing skill, its procedure files use authoring verbs, its output contract is paragraphs rather than structured data, or its name and description live in content vocabulary. One signal isn't enough. Two of four is the bar that keeps technical scripts from getting bookended by accident.
+
+If a skill already has 4.6 author subagents wired up, the audit detects that and leaves it alone. The idempotency check runs first and short-circuits everything else. Working configurations don't get rewritten.
+
+The manual switch still works when you want it.
 
 ```
 /model claude-opus-4-6
 ```
 
-Read both outputs side by side. If 4.6 produces the voice you recognize, keep that model on for that kind of work and switch back to 4.7 for everything else.
+Use this for ad-hoc cases where a single piece of content needs the 4.6 voice and you don't want to wire up a subagent for it. Switch back to 4.7 for everything else. The automated bookending is for skills you'll invoke more than once and want producing the same voice every time.
 
 ## Learn More
 

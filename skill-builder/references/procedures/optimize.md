@@ -19,7 +19,8 @@ When running `/skill-builder optimize [skill]`:
 **Frontmatter:**
 - Has YAML frontmatter: [yes/no]
 - name matches folder: [yes/no]
-- description is single line: [yes/no] ← CRITICAL (multi-line gets truncated)
+- description is single line: [yes/no] ← CRITICAL (multi-line gets truncated by the platform's help output)
+- description format-fix is content-preserving: any collapse from multi-line `|` / `>` to single-line MUST preserve every distinct piece of information per SKILL.md § Description Preservation Gate. If a single-line collapse would drop content, flag as a manual revision rather than auto-applying.
 - Has modes/subcommands: [yes/no]
 - Modes listed in description: [yes/no/N/A]
 
@@ -218,6 +219,7 @@ When running `/skill-builder optimize [skill] --execute`:
 
 1. Run display mode analysis first
 2. **Generate task list from findings** using TaskCreate — one task per discrete action (e.g., "Move accounts table to reference.md", "Fix frontmatter description to single line"). Include:
+   - **Description format-fix tasks are content-preserving.** Any task that collapses a multi-line `description: |` or `description: >` to a single line MUST preserve every distinct piece of information from the multi-line original (modes, usage, examples, scope notes). Per SKILL.md § Description Preservation Gate, the transformation is mechanical (newline removal, joining, quoting), not editorial. If the joined single line would lose content, mark the task as MANUAL_REVISION_REQUIRED and surface to the user instead of auto-applying.
    - One task per directive flagged in step 4d with status "annotation missing — generate" or "annotation stale — regenerate". Each annotation task writes a CHECKPOINT block directly beneath the sacred `<!-- /origin -->` close marker of the directive it covers, following the format in [templates.md](../templates.md) § "Enforcement Annotation Template".
    - One task per token-efficiency pattern flagged in step 4e, following the task templates in [token-efficiency.md](../token-efficiency.md) § "Execute Mode Task Generation" (P1 hook downshift, P2 effort downgrade, P3 machinery extraction, P4 precheck gate, P5 strictness field).
 3. Execute each task sequentially, marking complete via TaskUpdate as it goes
