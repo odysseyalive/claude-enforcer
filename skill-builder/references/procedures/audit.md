@@ -62,12 +62,9 @@ Go to Step 6 with execution choices that include:
 ## Skills Summary
 | Skill | Lines | Description | Directives | Reference Inline | Hooks | Status |
 |-------|-------|-------------|------------|------------------|-------|--------|
-| /skill-1 | X | [full description verbatim] | Y | Z tables | yes/no | OK/NEEDS WORK |
+| /skill-1 | X | single/multi | Y | Z tables | yes/no | OK/NEEDS WORK |
 
-**Description column:**
-- Quote the skill's frontmatter `description:` field IN FULL. Do NOT abbreviate, ellipse, or truncate.
-- Per SKILL.md § Description Preservation Gate, quoting in full is mandatory regardless of table-layout aesthetics. If the description is too long for a single visual row, let it wrap or render on a continuation line; never elide content.
-- Separately, flag the FORMAT (single-line vs. multi-line `|` / `>` syntax). Format flagging is independent of content. A multi-line `description: |` should be flagged for collapse; the contents stay intact through the collapse per the gate's step 4 (mechanical transformation only).
+**Description column:** Flag `multi` if uses `|` or `>` syntax (needs optimization to single line)
 ```
 
 ### Step 4: Run Sub-Commands in Display Mode
@@ -193,17 +190,6 @@ Combine all sub-command outputs into a single report:
 | /skill-1 | id-lookup | Enforce grounding for IDs | High |
 [from agents display mode per skill]
 
-## Content Bookending
-*(Aggregated from agents step 4d across all skills. Per `references/content-bookending.md`. Include this section only if at least one skill matched applicable/partial — omit entirely when every skill is "not applicable" or "already configured", consistent with the absence-vs-gap reporting principle. Always include when ANY skill is partial or applicable, even if others are already-configured, so the user can see both the gap and the existing wiring.)*
-
-| Skill | Status | Proposed Authors | Persona Drafts | Priority |
-|-------|--------|------------------|----------------|----------|
-| /skill-1 | Applicable | room-scene-author, npc-dialogue-author | [unique strings] | Medium |
-| /skill-2 | Already configured | — | — | — |
-| /skill-3 | Partially configured | mission-prose-author | [unique string] | Medium |
-
-**Idempotency note:** Skills marked "Already configured" are detected via existing `model: claude-opus-4-6` frontmatter, dispatch invocations, or Prose Subagent Dispatch CHECKPOINT. Their configurations are NOT modified by audit recommendations. See `content-bookending.md` § "Idempotency".
-
 ## Hooks Status
 [aggregated from hooks display mode]
 
@@ -257,17 +243,8 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
 > 6. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
 > 7. `hooks --execute` for dead wiring — auto-recover load-bearing + recoverable findings, auto-unwire advisory findings, stop on each protective / not-recoverable finding for user decision *(only if Step 2.5 surfaced dead wiring)*
-> 8. `agents --execute` for content bookending — create proposed `claude-opus-4-6` author subagents, add Prose Subagent Dispatch CHECKPOINTs, and rewrite procedures to dispatch *(only if the Content Bookending section reports Applicable or Partially configured for at least one skill)*
-> 9. Skip — just review for now
+> 8. Skip — just review for now
 
 When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
 
 **Follow § Output Discipline** (in SKILL.md) for cascade execution and cross-skill separation.
-
-### Post-execution notice (audit-level)
-
-Audits in pure display mode (the user picks option 9 / Skip, or runs `audit` without choosing any execute action) MUST NOT prompt for a session restart. Display mode is read-only — nothing was loaded that needs reloading. Adding a restart prompt to read-only output trains users to dismiss it.
-
-When the user selects an execute option that creates or modifies AGENT.md files (options 2, 4, or 8), the executing sub-procedure surfaces its own restart notice per `agents.md` § "Post-execution notice". The audit does NOT duplicate that notice at the orchestrator level; defer to the sub-command.
-
-When the user selects only optimize, hooks (non-agent), ledger, or other non-agent actions, no restart notice is required — those changes take effect when the modified skill is next invoked.

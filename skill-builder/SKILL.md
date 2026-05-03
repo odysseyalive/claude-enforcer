@@ -58,10 +58,6 @@ hooks:
 > **"When deploying a Team, one of the team member's persona is a research assistant who will research the issue using read-only reference tools. Other team members may also make requests from the research assistant to help augment the outcome."**
 
 *— Added 2026-02-23, source: user directive (tool specifics in references/agents-teams.md)*
-
-> **"I would like to add a restriction to the audit system not to truncate or reduce descriptions of skills, functions, etc."**
-
-*— Added 2026-05-02, source: user directive during the Content Bookending dev session — reinforces that descriptions are documentation, not optimization targets*
 <!-- /origin -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -94,19 +90,6 @@ CHECKPOINT — Team Research Assistant Gate:
 4. IF a research assistant is present → confirm its allowed-tools contains ONLY read-only reference tools. Strip any write or side-effect tools from the research assistant before spawn.
 5. After spawn, surface to other team members: "Research assistant '[persona]' is available for read-only reference queries. Route lookups through the assistant rather than duplicating research."
 6. IF a team is deployed without a research assistant (step 3 skipped) → STOP. Report: "Team deployment blocked — no research assistant in team composition."
-<!-- END ENFORCEMENT ANNOTATION -->
-
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
-<!-- Source directive: "I would like to add a restriction to the audit system not to truncate or reduce descriptions of skills, functions, etc." -->
-CHECKPOINT — Description Preservation Gate:
-1. Identify every "description" surface affected by the current operation: SKILL.md frontmatter `description:`, AGENT.md frontmatter `description:`, command-table summary cells, procedure-file overview paragraphs, function/section docstrings or overview prose. Each is a description for purposes of this gate.
-2. Capture the existing description text verbatim before any modification.
-3. IF the operation is purely structural (moving content between files, splitting references, reorganizing sections) → preserve every description verbatim. Do not condense, paraphrase, or "tighten" them. Move-don't-rewrite applies here exactly as it applies to user directives.
-4. IF the operation is a frontmatter format fix (multi-line `description: |` or `description: >` collapsed to single-line `description: "..."`) → the meaning must survive in full. The single-line form must include every distinct piece of information from the multi-line original (modes, usage examples, scope notes). The transformation is mechanical (newline removal, joining, quoting), not editorial.
-5. IF any rewrite would drop information from a description → STOP. Report: "Description rewrite would lose information from [field/file]: [list of dropped content]. Surface to user before proceeding." Do not auto-apply.
-6. The Reducer agent, the Token Efficiency Scan, and any "tightening" pass do NOT authorize description shrinkage. Descriptions are documentation surfaces — informational density is the feature, not a target for reduction.
-7. Audit and report rendering: when a procedure quotes a description in a report (Skills Summary table, Agent Opportunities table, Frontmatter Check, Skills List, etc.), quote the description IN FULL. Do NOT abbreviate with ellipses, "...", "[truncated]", or trailing-word elision. IF the rendering layout makes full-quote impractical (very long descriptions inside narrow tables) → wrap onto multiple display lines OR link to the source file. Never silently shorten.
-8. Platform truncation (e.g., Claude Code's help-output line limit) is a known constraint and is NOT a license to pre-truncate. The fix for platform truncation is fitting the meaning into a single concise line at authorship time, not removing detail at audit/optimize time.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 ---
@@ -282,7 +265,6 @@ Reference files:
 - [references/token-efficiency.md](references/token-efficiency.md) — Token-intensive pattern catalog and Token Efficiency Scan rules (optimize step 4e)
 - [references/temporal-validation.md](references/temporal-validation.md) — Temporal risk classification, phrase mappings, hook generation spec
 - [references/ledger-templates.md](references/ledger-templates.md) — Awareness Ledger record templates, agent definitions, consultation protocol
-- [references/content-bookending.md](references/content-bookending.md) — Auto-route writing work (creative + technical docs) to claude-opus-4-6 subagents; detection signals, idempotency rules, dispatch CHECKPOINT format (used by `agents` step 4d and the audit aggregate report)
 - [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, checksums, shell-safety, etc.)
 - [references/procedures/checksums.md](references/procedures/checksums.md) — Directive checksum generation spec (scripts generated at runtime, not shipped)
 - [references/procedures/shell-safety.md](references/procedures/shell-safety.md) — Shell-safety subcommand procedure (write / audit / lint)
