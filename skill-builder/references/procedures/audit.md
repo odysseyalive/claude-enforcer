@@ -72,14 +72,22 @@ Go to Step 6 with execution choices that include:
 
 ### Step 4: Run Sub-Commands in Display Mode
 
-**Agent budget:** Sub-procedures running in display mode during audit skip their own agent panels. Agent panels fire only in standalone mode or `--execute` mode where decisions have real consequences. The audit's only agent panel is the priority ranking panel (Step 4f) — one per audit run, not per skill.
+**Agent budget:** Sub-procedures running in display mode during audit skip their own agent panels. Agent panels fire only in standalone mode or `--execute` mode where decisions have real consequences. The audit's only agent panel is the priority ranking panel (Step 4g) — one per audit run, not per skill.
 
 - Quick audit (`--quick`): **0 agent panels** — pure checklist, no spawning
 - Standard audit: **1 agent panel total** (Step 4f priority ranking), plus lightweight cascade guard checks (no panel)
 
-For each skill found:
-1. Run **optimize** in display mode (skip agent panels in Steps 4b and 5b) → collect optimization findings
-2. Run **agents** in display mode (skip agent panel in Step 5) → collect agent opportunities
+**CHECKPOINT — Sub-Command Run Mandate (Opus 4.7 literal-execution gate):**
+
+1. The per-skill sub-command runs below are NOT optional. They are not a heuristic and not a "if signal seems sufficient" shortcut.
+2. IF the auditor's reasoning suggests skipping these runs because "the gathered signals already isolate findings", "the small finding set has measurable criticality", or any similar inference → STOP. That reasoning is invalid for this step. Resume the runs.
+3. The Non-Obvious Decision Gate exception (SKILL.md § Directives) governs the agent-panel spawn in Step 4g ONLY. It does NOT authorize skipping the per-skill sub-command runs in Step 4. Do not conflate.
+4. IF a sub-command run is skipped for any reason → the audit MUST report this explicitly in Step 5 under "Audit Coverage Gaps" with the reason and the analyses that did not fire (Token Efficiency Scan, Content Bookending Detection, agent-opportunity detection per skill, etc.). Silent skipping is forbidden.
+5. The runs are bounded and cheap in display mode (no agent spawns, no file writes). The cost of running them is far lower than the cost of a silently incomplete audit that the user trusts as complete.
+
+**For each skill found:**
+1. Run **optimize** in display mode (skip agent panels in Steps 4b and 5b) → collect optimization findings AND token efficiency scan
+2. Run **agents** in display mode (skip agent panel in Step 5) → collect agent opportunities AND Content Bookending Detection per `agents.md` Step 4d
 3. Run **hooks** in display mode (skip agent panel in Step 3b) → collect hooks inventory and opportunities
 
 ### Step 4a: Ledger Status
@@ -145,7 +153,35 @@ For each skill with 2+ validators or evaluation agents:
 
 Skip silently for skills with 0-1 validators.
 
-### Step 4e: Agent panel — priority ranking
+### Step 4e: Content Bookending Detection (audit-level, mandatory)
+
+This step is owned by the audit, not by the per-skill `agents` sub-command run. It fires for every audit, every skill, regardless of whether Step 4 sub-command runs completed. The detection itself is cheap (3 grep operations + 4 signal checks per skill) — no agent spawns, no file writes.
+
+**Grounding:** Read [content-bookending.md](../content-bookending.md) before this step for the signal definitions, idempotency rules, and false-positive guardrails.
+
+**Procedure (run for every skill in the filtered skill set):**
+
+1. **Idempotency precheck.** For each skill, run all three checks. ANY match means "already configured":
+   - Glob `.claude/skills/<skill>/agents/*/AGENT.md`. Read each. Frontmatter `model: claude-opus-4-6`?
+   - Grep `.claude/skills/<skill>/SKILL.md` and `.claude/skills/<skill>/references/procedures/*.md` for the literal string `claude-opus-4-6`.
+   - Grep `.claude/skills/<skill>/SKILL.md` for any CHECKPOINT named "Prose Subagent Dispatch", "Subagent Dispatch", or "Content Subagent".
+2. **Signal scan** (only if 4d.i found nothing). Compute the four signals from `content-bookending.md` § "Detection signals":
+   - Skill grounds against `voice/`, `writing/`, `edit/`, or `text-eval/`
+   - Authoring verbs in execute steps ("author", "draft prose", "compose", "write the description", "produce the article")
+   - Output contract is freeform paragraphs (not yaml/json/tables)
+   - Skill name/description matches content vocabulary (writing, voice, prose, narrative, dialogue, copy, lesson, story, article, post, newsletter, README, docs, documentation, tutorial, runbook, guide)
+3. **Classify each skill** as one of:
+   - `Already configured` — idempotency check matched
+   - `Partially configured` — idempotency matched some authors but not all content surfaces
+   - `Applicable` — 2+ signals matched, no existing wiring
+   - `Not applicable` — fewer than 2 signals matched
+4. **Aggregate** counts: total skills, configured count, partial count, applicable count, not-applicable count.
+5. **Pass results to Step 4f** (priority ranking) so the agent panel can rank bookending findings alongside other priorities.
+6. **Pass results to Step 5** for inclusion in the aggregate report. The Content Bookending section in Step 5 ALWAYS renders a one-line summary, regardless of whether any skill was applicable. Project-wide visibility on the gap is the point of the step. See § "Step 5: Aggregate Report" → "Content Bookending" for the rendering rules.
+
+**Why this is at audit level rather than inside the agents sub-command:** The original design had detection inside `agents.md` Step 4d, called transitively from audit Step 4. When an auditor (incorrectly) skips the per-skill sub-command runs, the detection silently doesn't fire and the report shows nothing — the user has no signal that the analysis was missed. Lifting detection here makes it independent of Step 4 completeness. The `agents.md` Step 4d still exists for standalone `/skill-builder agents [skill]` invocations.
+
+### Step 4f: Agent panel — priority ranking
 
 After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
 
@@ -194,15 +230,36 @@ Combine all sub-command outputs into a single report:
 [from agents display mode per skill]
 
 ## Content Bookending
-*(Aggregated from agents step 4d across all skills. Per `references/content-bookending.md`. Include this section only if at least one skill matched applicable/partial — omit entirely when every skill is "not applicable" or "already configured", consistent with the absence-vs-gap reporting principle. Always include when ANY skill is partial or applicable, even if others are already-configured, so the user can see both the gap and the existing wiring.)*
+*(Aggregated from Step 4e Content Bookending Detection across all skills. Per `references/content-bookending.md`. **Always include this section** — even when every skill is "not applicable" or zero skills are configured. Project-wide visibility on the gap is the point of the feature; absence-vs-gap is NOT applied here. The one-line summary surfaces the count regardless of state.)*
 
-| Skill | Status | Proposed Authors | Persona Drafts | Priority |
-|-------|--------|------------------|----------------|----------|
-| /skill-1 | Applicable | room-scene-author, npc-dialogue-author | [unique strings] | Medium |
-| /skill-2 | Already configured | — | — | — |
-| /skill-3 | Partially configured | mission-prose-author | [unique string] | Medium |
+**Summary line (mandatory, render even when zeros):**
+
+> **Content Bookending:** [N configured] of [M content-producing skills] have `claude-opus-4-6` author subagents wired up. [P applicable, Q partially configured, R not applicable] across [Total] skills audited.
+
+Then render the per-skill table:
+
+| Skill | Status | Signals Matched | Proposed Authors | Persona Drafts | Priority |
+|-------|--------|-----------------|------------------|----------------|----------|
+| /skill-1 | Applicable | 3/4 (voice ground, authoring verbs, prose output) | role-author-1, role-author-2 | [unique strings] | Medium |
+| /skill-2 | Already configured | — (idempotency match) | — | — | — |
+| /skill-3 | Partially configured | 4/4 | mission-prose-author | [unique string] | Medium |
+| /skill-4 | Not applicable | 1/4 | — | — | — |
+
+Include "Not applicable" rows in the table only when there are fewer than 8 skills total. For larger skill sets, suppress "Not applicable" rows from the table but include their count in the summary line.
 
 **Idempotency note:** Skills marked "Already configured" are detected via existing `model: claude-opus-4-6` frontmatter, dispatch invocations, or Prose Subagent Dispatch CHECKPOINT. Their configurations are NOT modified by audit recommendations. See `content-bookending.md` § "Idempotency".
+
+**If zero skills are content-producing** (M = 0): the summary line still renders as `Content Bookending: 0 of 0 content-producing skills detected. No applicable bookending opportunities.` This confirms the analysis ran and found nothing, distinguishing it from a missed analysis.
+
+## Audit Coverage Gaps
+*(Render this section ONLY when one or more analyses did not fire — e.g., a sub-command run was skipped, a tool failure aborted a step, or a permission denial blocked detection. Per Step 4 § "Sub-Command Run Mandate", silent skipping is forbidden. If every analysis fired completely, omit this section entirely.)*
+
+| Analysis | Skill(s) | Reason Not Fired | Impact |
+|----------|----------|------------------|--------|
+| [e.g., Token Efficiency Scan] | [/skill-1, /skill-2] | [e.g., optimize sub-command run was skipped] | [What detection was missed] |
+| [e.g., Agent Opportunities] | [/skill-3] | [e.g., agents sub-command run was skipped] | [What detection was missed] |
+
+Recommend: re-run the audit with the missing analyses, or run the affected sub-commands directly.
 
 ## Hooks Status
 [aggregated from hooks display mode]
