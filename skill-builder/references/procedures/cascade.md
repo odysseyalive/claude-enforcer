@@ -104,7 +104,7 @@ Check whether validators collectively constrain the skill's creative output:
 
 **When run standalone** (`/skill-builder cascade [skill]`): output the full report above.
 
-**When run as part of audit** (Step 4d in audit.md): include findings in the aggregate report under "Validation Cascade." If risk is MODERATE or HIGH, add to Priority Fixes.
+**When run as part of audit** (Step 4e in audit.md): include findings in the aggregate report under "Validation Cascade." If risk is MODERATE or HIGH, add to Priority Fixes.
 
 **When no skill is specified** (`/skill-builder cascade`): run for all skills, output a summary table:
 

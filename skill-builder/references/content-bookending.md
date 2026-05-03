@@ -153,9 +153,7 @@ Reference [`agents-personas.md`](agents-personas.md) for the full selection heur
 
 During a full audit, this detection runs inside the per-skill `agents` display-mode pass (Step 4 of `audit.md`). Findings surface in the Agent Opportunities section of the aggregate report under a dedicated "Content Bookending" column or sub-table. Idempotency-pass skills are reported as "configured" and surface no recommendations. Gap skills surface their proposed authors and the dispatch CHECKPOINT for review.
 
-The audit's priority-ranking agent panel (Step 4f) treats bookending recommendations as **medium priority** by default — they improve content quality but do not break anything when absent. Promote to high priority only if the skill is heavily content-focused and currently producing prose on 4.7 that the user has flagged as thin.
-
-**Audit-level execution:** As of the 2026-05-02 fix, Content Bookending Detection is owned by the audit at Step 4e (not just by the `agents` sub-command at its own Step 4d). The audit runs detection directly for every skill, every audit, regardless of whether the per-skill `agents` sub-command run completes. The `agents.md` Step 4d still exists for standalone `/skill-builder agents [skill]` invocations.
+The audit's priority-ranking agent panel (Step 4e) treats bookending recommendations as **medium priority** by default — they improve content quality but do not break anything when absent. Promote to high priority only if the skill is heavily content-focused and currently producing prose on 4.7 that the user has flagged as thin.
 
 ## Self-exclusion
 
