@@ -109,6 +109,13 @@ For each procedure that produces content, propose:
 
 4. **A `--manual-prose` flag** documented in the parent SKILL.md commands table. Setting this flag bypasses the dispatch and lets the parent (4.7) author directly. This is the escape hatch for cases where 4.6's output regresses, where the prose is short enough that subagent overhead isn't worth it, or where the user wants 4.7's literal output.
 
+5. **Registration is automatic.** Claude Code discovers project-level subagents at `.claude/agents/<name>.md` (flat, project root) — it does NOT walk `.claude/skills/<skill>/agents/...`. Skill-builder's `SessionStart` hook (`hooks/register-skill-agents.sh`) handles this autonomously: every session start, it symlinks every skill-bundled `AGENT.md` into `.claude/agents/<name>.md` (using the frontmatter `name:` field, since the platform keys `subagent_type` off `name`, not the directory). Orphan symlinks for deleted agents are pruned in the same pass.
+
+   What this means for the bookending recipe:
+   - **No registration step is needed in `--execute` task lists.** Authoring the AGENT.md is sufficient; the hook picks it up at the next session start.
+   - **Within the current session**, a freshly created AGENT.md is NOT yet registered until the next session start. If the skill's procedure dispatches the new author agent in the same conversation that created it, the dispatch will fail with "Agent type not found." The mitigations: either advise the user to start a new session before dispatching, or have the procedure invoke `bash $CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/register-skill-agents.sh` directly after creating the AGENT.md.
+   - **Backstop:** `/skill-builder verify` Step 4b reports any unregistered AGENT.md as FAIL — meaning the SessionStart hook didn't run. That's a wiring problem in skill-builder's SKILL.md frontmatter, not something the bookending procedure needs to repair.
+
 ## Grounding bundle: when to recommend, when not to
 
 `nsayka-wawa` distilled 18 grounding files (voice + craft + pedagogy + forest-beings) into one ~3K-token `references/prose-grounding-bundle.md` because each subagent dispatch needed all 18 files and reading them per-dispatch was wasteful (~6× cheaper after distillation).
@@ -144,6 +151,8 @@ Reference [`agents-personas.md`](agents-personas.md) for the full selection heur
 | **Persona collision** | Persona Assignment Gate + AGENT.md PreToolUse hook block duplicates at write time. |
 | **User wants 4.7 anyway** (e.g., for highly structured "writing" like log lines) | `--manual-prose` flag bypasses dispatch. Document it in the parent SKILL.md. |
 | **Existing config rewritten by drift** | Idempotency check runs first. Working configurations are NEVER modified. |
+| **Skill-bundled AGENT.md not registered to `.claude/agents/`** (platform doesn't walk skill directories — dispatch fails with "Agent type not found", bookending regresses silently to parent-on-4.7) | Skill-builder's `SessionStart` hook (`hooks/register-skill-agents.sh`) auto-registers every skill-bundled AGENT.md at session start. `/skill-builder verify` Step 4b is the backstop. Same-session creation-then-dispatch is the one edge case — see item 5 above. |
+| **`CLAUDE_CODE_SUBAGENT_MODEL` env override breaks selective routing** (sets every subagent to one model, defeating the bookending split — validators / lookups / formatters end up on the override model, regressing literal execution) | Do not set this env var when using bookending. Per-agent frontmatter `model:` is the correct lever. If a project must override globally, point it at the parent's model (currently `claude-opus-4-7`) and let per-agent frontmatter declare exceptions. |
 
 ## Display-mode discipline
 

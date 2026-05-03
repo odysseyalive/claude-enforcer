@@ -93,6 +93,24 @@ For each agent file:
 - Does it have valid frontmatter?
 - Is it referenced (by name or filename) in the parent SKILL.md?
 
+### Step 4b: Agent Registration Check (backstop)
+
+Claude Code discovers project-level subagents at `.claude/agents/<name>.md` (flat, project root) — it does NOT walk `.claude/skills/<skill>/agents/<name>/AGENT.md`. Skill-builder's `SessionStart` hook (`hooks/register-skill-agents.sh`) handles registration automatically: every session start, it symlinks every skill-bundled `AGENT.md` into `.claude/agents/<name>.md` and prunes orphans. **This step is a backstop**, not a primary repair path — if it fails, the hook isn't running.
+
+```bash
+Glob: .claude/skills/**/agents/*/AGENT.md
+Glob: .claude/agents/*.md
+```
+
+For each skill-bundled `AGENT.md`:
+
+1. Read its frontmatter `name:` field — that's the `subagent_type` callers will dispatch with.
+2. Check whether `.claude/agents/<name>.md` exists.
+3. **Exists** → PASS.
+4. **Missing** → FAIL — "Agent registration missing for `<name>`. Skill-builder's SessionStart hook should have created `.claude/agents/<name>.md`. Check that `hooks/register-skill-agents.sh` is wired in skill-builder's SKILL.md frontmatter and that the file is executable. Re-run `bash $CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/register-skill-agents.sh` to register manually."
+
+Verify never modifies files; the manual re-run is the escape hatch when the hook itself is broken.
+
 ### Step 5: Summary Output
 
 ```
@@ -109,6 +127,7 @@ For each agent file:
 | Shell-safety lint (hooks/settings) | [N]/[N] [PASS/WARN/FAIL] |
 | Stale artifacts | [NONE/WARN — list] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
+| Agents registered (`.claude/agents/`) | [N]/[N] [PASS/WARN/FAIL] |
 | Agent Teams enabled | [PASS/FAIL/N/A] |
 | Research assistant in teams | [N]/[N] [PASS/WARN/N/A] |
 
@@ -119,4 +138,5 @@ Overall: [PASS / PASS with warnings / FAIL]
 **If FAIL (directive checksum mismatch):** List each skill with mismatched fingerprint. This may indicate unauthorized directive modification.
 **If WARN (no directive checksum):** Note: "WARN: Directives without checksum protection in [skill]. Run `/skill-builder checksums [skill] --execute`."
 **If FAIL (shell-safety findings):** List each finding with file path, line number, and the rule it violates (e.g., R1 path resolution, R2 path-with-spaces). Remediation: `/skill-builder shell-safety audit [path] --execute` rewrites the mechanical (HARD) findings in place; SOFT findings need human review. Reason this matters: hook runner invokes commands via `/bin/sh -c`; unquoted relative or `$CLAUDE_PROJECT_DIR` paths fail silently on synced project roots and any non-project-root CWD.
+**If FAIL (agent registration):** List each unregistered AGENT.md and recommend re-running `bash $CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/register-skill-agents.sh`. If that registers them, the SessionStart wiring in skill-builder's SKILL.md frontmatter isn't firing — check that the `hooks: SessionStart:` block is intact and the script is executable. Without registration, `Agent(subagent_type: "<name>")` fails with "Agent type not found" and any bookending CHECKPOINT silently regresses to parent-on-4.7 prose.
 **If all PASS:** Report clean health.
