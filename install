@@ -50,13 +50,21 @@ if [ -d ".claude/skills/shell-safety" ]; then
     rm -rf ".claude/skills/shell-safety"
 fi
 
+# Remove legacy distributed hook scripts. skill-builder no longer ships hooks;
+# enforcement is via in-SKILL.md CHECKPOINTs (cross-platform, code-free).
+# Users who want enforcement hooks for their own skills generate them at runtime
+# via `/skill-builder hooks [skill] --execute`.
+if [ -d "$SKILL_DIR/hooks" ]; then
+    echo "Removing legacy skill-builder hook scripts (no longer distributed)..."
+    rm -rf "$SKILL_DIR/hooks"
+fi
+
 # Create skill directory (preserves existing to avoid breaking active sessions)
 echo "Creating $SKILL_DIR..."
 mkdir -p "$SKILL_DIR/references/procedures"
 mkdir -p "$SKILL_DIR/references/shell-safety"
 mkdir -p "$SKILL_DIR/agents/optimize-diff-auditor"
 mkdir -p "$SKILL_DIR/agents/intent-router"
-mkdir -p "$SKILL_DIR/hooks"
 
 # Download SKILL.md and reference files
 echo "Downloading skill-builder..."
@@ -64,7 +72,7 @@ curl -fsSL "$REPO_URL/skill-builder/SKILL.md" -o "$SKILL_DIR/SKILL.md"
 for ref in agents agents-personas agents-teams enforcement eval-history-format eval-rubrics ledger-templates optimization-examples patterns platform portability principles templates temporal-validation token-efficiency; do
     curl -fsSL "$REPO_URL/skill-builder/references/${ref}.md" -o "$SKILL_DIR/references/${ref}.md"
 done
-for proc in audit verify quick-audit skills list optimize agents hooks new directives inline post-action-chain claude-md ledger cascade eval checksums convert shell-safety intent-router; do
+for proc in audit verify quick-audit skills list optimize agents hooks new directives inline post-action-chain claude-md ledger cascade eval checksums convert shell-safety intent-router route; do
     curl -fsSL "$REPO_URL/skill-builder/references/procedures/${proc}.md" -o "$SKILL_DIR/references/procedures/${proc}.md"
 done
 for ss in rules templates audit-patterns; do
@@ -72,12 +80,6 @@ for ss in rules templates audit-patterns; do
 done
 curl -fsSL "$REPO_URL/skill-builder/agents/optimize-diff-auditor/AGENT.md" -o "$SKILL_DIR/agents/optimize-diff-auditor/AGENT.md"
 curl -fsSL "$REPO_URL/skill-builder/agents/intent-router/AGENT.md" -o "$SKILL_DIR/agents/intent-router/AGENT.md"
-
-# Ship the skill-builder hook scripts (command-type hooks wired from SKILL.md frontmatter)
-for hook in check-persona-uniqueness verify-directive-integrity; do
-    curl -fsSL "$REPO_URL/skill-builder/hooks/${hook}.sh" -o "$SKILL_DIR/hooks/${hook}.sh"
-    chmod +x "$SKILL_DIR/hooks/${hook}.sh"
-done
 
 # Enable agent teams and auto-approve research tools
 SETTINGS_FILE=".claude/settings.local.json"
@@ -137,4 +139,6 @@ echo "    /skill-builder agents [skill]     Show agent opportunities (--execute 
 echo "    /skill-builder hooks [skill]      Show hooks inventory (--execute to create)"
 echo "    /skill-builder shell-safety lint [file]  Check shell or settings.json for pitfalls"
 echo "    /skill-builder shell-safety audit [path] Scan and patch fragility (--execute to fix)"
+echo "    /skill-builder route index               Build /route skill index (auto-runs at audit end)"
+echo "    /skill-builder route embed               Plan route consultation gates (--execute to apply)"
 echo

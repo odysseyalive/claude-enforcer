@@ -157,6 +157,19 @@ Each agent reads the aggregated findings from optimize, agents, and hooks across
 - Items ranked top-3 by only 1 agent → medium priority
 - Present the synthesized ranking with attribution to each agent's rationale
 
+### Step 4g: Route Index & Embed (final task list items)
+
+After all sub-commands and the priority ranking panel finish, the audit's execution task list MUST end with these two items, in this exact order:
+
+- **Second-to-last task:** `route index` — refresh the `/route` skill's catalog. Skills that were renamed, added, or had their description/modes changed by earlier optimize/agents/hooks tasks need to be reflected in the index immediately.
+- **Last task:** `route embed` — refresh consultation gates across skills. Earlier tasks may have added or removed workflow steps that change which skills should carry the route gate; this step reconciles.
+
+Both appear in Step 6's execution menu as discrete items the user can include or skip. They are appended to whatever combined task list TaskCreate produces — they do NOT replace any earlier task. Order matters: `route index` must run before `route embed` so that `embed`'s index-refresh chain (Step 6 of `route.md` § `embed`) does not double-rebuild a stale catalog.
+
+**During audit display mode** (no `--execute` selected), surface these two as recommended terminal actions in the report's Priority Fixes section so the user knows they would run last.
+
+**Grounding:** [route.md](route.md)
+
 ### Step 5: Aggregate Report
 
 Combine all sub-command outputs into a single report:
@@ -243,8 +256,9 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
 > 6. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
 > 7. `hooks --execute` for dead wiring — auto-recover load-bearing + recoverable findings, auto-unwire advisory findings, stop on each protective / not-recoverable finding for user decision *(only if Step 2.5 surfaced dead wiring)*
-> 8. Skip — just review for now
+> 8. `route index --execute` + `route embed --execute` — refresh the `/route` index and reconcile consultation gates (auto-appended; final two tasks per § Step 4g)
+> 9. Skip — just review for now
 
-When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress.
+When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress. Per § Step 4g, append `route index` (second-to-last) and `route embed` (last) to the task list whenever option 8 is selected, OR by default whenever any other execute option (1–4, 6, 7) is selected so the route system stays in sync with the changes just made. Option 5 (ledger creation) does not auto-trigger route refresh.
 
 **Follow § Output Discipline** (in SKILL.md) for cascade execution and cross-skill separation.

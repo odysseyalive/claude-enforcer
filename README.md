@@ -108,6 +108,38 @@ Full scan. For a lightweight pass (frontmatter + line counts + priority fixes on
 
 See [COMMANDS.md § Inspection & Diagnostics](COMMANDS.md#inspection--diagnostics) for what each mode covers and when `verify` or `cascade` is the better tool for the job.
 
+## Routing Instead of Freelancing
+
+A skill exists for a reason. Someone codified the rules, wrote the directives, wired the hooks. When the AI picks up a task and runs its own ad-hoc tool calls instead of consulting that skill, the rules get bypassed. Not by intent. By default. The model reaches for the most direct path through whatever tools it remembers, and the carefully built skill sits unused.
+
+The `route` system fixes that. It has two halves.
+
+```
+/skill-builder route index
+```
+
+This builds an index of every installed skill. Names, descriptions, modes, trigger phrases. The output lives inside a new `/route` skill that the AI can consult for any task. Pass it a task description and it picks the right skill and function.
+
+```
+/route find recent papers on transformer architecture
+/route summarize this URL
+/route audit the skills in this project
+```
+
+The second half is `embed`.
+
+```
+/skill-builder route embed
+```
+
+This walks every installed skill and looks for places where the workflow tends to hand off to research, web search, or follow-up analysis. For each skill that has those open-ended steps, embed inserts a Route Consultation Gate. A short checkpoint that tells the AI to consult `/route` before improvising on a follow-up. The skill stays in charge of its own deterministic steps. Route catches the freelancing.
+
+Both commands are smart on re-run. Index diffs against the prior catalog and reports what changed. Embed reconciles its consultation gates against what's already on disk. New skills get gates added. Skills that no longer need a gate get them removed. Stale gates get refreshed. The audit appends both as the last two task items, so every audit ends with a current index and current gates.
+
+As your skill library grows, so does the chance the AI silently picks a generic path through tasks that have purpose-built skills. Route is the pattern that keeps that drift from compounding. Build a skill once. The system finds it.
+
+See [COMMANDS.md § Routing](COMMANDS.md#routing) for the full command reference.
+
 ## Philosophy
 
 | Layer | What It Is | Purpose | Drift-Resistant? |

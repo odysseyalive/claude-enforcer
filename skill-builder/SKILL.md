@@ -1,26 +1,12 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger, cascade, checksums, convert"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, optimize, agents, hooks, verify, inline, ledger, cascade, checksums, convert, shell-safety, route"
 when_to_use: "When creating, auditing, or optimizing Claude Code skills, or when working with SKILL.md files, hooks, or agents"
 argument-hint: "[command] [skill] [--execute]"
 version: "1.5"
 minimum-effort-level: high
 allowed-tools: Read, Glob, Grep, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet
 hooks:
-  PreToolUse:
-    - matcher: "Edit|Write"
-      hooks:
-        - type: command
-          command: "\"$CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/check-persona-uniqueness.sh\""
-          if: "Write(**/AGENT.md)|Edit(**/AGENT.md)"
-          statusMessage: "Checking persona uniqueness..."
-  PostToolUse:
-    - matcher: "Edit|Write"
-      hooks:
-        - type: command
-          command: "\"$CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/verify-directive-integrity.sh\""
-          if: "Edit(**/SKILL.md)|Write(**/SKILL.md)"
-          statusMessage: "Verifying directive integrity..."
   PostCompact:
     - hooks:
         - type: command
@@ -78,7 +64,7 @@ CHECKPOINT — Persona Assignment Gate:
 3. Glob .claude/skills/*/agents/*/AGENT.md and read each file's persona field.
 4. IF the proposed persona string matches any existing persona verbatim OR paraphrases one already in use (same core identity, different words) → STOP. Report: "Persona conflicts with [path]: '[existing persona]'. Choose a different persona."
 5. IF no duplicate AND the persona fits the role (step 2 passed) → CONTINUE to write the AGENT.md.
-6. The Write/Edit PreToolUse hook declared in this SKILL.md frontmatter performs the uniqueness check at tool-call time as a deterministic backstop; the steps above must run during authorship so the hook is never the first signal.
+6. There is no shipped backstop hook for this gate (skill-builder does not distribute pre-built hook scripts; cross-platform compatibility takes precedence). The CHECKPOINT above IS the enforcement — follow it literally during authorship. Users who want a deterministic backstop on their own systems can generate one via `/skill-builder hooks dev skill-builder --execute`, which builds an OS-appropriate hook locally without shipping it.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -118,6 +104,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `ledger` | [ledger.md](references/procedures/ledger.md) | Create Awareness Ledger |
 | `checksums [skill]` | [checksums.md](references/procedures/checksums.md) | Generate/verify directive checksums |
 | `shell-safety [mode] [path]` | [shell-safety.md](references/procedures/shell-safety.md) | Write / audit / lint shell code and JSON-embedded shell for pitfalls |
+| `route [mode]` | [route.md](references/procedures/route.md) | Maintain `/route` skill index and embed route-consultation hooks into other skills |
 | `update` | *(inline below)* | Update to latest version |
 <!-- /origin -->
 
@@ -147,6 +134,26 @@ Convert existing Opus 4.6-era skills to Opus 4.7-compatible execution. User dire
 High-risk command — defaults to display mode, requires `--execute` to modify files.
 
 **Grounding:** Read [references/procedures/convert.md](references/procedures/convert.md) for the full procedure, [references/templates.md](references/templates.md) § "Enforcement Annotation Template" for the annotation format, and [references/enforcement.md](references/enforcement.md) § "Opus 4.7 Behavioral Contract" for the literal-execution model.
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `route` Command
+
+Maintain the `/route` skill — a glorified, auto-generated index of every installed skill — and embed route-consultation hooks into other skills so the AI dispatches through registered skills instead of freelancing. `/route` is a peer to `intent-router`, not a replacement: `intent-router` handles freeform `/skill-builder <text>` invocations within skill-builder; `/route` handles user-level task routing across every installed skill.
+
+- `/skill-builder route index` — scan all skills, regenerate `/route`'s catalog. Bootstraps `/route` if missing. Diffs against the prior index and reports NEW / REMOVED / UPDATED / UNCHANGED. Default mode is execute (low-risk; only writes auto-generated content inside `/route`).
+- `/skill-builder route index --dry-run` — display-only summary of what would change.
+- `/skill-builder route embed` — display mode (high-risk default). For each skill, classify NEW / REFRESH / REMOVE / NOOP based on workflow heuristics + a reconciliation against any embed blocks already on disk.
+- `/skill-builder route embed --execute` — apply the planned embeds, refreshes, and removals; auto-runs `route index --execute` afterward to keep the catalog current.
+- `/skill-builder route embed --remove [skill]` — manually opt a skill out of the route gate.
+
+Both `index` and `embed` are intelligent on re-run: `index` diffs against the prior catalog and rewrites idempotently; `embed` reconciles against existing `<!-- ROUTE-EMBED START -->` markers and either refreshes them, removes them when the skill no longer qualifies, or adds them where workflows now require routing.
+
+**Audit integration:** `route index` is appended as the second-to-last item in audit's task list, and `route embed` is the last item. See [audit.md](references/procedures/audit.md) § Step 4g.
+
+**Grounding:** Read [references/procedures/route.md](references/procedures/route.md) for the full procedure, including the embed block format, reconciliation rules, and the `/route` skill template used during bootstrap.
 <!-- /origin -->
 
 ---
@@ -184,7 +191,7 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
    - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
    - NO  → `dev_mode = false`.
 2. Extract the first remaining positional argument as `first_arg`.
-3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, checksums, convert, shell-safety, update }`.
+3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, checksums, convert, shell-safety, route, update }`.
 4. IF `first_arg` is empty (no arguments remaining) → dispatch to the default full-audit flow per § Quick Commands. Do NOT invoke the intent router. STOP this CHECKPOINT.
 5. IF `first_arg` is in the known-command set → treat it as the command name. Determine whether a skill target was specified in the remaining arguments. CONTINUE to step 7.
 6. IF `first_arg` is NOT in the known-command set AND the remaining argument string is non-empty →
@@ -201,7 +208,21 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
 
 This CHECKPOINT fires every invocation. Procedure files repeat it in their own preflight blocks for defense in depth — 4.7 executes each file literally, so both gates matter.
 
-**Post-dev check:** After any `dev` command that modifies skill-builder files, verify that the `install` script still covers all files. Glob `skill-builder/**/*.md`, compare against the files downloaded in the installer's loop, and flag any new/renamed/removed files that the installer doesn't handle. This prevents drift between the repo and what users receive on install.
+**CHECKPOINT — Dev Path Discipline (fires only when `dev_mode == true`):**
+
+When the dev prefix is active AND the project has a source distribution at `skill-builder/SKILL.md` (relative to `$CLAUDE_PROJECT_DIR`), every Edit/Write tool call that targets a skill-builder file MUST resolve to the source path under `skill-builder/...`. The runtime copy at `.claude/skills/skill-builder/...` is gitignored and is overwritten on every `bash install`; edits there silently fail to ship.
+
+1. Detect maintainer mode: check whether `${CLAUDE_PROJECT_DIR}/skill-builder/SKILL.md` exists. IF NOT → end-user mode → this CHECKPOINT is a no-op; proceed normally.
+2. For every planned Edit or Write tool call whose target path matches `*/.claude/skills/skill-builder/*`:
+   - REWRITE the target before issuing the call: replace `.claude/skills/skill-builder/` with `skill-builder/` in the path. The source path is the canonical edit target.
+   - IF the source file does not exist while the runtime file does (runtime is ahead of source) → STOP. Report: "Runtime copy is ahead of source for [path]. Determine canonical state before editing — do not auto-mirror."
+3. There is no shipped hook for this gate; skill-builder does not distribute pre-built hook scripts. Steps 1–2 ARE the enforcement and must run during authorship. Maintainers who want a local deterministic backstop can generate one via `/skill-builder hooks dev skill-builder --execute`, which builds an OS-appropriate hook on the maintainer's own system without shipping it.
+4. After the dev session completes, run `git status --short -- skill-builder/`. IF the session was expected to modify skill-builder files AND the result is empty → FAIL. Report: "Dev session produced no source changes. Edits may have landed in the gitignored runtime copy."
+
+**Post-dev check:** After any `dev` command that modifies skill-builder files, run BOTH of the following:
+
+1. **Manifest check.** Glob `skill-builder/**/*.md`. Compare against the files downloaded in the installer's `for ref`, `for proc`, and `for ss` loops, plus the explicit `curl` lines for `SKILL.md` and `agents/*/AGENT.md`. Flag any new/renamed/removed files the installer doesn't handle. This prevents drift between the repo and what users receive on install. (skill-builder no longer ships hook scripts; users generate per-system hooks via `/skill-builder hooks` if they want them.)
+2. **Source-edit verification.** Run `git status --short -- skill-builder/`. If the dev session was expected to produce changes and the output is empty, the edits landed in the runtime copy. Report the failure with the runtime/source diff so the user can mirror canonical changes back to source.
 <!-- /origin -->
 
 ---
@@ -213,8 +234,8 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 
 | Risk | Commands | Default Mode |
 |------|----------|-------------|
-| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums` | **Execute directly** |
-| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade`, `convert` | **Display mode** (requires `--execute`) |
+| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index` | **Execute directly** |
+| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade`, `convert`, `route embed` | **Display mode** (requires `--execute`) |
 
 | Mode | Behavior | Flag |
 |------|----------|------|
@@ -223,7 +244,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 
 ### Rules
 
-1. **Low-risk commands execute immediately.** `new`, `inline`, `skills`, `list`, `verify`, `ledger`, and `checksums` do their work directly without requiring `--execute`. They are additive or read-only — there is nothing to preview.
+1. **Low-risk commands execute immediately.** `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, and `route index` do their work directly without requiring `--execute`. They are additive or read-only — there is nothing to preview. (`route index` is auto-generated content inside the `/route` skill only — idempotent regeneration.)
 2. **High-risk commands default to display mode.** Running `/skill-builder optimize my-skill` shows what *would* change without modifying anything. Add `--execute` to apply.
 3. **Audit always calls sub-commands in display mode**, then offers the user a choice of which to execute.
 4. **Execution requires a task plan.** When a high-risk command runs with `--execute`, the command MUST:
@@ -268,6 +289,7 @@ Reference files:
 - [references/procedures/](references/procedures/) — Per-command procedure files (audit, verify, optimize, agents, hooks, new, inline, ledger, cascade, checksums, shell-safety, etc.)
 - [references/procedures/checksums.md](references/procedures/checksums.md) — Directive checksum generation spec (scripts generated at runtime, not shipped)
 - [references/procedures/shell-safety.md](references/procedures/shell-safety.md) — Shell-safety subcommand procedure (write / audit / lint)
+- [references/procedures/route.md](references/procedures/route.md) — Route subcommand procedure (index + embed) with `/route` skill bootstrap template
 - [references/shell-safety/](references/shell-safety/) — Shell-safety rule set (rules.md, templates.md, audit-patterns.md) — the canonical pitfall catalog used by hooks, verify, and shell-safety
 - [agents/optimize-diff-auditor/](agents/optimize-diff-auditor/) — Post-optimize semantic equivalence verification agent
 <!-- /origin -->
