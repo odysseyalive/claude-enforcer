@@ -44,6 +44,14 @@ hooks:
 > **"When deploying a Team, one of the team member's persona is a research assistant who will research the issue using read-only reference tools. Other team members may also make requests from the research assistant to help augment the outcome."**
 
 *— Added 2026-02-23, source: user directive (tool specifics in references/agents-teams.md)*
+
+> **"When the dev flag gets called, you ALWAYS concentrate on the distribution files first, then sync changes to the .claude directory after."**
+
+*— Added 2026-05-08, source: user directive (after dev edits repeatedly landed in the runtime copy instead of the source distribution)*
+
+> **"No hooks! We don't distribute hooks. The project only makes hooks on the host system."**
+
+*— Added 2026-05-08, source: user directive*
 <!-- /origin -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -78,6 +86,62 @@ CHECKPOINT — Team Research Assistant Gate:
 6. IF a team is deployed without a research assistant (step 3 skipped) → STOP. Report: "Team deployment blocked — no research assistant in team composition."
 <!-- END ENFORCEMENT ANNOTATION -->
 
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "When the dev flag gets called, you ALWAYS concentrate on the distribution files first, then sync changes to the .claude directory after." -->
+CHECKPOINT — Source-First Ordering Gate (fires when `dev_mode == true`):
+1. Maintainer mode detection: does `${CLAUDE_PROJECT_DIR}/skill-builder/SKILL.md` exist?
+   - YES → maintainer mode active. Continue.
+   - NO  → end-user mode. This CHECKPOINT is a no-op.
+2. Track per-session state: which `skill-builder/<path>` files have been edited so far in this session? Maintain a mental ledger of source paths touched.
+3. Before issuing ANY Edit/Write tool call on a file under `.claude/skills/skill-builder/<path>` or `skill-builder/<path>`:
+   - IF the planned target is `skill-builder/<path>` → CONTINUE. This is the canonical first-pass edit.
+   - IF the planned target is `.claude/skills/skill-builder/<path>`:
+     - IF `skill-builder/<path>` has already been edited in this session → CONTINUE. This is the mirror phase.
+     - IF `skill-builder/<path>` has NOT been edited in this session → STOP. REWRITE the target to `skill-builder/<path>` BEFORE issuing the call. Edit source first.
+4. Reverse-order forbidden: never edit runtime first then "sync back to source." The runtime contains intentional runtime-only content (local hooks frontmatter, sidecars) that must NOT propagate to source.
+5. End-of-session check: `git status --short -- skill-builder/`. Empty when changes were expected = FAIL. Report: "Source-first ordering violated. Edits landed in the runtime only. Reverse order and retry."
+<!-- END ENFORCEMENT ANNOTATION -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "No hooks! We don't distribute hooks. The project only makes hooks on the host system." -->
+CHECKPOINT — No-Distribute-Hooks Gate:
+1. Before adding any hook script under `skill-builder/` (the source distribution) → STOP. The source distribution MUST NOT contain hook scripts. Hooks live only in the runtime copy on the host system.
+2. Before adding a `hooks:` frontmatter block to source `skill-builder/SKILL.md` → STOP. Source SKILL.md MUST NOT declare hooks. The runtime SKILL.md may declare hooks the host has generated locally; source must not.
+3. Before adding any line to the `install` script that fetches a hook script via `curl` → STOP. The installer fetches NO hook scripts. Confirm: the existing `install` only contains `for ref`, `for proc`, `for ss` loops plus per-skill `SKILL.md` and `agents/*/AGENT.md` curl lines. Adding a hook-fetch line violates this directive.
+4. Hooks ARE permitted in the runtime copy (`.claude/skills/skill-builder/hooks/`) and in runtime `SKILL.md` frontmatter, but only when generated on the host system via `/skill-builder hooks <skill> --execute` or maintained by hand by the host operator. Runtime hooks are local-only and never propagate back to the source distribution.
+5. IF a workflow proposes shipping a hook via `install`, adding hook scripts to `skill-builder/`, or declaring hooks in source frontmatter → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only."
+<!-- END ENFORCEMENT ANNOTATION -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## Phase 0: Dev Path Discipline (BLOCKING — maintainer mode)
+
+**When `dev_mode == true` AND `${CLAUDE_PROJECT_DIR}/skill-builder/SKILL.md` exists (this repo IS the skill-builder source distribution), every Edit/Write on a skill-builder file MUST target the source path under `skill-builder/...` BEFORE any mirror to the runtime copy at `.claude/skills/skill-builder/...`.**
+
+The runtime is gitignored. It gets overwritten on every `bash install`. Runtime-only edits never reach end users.
+
+**Mandatory order — non-negotiable:**
+
+1. **Edit `skill-builder/<path>` first** (the source distribution under repo root).
+2. **Then mirror the same change to `.claude/skills/skill-builder/<path>`** so the running session matches source. The mirror is a content sync, not a wholesale overwrite. Preserve runtime-only content the source intentionally lacks: local hooks frontmatter, `.directives.sha` sidecars, generated artifacts.
+3. **Never reverse the order.** Runtime contains intentional runtime-only content that must NOT propagate to source.
+
+**CHECKPOINT — fires before any skill-builder Read/Edit/Write when `dev` is in the invocation:**
+
+1. Maintainer mode: does `${CLAUDE_PROJECT_DIR}/skill-builder/SKILL.md` exist?
+   - YES → maintainer mode active. Continue.
+   - NO  → end-user mode. This CHECKPOINT is a no-op. Proceed to dispatch.
+2. For every planned Edit/Write whose path starts with `.claude/skills/skill-builder/`:
+   - REWRITE the path BEFORE issuing the tool call: replace `.claude/skills/skill-builder/` with `skill-builder/`. The source path is the canonical first-pass edit target.
+   - IF the source file does not exist while the runtime file does → STOP. Report: "Runtime is ahead of source for [path]. Determine canonical state before editing." Do not auto-mirror.
+3. For Reads on skill-builder content: prefer `skill-builder/<path>` so planning grounds on canonical source. Reads from runtime are allowed but second choice — the runtime may be stale.
+4. After all source edits land, perform the runtime mirror as a separate, explicit phase. For each `skill-builder/<path>` modified in this session, replicate the same change to `.claude/skills/skill-builder/<path>`. Touch only the changed sections; do not overwrite runtime-only frontmatter, hook scripts, or sidecars.
+5. End-of-session check: `git status --short -- skill-builder/`. Empty output when changes were expected = FAIL. The edits landed in the runtime only. Reverse order and retry from step 2.
+
+**No hook backstop for this gate.** Per the user directive "No hooks! We don't distribute hooks. The project only makes hooks on the host system" (see § Directives), there is no shipped hook for Phase 0 enforcement. The CHECKPOINT above IS the enforcement and must run during authorship. A maintainer who wants a local mechanical backstop on their own host can generate one via `/skill-builder hooks dev skill-builder --execute`, but that is a host-system action and is never part of the source distribution.
+<!-- /origin -->
+
 ---
 
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
@@ -97,6 +161,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `agents [skill]` | [agents.md](references/procedures/agents.md) | Analyze/create agents |
 | `hooks [skill]` | [hooks.md](references/procedures/hooks.md) | Inventory/create hooks |
 | `new [name]` | [new.md](references/procedures/new.md) | Create skill from template |
+| `strip [skill]` | [strip.md](references/procedures/strip.md) | Delete a skill and remove all cross-references |
 | `inline [skill] [directive]` | [inline.md](references/procedures/inline.md) | Quick-add directive |
 | `skills` | [skills.md](references/procedures/skills.md) | List local skills |
 | `list [skill]` | [list.md](references/procedures/list.md) | Show modes/options |
@@ -159,6 +224,24 @@ Both `index` and `embed` are intelligent on re-run: `index` diffs against the pr
 ---
 
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `strip` Command
+
+Delete a skill completely and remove every connection to it from other skills, settings, hook bindings, and dev-repo manifests. The destructive counterpart to `new`.
+
+- Display mode (default): `/skill-builder strip [skill]` — produce an impact report listing every file to be deleted, every cross-reference to be removed, dependent skills, and BREAKING status if any HARD references exist
+- Execute mode: `/skill-builder strip [skill] --execute` — apply the deletion plan
+- Breaking confirmation: `/skill-builder strip [skill] --execute --confirm-breaking` — required when the target has HARD references in other skills (workflow Read instructions, hook scripts, or AGENT.md grounding)
+
+Destructive command — defaults to display mode, requires `--execute`. Stripping `skill-builder` itself is HARD-REFUSED even with the `dev` prefix; the prefix permits self-modification, not self-deletion.
+
+After deletion, the procedure auto-runs `route index --execute` to drop the target from the `/route` catalog (when `/route` is installed).
+
+**Grounding:** Read [references/procedures/strip.md](references/procedures/strip.md) for the full procedure, including the 15 cross-reference detection patterns, dependent classification, settings.local.json mutation rules, and the strict task ordering (sweep references before deletion).
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
 ## The `shell-safety` Command
 
 Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell strings) against the canonical pitfall rule set. Used internally by `hooks` and `verify`, and available for direct user invocation.
@@ -208,16 +291,7 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
 
 This CHECKPOINT fires every invocation. Procedure files repeat it in their own preflight blocks for defense in depth — 4.7 executes each file literally, so both gates matter.
 
-**CHECKPOINT — Dev Path Discipline (fires only when `dev_mode == true`):**
-
-When the dev prefix is active AND the project has a source distribution at `skill-builder/SKILL.md` (relative to `$CLAUDE_PROJECT_DIR`), every Edit/Write tool call that targets a skill-builder file MUST resolve to the source path under `skill-builder/...`. The runtime copy at `.claude/skills/skill-builder/...` is gitignored and is overwritten on every `bash install`; edits there silently fail to ship.
-
-1. Detect maintainer mode: check whether `${CLAUDE_PROJECT_DIR}/skill-builder/SKILL.md` exists. IF NOT → end-user mode → this CHECKPOINT is a no-op; proceed normally.
-2. For every planned Edit or Write tool call whose target path matches `*/.claude/skills/skill-builder/*`:
-   - REWRITE the target before issuing the call: replace `.claude/skills/skill-builder/` with `skill-builder/` in the path. The source path is the canonical edit target.
-   - IF the source file does not exist while the runtime file does (runtime is ahead of source) → STOP. Report: "Runtime copy is ahead of source for [path]. Determine canonical state before editing — do not auto-mirror."
-3. There is no shipped hook for this gate; skill-builder does not distribute pre-built hook scripts. Steps 1–2 ARE the enforcement and must run during authorship. Maintainers who want a local deterministic backstop can generate one via `/skill-builder hooks dev skill-builder --execute`, which builds an OS-appropriate hook on the maintainer's own system without shipping it.
-4. After the dev session completes, run `git status --short -- skill-builder/`. IF the session was expected to modify skill-builder files AND the result is empty → FAIL. Report: "Dev session produced no source changes. Edits may have landed in the gitignored runtime copy."
+**Dev Path Discipline (defense-in-depth pointer):** Phase 0 at the top of this SKILL.md is the primary gate for source-vs-runtime path resolution in maintainer mode. It fires BEFORE this CHECKPOINT in document order. If Phase 0 ran cleanly, the path was already rewritten to the source location before reaching dispatch. If you reached this point and a planned Edit/Write still targets `.claude/skills/skill-builder/...`, STOP and re-read § Phase 0.
 
 **Post-dev check:** After any `dev` command that modifies skill-builder files, run BOTH of the following:
 
@@ -236,6 +310,7 @@ When the dev prefix is active AND the project has a source distribution at `skil
 |------|----------|-------------|
 | **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index` | **Execute directly** |
 | **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade`, `convert`, `route embed` | **Display mode** (requires `--execute`) |
+| **Destructive** (deletes files irreversibly) | `strip` | **Display mode** (requires `--execute`; `--confirm-breaking` if dependents exist) |
 
 | Mode | Behavior | Flag |
 |------|----------|------|

@@ -157,6 +157,41 @@ Create it.
 
 ---
 
+## Removing
+
+Commands that delete skills and clean up after them. Destructive, so they default to display mode. Add `--execute` to apply.
+
+### `/skill-builder strip [skill]`
+
+**What it does.** Deletes a skill completely and removes every cross-reference to it from the rest of the project. Sweeps grounding links, slash-skill prose mentions, route catalog rows, `ROUTE-EMBED` blocks, hook bindings in `settings.local.json`, `Skill()` and `Read()` permission entries, AGENT.md grounding, hook script bodies, and dev-repo manifests like the installer. Auto-runs `route index --execute` after deletion so the catalog drops the target. Display mode by default. Add `--execute` to apply the plan.
+
+**When to use.** When a skill is no longer earning its keep. The directive moved into another skill. The workflow stopped getting invoked. A refactor is absorbing one skill into another. The deprecation cycle is over and the leftover files just need to go.
+
+**Example.**
+Display mode shows the impact report.
+
+```
+/skill-builder strip my-old-skill
+```
+
+Apply the plan.
+
+```
+/skill-builder strip my-old-skill --execute
+```
+
+When the report flags BREAKING because other skills hard-depend on the target (workflow Reads, hook scripts, AGENT.md grounding), an additional confirmation flag is required.
+
+```
+/skill-builder strip my-old-skill --execute --confirm-breaking
+```
+
+**Stripping skill-builder is hard-refused.** Even with the `dev` prefix. The prefix permits self-modification, not self-deletion. To uninstall skill-builder, close the session, remove `.claude/skills/skill-builder/` manually, and rerun the installer if you want it back.
+
+**Under the hood.** `.claude/skills/skill-builder/references/procedures/strip.md`. The procedure documents 15 detection patterns for cross-references, the dependent classification (HARD vs SOFT), and the strict task ordering that sweeps every reference before deleting the directory.
+
+---
+
 ## Restructuring & Enforcement
 
 Commands that reshape existing skills or add enforcement machinery. High-risk, so they default to display mode. Add `--execute` to apply.
@@ -503,6 +538,8 @@ Skill-builder commands sort into two risk tiers.
 **Low-risk (additive, non-destructive):** `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`. These execute immediately. They add files or read state. Nothing to preview, nothing to undo.
 
 **High-risk (restructuring, modifying):** `optimize`, `agents`, `hooks`, `audit`, `cascade`, `convert`. These default to display mode. A read-only plan of what would change. Add `--execute` to apply.
+
+**Destructive (deletes files irreversibly):** `strip`. Defaults to display mode like the high-risk tier, but `--execute` requires `--confirm-breaking` when other skills hard-depend on the target. Git is the recovery mechanism. No separate backup is created, so commit before stripping.
 
 The distinction matters because high-risk commands reshape existing content. A bad `optimize` run can break a skill's observable behavior. Display mode gives you a full review surface before anything gets written.
 

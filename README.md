@@ -88,7 +88,17 @@ Sometimes you notice a pattern violation while you're working. Claude uses a for
 
 This adds the directive verbatim to the target skill with a date and source attribution. If the directive is programmable (contains "never" or "always" with a specific value), skill-builder suggests a hook but won't create one unless you ask.
 
-See [COMMANDS.md § Creating & Adding](COMMANDS.md#creating--adding) for `new`, `inline`, and `ledger`. See [COMMANDS.md § Restructuring & Enforcement](COMMANDS.md#restructuring--enforcement) for `optimize`, `agents`, `hooks`, and `checksums`.
+### Retiring a Skill
+
+Sometimes a skill outlives its purpose. The directive moved into another skill, the workflow stopped getting invoked, the project shifted off the platform that needed it. `strip` handles the cleanup. It deletes the skill directory. Then it sweeps every cross-reference, hook binding, and route catalog entry across the rest of the project. Other skills don't sit pointing at a missing target.
+
+```
+/skill-builder strip old-deploy
+```
+
+Display mode by default. Add `--execute` to apply. If other skills hard-depend on the target, an additional `--confirm-breaking` flag is required.
+
+See [COMMANDS.md § Creating & Adding](COMMANDS.md#creating--adding) for `new`, `inline`, and `ledger`. See [COMMANDS.md § Removing](COMMANDS.md#removing) for `strip`. See [COMMANDS.md § Restructuring & Enforcement](COMMANDS.md#restructuring--enforcement) for `optimize`, `agents`, `hooks`, and `checksums`.
 
 ## Keep Your Skills Current
 
