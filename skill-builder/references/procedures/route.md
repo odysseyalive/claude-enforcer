@@ -222,26 +222,11 @@ The START/END HTML comments are the replacement anchors. Future `route index` ru
 
 High-risk. Defaults to display mode. Inserts (or refreshes) a Route Consultation Gate annotation into other skills' SKILL.md.
 
-### Step 1: Legacy Cleanup (intent-router)
+`/route` is a peer to skill-builder's `intent-router`, not a replacement. `intent-router` is the live freeform dispatcher for `/skill-builder <text>` invocations and is part of the source distribution; `route embed` does NOT treat it as legacy and does NOT propose its removal. Self-exclusion rules apply normally: skill-builder is excluded from `embed` scans unless the invocation carries the `dev` prefix.
 
-Before scanning for embed candidates, sweep installed projects for the obsolete `intent-router` artifacts. The intent-router was an earlier freeform-dispatch mechanism that has been superseded by `/route` + `route embed`. Any project that installed during the brief window when `intent-router` shipped will have orphaned files; this step removes them so the new embed routine fully replaces the old behavior.
+### Step 1: Identify Embed Candidates
 
-Detect and (in execute mode) remove:
-
-- `.claude/skills/skill-builder/agents/intent-router/AGENT.md` and the `intent-router/` directory
-- `.claude/skills/skill-builder/references/procedures/intent-router.md`
-- Any `<!-- INTENT-ROUTER START -->` … `<!-- INTENT-ROUTER END -->` block in skill-builder's SKILL.md (defensive — if a previous generator ever wrote one)
-
-Also scan `skill-builder/SKILL.md` for references to `intent-router` (procedure links, command-table rows, CHECKPOINT mentions). If any remain after the file deletes, report them — do NOT auto-edit SKILL.md text outside of the marker-bounded block above; surface the line numbers so the user (or a follow-up `/skill-builder optimize skill-builder dev --execute`) can resolve.
-
-Display mode: list what would be removed.
-Execute mode: remove the files, then continue to Step 2.
-
-This step is idempotent — clean projects produce no output and no action.
-
-### Step 2: Identify Embed Candidates
-
-Glob `.claude/skills/*/SKILL.md` (apply preflight exclusions; also exclude `/route`).
+Glob `.claude/skills/*/SKILL.md` (apply preflight exclusions per SKILL.md § Self-Exclusion Rule — skill-builder is excluded unless `dev` prefix is set; also exclude `/route`).
 
 For each candidate, classify:
 
@@ -254,9 +239,9 @@ For each candidate, classify:
   - Pure CRUD or validation skills with explicit, fully-named tool calls in every step
   - Skills whose workflow is one or two deterministic steps
 
-If classification is ambiguous (skill matches some always-embed signals but is mostly deterministic), defer to the agent panel in Step 2b.
+If classification is ambiguous (skill matches some always-embed signals but is mostly deterministic), defer to the agent panel in Step 1b.
 
-### Step 2b: Agent panel — embed targeting (mandatory when ambiguous)
+### Step 1b: Agent panel — embed targeting (mandatory when ambiguous)
 
 Per SKILL.md § Non-Obvious Decision Gate, embed targeting requires independent input when the heuristics are split. Trigger conditions (any one):
 - ≥1 candidate matched some always-embed signals AND some skip signals
@@ -273,12 +258,12 @@ Synthesize:
 - EMBED if Agents 1 AND 2 agree on EMBED AND Agent 3 reports no conflict
 - SKIP otherwise (safe default)
 
-### Step 2c: Reconcile With Prior Runs
+### Step 1c: Reconcile With Prior Runs
 
 Before generating any new block, compare the current candidate set against the existing state on disk. The embed routine MUST be idempotent and self-correcting:
 
 1. **Scan existing embeds.** Glob `.claude/skills/*/SKILL.md` for the `<!-- ROUTE-EMBED START -->` marker. Build the set `prior_embedded = {skill names that currently have a route-embed block}`.
-2. **Compute the action per skill** by intersecting `prior_embedded` with the new classification from Step 2 (and Step 2b synthesis if it ran):
+2. **Compute the action per skill** by intersecting `prior_embedded` with the new classification from Step 1 (and Step 1b synthesis if it ran):
 
    | Prior state | New classification | Action |
    |-------------|-------------------|--------|
@@ -287,12 +272,12 @@ Before generating any new block, compare the current candidate set against the e
    | embedded | SKIP | **REMOVE** — the skill no longer needs the gate (workflow simplified, follow-up steps removed). Strip the block. |
    | not embedded | SKIP | **NOOP** |
 
-3. **Detect drift.** For REFRESH candidates, diff the on-disk block against the canonical block (§ Step 3). If they match byte-for-byte → NOOP. If they differ (canonical updated, or someone hand-edited) → REFRESH overwrites with the canonical text. Hand edits to the auto-generated block are NOT preserved; the START/END markers warn against editing.
+3. **Detect drift.** For REFRESH candidates, diff the on-disk block against the canonical block (§ Step 2). If they match byte-for-byte → NOOP. If they differ (canonical updated, or someone hand-edited) → REFRESH overwrites with the canonical text. Hand edits to the auto-generated block are NOT preserved; the START/END markers warn against editing.
 4. **Detect tampering.** If a START marker is found without a matching END marker (or vice versa), report it and SKIP that skill. Do not attempt repair — surface the malformed file to the user.
 
 This reconciliation is what makes repeat runs intelligent: skills get added or dropped from the embed set automatically as their workflows evolve, and stale blocks self-correct on the next `route embed --execute`. When the canonical block in this procedure file is updated (e.g., to add new dispatch-enforcement clauses), every existing embed REFRESHes on the next run — propagation is automatic.
 
-### Step 3: Generate the Embed Block
+### Step 2: Generate the Embed Block
 
 The block is auto-generated and machine-replaceable. Use these markers verbatim so subsequent re-runs can find and replace cleanly:
 
@@ -317,11 +302,11 @@ CHECKPOINT — Skill Routing Gate:
 <!-- ROUTE-EMBED END -->
 ```
 
-The START/END HTML comments are the replacement anchors. Future `route embed` runs locate them by exact match and replace the block in place. They are not user-modifiable; if a user wants to disable the gate, they must run `/skill-builder route embed --remove [skill]` (see § Step 5b).
+The START/END HTML comments are the replacement anchors. Future `route embed` runs locate them by exact match and replace the block in place. They are not user-modifiable; if a user wants to disable the gate, they must run `/skill-builder route embed --remove [skill]` (see § Step 4b).
 
-### Step 4: Insertion Point
+### Step 3: Insertion Point
 
-Read the target SKILL.md and locate the insertion point per the action computed in Step 2c:
+Read the target SKILL.md and locate the insertion point per the action computed in Step 1c:
 
 1. **NEW** → insert the block at the end of SKILL.md, separated from preceding content by a `---` horizontal rule and a blank line.
 2. **REFRESH** → replace the entire block (between the existing START and END markers) with the freshly generated block. Do NOT alter any content outside the markers, including the surrounding `---` rule.
@@ -330,7 +315,7 @@ Read the target SKILL.md and locate the insertion point per the action computed 
 
 Do NOT insert inside `<!-- origin: user | immutable: true -->` blocks. Do NOT alter any user directives. The START/END markers and the `origin: skill-builder | modifiable: true` flag inside the block confirm that the insert is mutable, machine-generated content.
 
-### Step 5: Display Mode Output
+### Step 4: Display Mode Output
 
 For each candidate, print:
 
@@ -340,11 +325,10 @@ For each candidate, print:
   Insertion: [end-of-file / replace-existing-marker / strip-existing-block / —]
 ```
 
-Aggregate report (include legacy cleanup totals from Step 1):
+Aggregate report:
 
 ```
 Route embed plan:
-  Legacy cleanup (intent-router): [files: F, references in SKILL.md: R]
   Total candidates: N
   NEW: X (skills gaining a route gate)
   REFRESH: Y (existing block updated to canonical text)
@@ -354,20 +338,18 @@ Route embed plan:
 Use `/skill-builder route embed --execute` to apply.
 ```
 
-### Step 5b: Manual Remove Mode
+### Step 4b: Manual Remove Mode
 
 `/skill-builder route embed --remove [skill]` removes the embed block from a single named skill, regardless of classification. Use when a user wants to opt a skill out even though heuristics say EMBED. Display by default; add `--execute` to apply.
 
 If `[skill]` is omitted, list all skills currently containing a route embed and ask which to remove via AskUserQuestion.
 
-`--remove` does NOT touch the legacy intent-router cleanup; that always runs in Step 1 of any `embed` invocation.
-
-### Step 6: Execute Mode
+### Step 5: Execute Mode
 
 For each NEW, REFRESH, or REMOVE target (NOOP is silent):
 
 1. Read the skill's SKILL.md.
-2. Apply the change per Step 4.
+2. Apply the change per Step 3.
 3. Re-read the file and verify:
    - For NEW or REFRESH: the route embed block is present exactly once and matches the canonical text byte-for-byte.
    - For REMOVE: no `<!-- ROUTE-EMBED START -->` or `<!-- ROUTE-EMBED END -->` markers remain.
@@ -379,7 +361,6 @@ After all targets are processed, report:
 
 ```
 Route embed applied.
-- Legacy intent-router files removed: F
 - Skills modified: N
   - NEW: X
   - REFRESH: Y
@@ -388,7 +369,7 @@ Route embed applied.
 - Failures: E (rolled back)
 ```
 
-### Step 7: Post-Embed Index Refresh
+### Step 6: Post-Embed Index Refresh
 
 After a successful `route embed --execute`, automatically run `route index --execute` to refresh the catalog (skill descriptions or modes may have changed indirectly) AND to refresh the dispatch CHECKPOINT in `/route`'s SKILL.md if its canonical text drifted. Report this as part of the same operation.
 
@@ -481,6 +462,6 @@ CHECKPOINT — Dispatch Required:
 
 - [audit.md](audit.md) § Step 4g — audit-time invocation of route index/embed
 - [skills.md](skills.md) — canonical skill inventory pattern (reused in `index` Step 1)
-- [post-action-chain.md](post-action-chain.md) — for the `--execute` chaining pattern referenced in `embed` Step 7
+- [post-action-chain.md](post-action-chain.md) — for the `--execute` chaining pattern referenced in `embed` Step 6
 - SKILL.md § Self-Exclusion Rule — `dev` prefix semantics applied in preflight
 - SKILL.md § Display/Execute Mode Convention — risk classification per mode
