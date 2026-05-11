@@ -52,6 +52,10 @@ hooks:
 > **"No hooks! We don't distribute hooks. The project only makes hooks on the host system."**
 
 *— Added 2026-05-08, source: user directive*
+
+> **"Exception to the no-hooks-distribution rule: skill-builder's own load-bearing enforcement hooks — protect-directives.sh and unique-persona.sh — DO ship in the source distribution and the installer fetches them. They protect two sacred user directives (no rewording of immutable blocks; persona uniqueness across agents). Without them, every fresh install silently loses load-bearing enforcement. The general no-distribute rule still applies to every other hook on the host system. Wiring into settings.local.json remains host-local."**
+
+*— Added 2026-05-11, source: user directive (after the regenerate-and-rewire loop revealed that no-distribute leaves load-bearing enforcement off on every fresh host).*
 <!-- /origin -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -104,12 +108,17 @@ CHECKPOINT — Source-First Ordering Gate (fires when `dev_mode == true`):
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
 <!-- Source directive: "No hooks! We don't distribute hooks. The project only makes hooks on the host system." -->
+<!-- Exception directive (2026-05-11): protect-directives.sh and unique-persona.sh DO ship in source. -->
 CHECKPOINT — No-Distribute-Hooks Gate:
-1. Before adding any hook script under `skill-builder/` (the source distribution) → STOP. The source distribution MUST NOT contain hook scripts. Hooks live only in the runtime copy on the host system.
-2. Before adding a `hooks:` frontmatter block to source `skill-builder/SKILL.md` → STOP. Source SKILL.md MUST NOT declare hooks. The runtime SKILL.md may declare hooks the host has generated locally; source must not.
-3. Before adding any line to the `install` script that fetches a hook script via `curl` → STOP. The installer fetches NO hook scripts. Confirm: the existing `install` only contains `for ref`, `for proc`, `for ss` loops plus per-skill `SKILL.md` and `agents/*/AGENT.md` curl lines. Adding a hook-fetch line violates this directive.
-4. Hooks ARE permitted in the runtime copy (`.claude/skills/skill-builder/hooks/`) and in runtime `SKILL.md` frontmatter, but only when generated on the host system via `/skill-builder hooks <skill> --execute` or maintained by hand by the host operator. Runtime hooks are local-only and never propagate back to the source distribution.
-5. IF a workflow proposes shipping a hook via `install`, adding hook scripts to `skill-builder/`, or declaring hooks in source frontmatter → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only."
+1. Define the EXCEPTION_HOOKS set: `{ protect-directives.sh, unique-persona.sh }`. Every step below applies to all hooks EXCEPT those in this set; the exception steps (1b, 3b) cover the two named hooks explicitly.
+2. Before adding any hook script under `skill-builder/hooks/` whose basename is NOT in EXCEPTION_HOOKS → STOP. The source distribution MUST NOT contain hook scripts other than the two named exceptions. Hooks live only in the runtime copy on the host system.
+   - 2b. Exception path: adding `skill-builder/hooks/protect-directives.sh` or `skill-builder/hooks/unique-persona.sh` is PERMITTED and REQUIRED per the 2026-05-11 sacred directive. These ship in source.
+3. Before adding a `hooks:` frontmatter block to source `skill-builder/SKILL.md` → STOP. Source SKILL.md MUST NOT declare hooks. The runtime SKILL.md may declare hooks the host has generated locally; source must not.
+4. Before adding any line to the `install` script that fetches a hook script via `curl` → check against EXCEPTION_HOOKS.
+   - 4a. If the basename is in EXCEPTION_HOOKS → PERMITTED. The installer is expected to fetch these two files. Confirm the fetch loop targets `.claude/skills/skill-builder/hooks/` on the host.
+   - 4b. If the basename is NOT in EXCEPTION_HOOKS → STOP. Adding the fetch line violates the directive.
+5. Hooks ARE permitted in the runtime copy (`.claude/skills/skill-builder/hooks/`) and in runtime `SKILL.md` frontmatter, but only when generated on the host system via `/skill-builder hooks <skill> --execute` or maintained by hand by the host operator. The two EXCEPTION_HOOKS additionally arrive via the installer's fetch loop. Runtime hooks NOT in EXCEPTION_HOOKS never propagate back to the source distribution.
+6. IF a workflow proposes shipping a hook NOT in EXCEPTION_HOOKS via `install`, adding non-exception hook scripts to `skill-builder/`, or declaring hooks in source frontmatter → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only — only protect-directives.sh and unique-persona.sh are permitted in source per the 2026-05-11 exception."
 <!-- END ENFORCEMENT ANNOTATION -->
 
 ---
@@ -127,6 +136,8 @@ The runtime is gitignored. It gets overwritten on every `bash install`. Runtime-
 2. **Then mirror the same change to `.claude/skills/skill-builder/<path>`** so the running session matches source. The mirror is a content sync, not a wholesale overwrite. Preserve runtime-only content the source intentionally lacks: local hooks frontmatter, `.directives.sha` sidecars, generated artifacts.
 3. **Never reverse the order.** Runtime contains intentional runtime-only content that must NOT propagate to source.
 
+**Hooks-in-source exception:** Two skill-builder hooks ship in the source distribution per the 2026-05-11 sacred directive — `protect-directives.sh` and `unique-persona.sh`. When `dev` mode targets either file, the canonical source path is `skill-builder/hooks/<name>` — edit there first, then mirror to `.claude/skills/skill-builder/hooks/<name>`. Every other hook file remains runtime-only and follows the original no-distribute rule.
+
 **CHECKPOINT — fires before any skill-builder Read/Edit/Write when `dev` is in the invocation:**
 
 1. Maintainer mode: does `${CLAUDE_PROJECT_DIR}/skill-builder/SKILL.md` exist?
@@ -135,6 +146,7 @@ The runtime is gitignored. It gets overwritten on every `bash install`. Runtime-
 2. For every planned Edit/Write whose path starts with `.claude/skills/skill-builder/`:
    - REWRITE the path BEFORE issuing the tool call: replace `.claude/skills/skill-builder/` with `skill-builder/`. The source path is the canonical first-pass edit target.
    - IF the source file does not exist while the runtime file does → STOP. Report: "Runtime is ahead of source for [path]. Determine canonical state before editing." Do not auto-mirror.
+   - Hook path exception: paths matching `.claude/skills/skill-builder/hooks/protect-directives.sh` or `.claude/skills/skill-builder/hooks/unique-persona.sh` rewrite to `skill-builder/hooks/<name>` (these two ship in source per the 2026-05-11 directive). Any OTHER `.claude/skills/skill-builder/hooks/*.sh` path stays runtime-only — do NOT rewrite to source for those.
 3. For Reads on skill-builder content: prefer `skill-builder/<path>` so planning grounds on canonical source. Reads from runtime are allowed but second choice — the runtime may be stale.
 4. After all source edits land, perform the runtime mirror as a separate, explicit phase. For each `skill-builder/<path>` modified in this session, replicate the same change to `.claude/skills/skill-builder/<path>`. Touch only the changed sections; do not overwrite runtime-only frontmatter, hook scripts, or sidecars.
 5. End-of-session check: `git status --short -- skill-builder/`. Empty output when changes were expected = FAIL. The edits landed in the runtime only. Reverse order and retry from step 2.

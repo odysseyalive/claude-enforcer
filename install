@@ -50,14 +50,23 @@ if [ -d ".claude/skills/shell-safety" ]; then
     rm -rf ".claude/skills/shell-safety"
 fi
 
-# Remove legacy distributed hook scripts. skill-builder no longer ships hooks;
-# enforcement is via in-SKILL.md CHECKPOINTs (cross-platform, code-free).
-# Users who want enforcement hooks for their own skills generate them at runtime
-# via `/skill-builder hooks [skill] --execute`.
-if [ -d "$SKILL_DIR/hooks" ]; then
-    echo "Removing legacy skill-builder hook scripts (no longer distributed)..."
-    rm -rf "$SKILL_DIR/hooks"
-fi
+# Hook distribution: per the 2026-05-11 sacred directive, skill-builder ships
+# exactly two load-bearing hooks (protect-directives.sh, unique-persona.sh).
+# They guard two other sacred user directives — no rewording of immutable
+# blocks, and persona uniqueness across agents — and without them every fresh
+# install silently loses load-bearing enforcement. The general no-distribute
+# rule still applies to all other hooks; users generate their own per-skill
+# hooks via `/skill-builder hooks [skill] --execute`.
+#
+# Remove legacy older-named hook scripts from prior installs.
+for legacy_hook in \
+    "$SKILL_DIR/hooks/verify-directive-integrity.sh" \
+    "$SKILL_DIR/hooks/check-persona-uniqueness.sh"; do
+    if [ -f "$legacy_hook" ]; then
+        echo "Removing legacy $(basename "$legacy_hook")..."
+        rm -f "$legacy_hook"
+    fi
+done
 
 # Create skill directory (preserves existing to avoid breaking active sessions)
 echo "Creating $SKILL_DIR..."
@@ -65,6 +74,7 @@ mkdir -p "$SKILL_DIR/references/procedures"
 mkdir -p "$SKILL_DIR/references/shell-safety"
 mkdir -p "$SKILL_DIR/agents/optimize-diff-auditor"
 mkdir -p "$SKILL_DIR/agents/intent-router"
+mkdir -p "$SKILL_DIR/hooks"
 
 # Download SKILL.md and reference files
 echo "Downloading skill-builder..."
@@ -80,6 +90,15 @@ for ss in rules templates audit-patterns; do
 done
 curl -fsSL "$REPO_URL/skill-builder/agents/optimize-diff-auditor/AGENT.md" -o "$SKILL_DIR/agents/optimize-diff-auditor/AGENT.md"
 curl -fsSL "$REPO_URL/skill-builder/agents/intent-router/AGENT.md" -o "$SKILL_DIR/agents/intent-router/AGENT.md"
+
+# Fetch the two load-bearing hook scripts (2026-05-11 exception to no-distribute).
+# Wiring into .claude/settings.local.json stays host-local: run
+#   /skill-builder hooks dev skill-builder --execute
+# after install to wire them.
+for hook in protect-directives.sh unique-persona.sh; do
+    curl -fsSL "$REPO_URL/skill-builder/hooks/${hook}" -o "$SKILL_DIR/hooks/${hook}"
+    chmod +x "$SKILL_DIR/hooks/${hook}"
+done
 
 # Enable agent teams and auto-approve research tools
 SETTINGS_FILE=".claude/settings.local.json"
