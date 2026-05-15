@@ -69,7 +69,7 @@ For each wired hook in settings.local.json:
 
 ```bash
 Read: .claude/settings.local.json → env → CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
-Grep: .claude/skills/**/SKILL.md and .claude/skills/**/agents/*.md for "agent team", "TeamCreate", "Spawn teammates"
+Grep: .claude/skills/**/SKILL.md AND BOTH agent-file forms — .claude/skills/**/agents/*.md (flat) and .claude/skills/**/agents/*/AGENT.md (subdir) — for "agent team", "TeamCreate", "Spawn teammates". Union the two globs so team patterns declared in either agent form are detected.
 ```
 
 Determine whether any skill uses team patterns (grep matches above). Then check the env var.
@@ -86,7 +86,11 @@ For each skill that uses teams, verify its team definition includes a research a
 ### Step 4: Agent Validation
 
 ```bash
-Glob: .claude/skills/**/agents/*.md
+Glob BOTH agent-file forms and union the results:
+- `.claude/skills/**/agents/*.md` (flat-file agents like `agents/failure-triage.md`)
+- `.claude/skills/**/agents/*/AGENT.md` (subdirectory-form agents like `agents/optimize-diff-auditor/AGENT.md`)
+
+Either glob alone silently misses half the agent population.
 ```
 
 For each agent file:

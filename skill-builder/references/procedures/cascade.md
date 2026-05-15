@@ -18,7 +18,7 @@ Count all validation mechanisms attached to the skill:
 | Type | Where to Look |
 |------|---------------|
 | Hooks | `.claude/skills/[skill]/hooks/*.sh` + `settings.local.json` wiring |
-| Evaluation agents | `.claude/skills/[skill]/agents/*.md` with evaluation/validator role |
+| Evaluation agents | BOTH forms: `.claude/skills/[skill]/agents/*.md` (flat) AND `.claude/skills/[skill]/agents/*/AGENT.md` (subdir) with evaluation/validator role. Union the two — checking only one form silently undercounts validators. |
 | Text Evaluation Pair | Agent files with "Reducer" or "Clarifier" persona |
 | Agent panels in procedures | Procedure files that spawn agents for this skill |
 | Inline validation steps | SKILL.md workflow steps that validate before proceeding |

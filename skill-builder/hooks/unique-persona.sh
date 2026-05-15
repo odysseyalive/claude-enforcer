@@ -1,6 +1,8 @@
 #!/bin/bash
-# Hook: unique-persona — block persona duplication across AGENT.md files.
-#       Exact-match fast path. Runs PreToolUse on Edit|Write.
+# Hook: unique-persona — block persona duplication across agent files.
+#       Covers both flat-file agents (agents/<name>.md) and subdir-form
+#       agents (agents/<name>/AGENT.md). Exact-match fast path.
+#       Runs PreToolUse on Edit|Write.
 # Skill: /skill-builder
 # Rule reference: shell-safety R3, R5, R7, R10
 #
@@ -21,9 +23,14 @@ try:
 except Exception:
     pass' 2>/dev/null)
 
-# Only inspect AGENT.md files
+# Only inspect agent files. Agents live in two valid forms:
+#   - flat-file:   <skill>/agents/<name>.md
+#   - subdir form: <skill>/agents/<name>/AGENT.md
+# Filtering only on */AGENT.md silently skips flat-file agent writes.
+# The trailing persona-extraction check exits early on files that happen
+# to live under agents/ but lack a persona: field (e.g. supporting notes).
 case "$FILE_PATH" in
-  */AGENT.md) ;;
+  */agents/*.md) ;;
   *) exit 0 ;;
 esac
 
@@ -59,7 +66,7 @@ NORM_PROPOSED=$(normalize "$PROPOSED_PERSONA")
 # Locate the project root (prefer $CLAUDE_PROJECT_DIR, fall back to pwd)
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 
-# Scan every other AGENT.md for an exact normalized match
+# Scan every other agent file (both forms) for an exact normalized match
 CONFLICT_FILE=""
 CONFLICT_PERSONA=""
 while IFS= read -r -d '' f; do
@@ -77,7 +84,7 @@ while IFS= read -r -d '' f; do
         CONFLICT_PERSONA="$EXISTING"
         break
     fi
-done < <(find "$ROOT/.claude/skills" -name 'AGENT.md' -print0 2>/dev/null)
+done < <(find "$ROOT/.claude/skills" -path '*/agents/*' -name '*.md' -print0 2>/dev/null)
 
 if [ -n "$CONFLICT_FILE" ]; then
     echo "BLOCKED: persona '${PROPOSED_PERSONA}' conflicts with ${CONFLICT_FILE}: '${CONFLICT_PERSONA}'. Choose a different persona." >&2

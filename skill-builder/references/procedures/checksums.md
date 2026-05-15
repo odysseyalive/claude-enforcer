@@ -130,10 +130,10 @@ sha256:<hash>  directive:2  "<first 50 chars of directive>..."
 
 **Logic:**
 1. Read JSON from stdin. Extract `file_path`.
-2. If file path does not end with `AGENT.md` → exit 0 (not our concern)
+2. If file path is not an agent file (does NOT match `*/agents/*.md` for flat-file agents OR `*/agents/*/AGENT.md` for subdirectory-form agents) → exit 0 (not our concern). Both forms are valid agent locations; filtering only on `AGENT.md` silently skips flat-file agent writes.
 3. Extract `persona:` field from the JSON content (look for the YAML frontmatter field within the raw JSON — appears as literal text)
-4. If no persona found → exit 0 (allow)
-5. Find all existing `.claude/skills/*/agents/*/AGENT.md` files
+4. If no persona found → exit 0 (allow). This naturally handles non-agent markdown that happens to live under `agents/` (e.g. supporting notes) — files without a `persona:` field exit here.
+5. Find all existing agent files in BOTH forms: `.claude/skills/*/agents/*.md` (flat) AND `.claude/skills/*/agents/*/AGENT.md` (subdir). Union the two — checking only one form silently misses persona collisions from the other half of the population.
 6. For each (excluding the file being written): extract `persona:` field
 7. Case-insensitive comparison. If match → exit 2 with stderr: "BLOCKED: Persona '[X]' already in use by [agent] in [file]."
 8. If unique → exit 0

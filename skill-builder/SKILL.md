@@ -73,7 +73,7 @@ CHECKPOINT — Non-Obvious Decision Gate:
 CHECKPOINT — Persona Assignment Gate:
 1. Before writing or editing any AGENT.md file, extract the proposed persona string from the agent frontmatter.
 2. Read references/agents-personas.md § "Persona assignment rules" to confirm the persona fits the agent's stated role (task, scope, perspective).
-3. Glob .claude/skills/*/agents/*/AGENT.md and read each file's persona field.
+3. Glob BOTH agent-file forms and read each file's persona field: `.claude/skills/*/agents/*.md` (flat-file agents like `agents/failure-triage.md`) AND `.claude/skills/*/agents/*/AGENT.md` (subdirectory-form agents like `agents/optimize-diff-auditor/AGENT.md`). Union the two globs — agents may live in either form, and using only one form silently drops uniqueness coverage for the other half of the population.
 4. IF the proposed persona string matches any existing persona verbatim OR paraphrases one already in use (same core identity, different words) → STOP. Report: "Persona conflicts with [path]: '[existing persona]'. Choose a different persona."
 5. IF no duplicate AND the persona fits the role (step 2 passed) → CONTINUE to write the AGENT.md.
 6. There is no shipped backstop hook for this gate (skill-builder does not distribute pre-built hook scripts; cross-platform compatibility takes precedence). The CHECKPOINT above IS the enforcement — follow it literally during authorship. Users who want a deterministic backstop on their own systems can generate one via `/skill-builder hooks dev skill-builder --execute`, which builds an OS-appropriate hook locally without shipping it.

@@ -31,7 +31,7 @@ If the skill does not exist, report: "Skill /[skill] not found. Nothing to strip
 Read the target's directory tree. Record:
 - SKILL.md (line count)
 - All `references/**/*.md`
-- All `agents/*/AGENT.md`
+- All agent files in BOTH forms: `agents/*.md` (flat-file agents) AND `agents/*/AGENT.md` (subdirectory-form agents)
 - All `hooks/*` scripts
 - Any `*.sha` checksum sidecars
 
@@ -70,7 +70,7 @@ Apply each of the 15 detection patterns below across `.claude/skills/`, `.claude
 | 6 | Hook commands referencing target's hooks dir | `\.claude/skills/<target>/hooks/` | `.claude/settings.local.json`, all SKILL.md frontmatter `hooks:` |
 | 7 | `Skill(<target>)` permission entries | `Skill\(<target>\)` | `.claude/settings.local.json` |
 | 8 | `Read(...skills/<target>/**)` permission entries | `skills/<target>/\*\*` | `.claude/settings.local.json` |
-| 9 | AGENT.md cross-skill grounding | `\.claude/skills/<target>/` inside `agents/*/AGENT.md` | All AGENT.md |
+| 9 | Agent cross-skill grounding | `\.claude/skills/<target>/` inside agent files | All agent files in BOTH forms: `agents/*.md` (flat) AND `agents/*/AGENT.md` (subdir) |
 | 10 | Auto-chain directives in prose | `(auto.?chain\|auto.?invoke\|chain (from\|to)\|invoke /<target>)` | All `*.md` |
 | 11 | Hook script bodies that name the target | `<target>` inside `*/hooks/*.sh` | All hook scripts |
 | 12 | Companion-skill hard-dependency phrases | `<target>/(ledger\|references)` if target is a known companion (awareness-ledger, voice, writing, text-eval, image-eval) | All `*.md` |
@@ -139,7 +139,7 @@ Run TaskCreate with one task per discrete action, in the strict order below. The
 
 1. Sweep grounding links and prose mentions in remaining `.claude/skills/*/SKILL.md`
 2. Sweep `.claude/skills/*/references/**/*.md`
-3. Sweep `.claude/skills/*/agents/*/AGENT.md`
+3. Sweep agent files in BOTH forms: `.claude/skills/*/agents/*.md` (flat) AND `.claude/skills/*/agents/*/AGENT.md` (subdir). Union the two — skipping one form leaves dangling references in those agent files.
 4. Sweep hook script bodies in `.claude/skills/*/hooks/*`
 5. Strip live `<!-- ROUTE-EMBED START -->` blocks naming the target (if any)
 6. Update `.claude/settings.local.json` (remove `Skill(<target>)`, `Read(...skills/<target>/**)`, hook entries pointing at `<target>/hooks/`)
