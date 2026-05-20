@@ -50,11 +50,14 @@ Skip Steps 3, 4 (sub-commands), 4c–4f (they require existing skills).
 
 **Still run Step 4a** (Awareness Ledger status check). This is a companion skill installation — it doesn't depend on existing skills and the audit is the orchestrator for surfacing it.
 
+**Still run Step 4g — but only the `route index` half.** `/route` can (and should) bootstrap with an empty catalog so the dispatcher exists the moment the user's first skill is created. The `route embed` half is SKIPPED in bootstrap mode (there are no skills to embed into). See [route.md](route.md) § Mode: `index` → Step 1 "Zero-skill case is valid" and § Mode: `embed` → Step 1 "Zero-candidate case." Surface `route index --execute` as a recommended terminal action in the bootstrap report.
+
 Go to Step 6 with execution choices that include:
 - CLAUDE.md extraction candidates (from above)
 - Awareness Ledger installation (from Step 4a, if not installed)
+- `route index --execute` — bootstrap `/route` with an empty catalog (from Step 4g, always offered in bootstrap mode if `/route` is not yet installed)
 
-**Post-bootstrap chaining:** When CLAUDE.md extraction is executed and new skills are created, post-action chaining (per § Display/Execute Mode Convention rule 6) fires automatically — running optimize, agents, and hooks in display mode for each newly created skill, then offering execution choices. This ensures agents and hooks are surfaced in the same session, not deferred to a second audit.
+**Post-bootstrap chaining:** When CLAUDE.md extraction is executed and new skills are created, post-action chaining (per § Display/Execute Mode Convention rule 6) fires automatically — running optimize, agents, and hooks in display mode for each newly created skill, then offering execution choices. This ensures agents and hooks are surfaced in the same session, not deferred to a second audit. The chain also re-runs `route index` after new skills appear so the freshly-bootstrapped catalog picks them up.
 
 ### Step 3: Skills Summary Table
 
@@ -161,12 +164,12 @@ Each agent reads the aggregated findings from optimize, agents, and hooks across
 
 After all sub-commands and the priority ranking panel finish, the audit's execution task list MUST end with these two items, in this exact order:
 
-- **Second-to-last task:** `route index` — refresh the `/route` skill's catalog. Skills that were renamed, added, or had their description/modes changed by earlier optimize/agents/hooks tasks need to be reflected in the index immediately.
-- **Last task:** `route embed` — refresh consultation gates across skills. Earlier tasks may have added or removed workflow steps that change which skills should carry the route gate; this step reconciles.
+- **Second-to-last task:** `route index` — refresh the `/route` skill's catalog. Skills that were renamed, added, or had their description/modes changed by earlier optimize/agents/hooks tasks need to be reflected in the index immediately. Also fires in **bootstrap mode** (Step 2.5) — `/route` bootstraps with an empty catalog so the dispatcher is ready as soon as the user creates their first skill.
+- **Last task:** `route embed` — refresh consultation gates across skills. Earlier tasks may have added or removed workflow steps that change which skills should carry the route gate; this step reconciles. **Skipped in bootstrap mode** — no skills exist to embed into; the embed mode itself stops cleanly in that state ([route.md](route.md) § Mode: `embed` → Step 1 "Zero-candidate case").
 
 Both appear in Step 6's execution menu as discrete items the user can include or skip. They are appended to whatever combined task list TaskCreate produces — they do NOT replace any earlier task. Order matters: `route index` must run before `route embed` so that `embed`'s index-refresh chain (Step 6 of `route.md` § `embed` — Post-Embed Index Refresh) does not double-rebuild a stale catalog.
 
-**During audit display mode** (no `--execute` selected), surface these two as recommended terminal actions in the report's Priority Fixes section so the user knows they would run last.
+**During audit display mode** (no `--execute` selected), surface these two as recommended terminal actions in the report's Priority Fixes section so the user knows they would run last. In bootstrap mode, surface only `route index` (embed is N/A).
 
 **Grounding:** [route.md](route.md)
 
