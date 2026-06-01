@@ -160,6 +160,26 @@ Each agent reads the aggregated findings from optimize, agents, and hooks across
 - Items ranked top-3 by only 1 agent → medium priority
 - Present the synthesized ranking with attribution to each agent's rationale
 
+### Step 4f: Model Lane Check (report-only scan + suppressible switch prompt)
+
+Make the audit model-aware per the user directive (SKILL.md § Directives → Model-Lane Routing Gate). This step runs **after** the priority panel (4e) and **before** the route terminal tasks (4g). It is report-only at its core; the optional switch prompt is interactive and never blocks.
+
+**SKIP this step entirely in `audit --quick`** — the quick path does no structural/narrative scanning (see [quick-audit.md](quick-audit.md) § Step 4).
+
+1. **Read the mapping.** Read `references/model-lanes.md` (path relative to the skill-builder install). Parse the Lane→Model table and the Skill→Lane table.
+2. **Unconfigured → no-op (silent).** IF `model-lanes.md` is absent, OR the Skill→Lane table has no active (non-commented) rows AND no audited skill self-declares a `lane:` frontmatter key → the feature is unconfigured. **Omit the Model Lane report section entirely** (per Step 5 "absence vs. gap"). Do not flag, do not prompt. Stop this step.
+3. **Detect the active model.** Read the session system-context line "The exact model ID is …", strip any `[1m]`/`[200k]` suffix, lowercase → `ACTIVE_MODEL`. See [model-lanes.md](../model-lanes.md) § Active-Model Detection. This is a concrete read — no agent.
+4. **Resolve each skill's lane from a DECLARED source only.** For each audited skill (respecting self-exclusion from Step 1): `lane:` frontmatter → Skill→Lane table → **NO LANE**. A skill with no declared lane is **skipped for flagging** — never auto-classified. Optionally compute a non-blocking lane *suggestion* for undeclared skills per [model-lanes.md](../model-lanes.md) § Advisory Lane Suggestion (suggest-only; a suggestion never triggers a prompt).
+5. **Compare.** Look up the lane's Preferred Model. IF empty/absent → skip (flagging disabled by empty cell). IF non-empty AND `preferred_model != ACTIVE_MODEL` → record a **mismatch**. Apply the stale-ID self-check from [model-lanes.md](../model-lanes.md) § Comparison Rule: if a non-empty preferred model is not of `claude-<family>-<major>-<minor>` shape or names a clearly superseded family, downgrade to a "mapping may be stale" advisory instead of a switch prompt.
+6. **Report (always).** Emit the Model Lane section in the Step 5 aggregate report (table below). Report-only; never blocks.
+7. **Prompt to switch (interactive only; the user's "flag + prompt").** In an interactive session with mismatches present AND prompting not suppressed (see step 8): after the report, emit **one batched prompt per distinct preferred model** (group mismatched skills by their preferred model — never one prompt per skill) via **AskUserQuestion**, styled on the `update` command's CHECKPOINT. The prompt instructs the user to run `/model` to switch — a skill cannot change the session model itself. Offer options: **switched / skip / continue**. After acknowledgement, re-read the model line **once** to confirm; do not loop or re-prompt beyond that one confirmation.
+8. **Suppression ("or not").** SUPPRESS the prompt (report only) when ANY of: `--no-model-prompt` is set; the session is headless/non-interactive (the prompt would block or loop because the model never changes between re-invocations — keep `verify`-style runs safe); or this is `audit --quick` (section omitted entirely). `--model-prompt` forces the prompt even in display mode. Default interactive `audit` (no flag) prompts.
+9. **Unreadable mapping with declared lanes → stop.** IF at least one skill declares a lane but `model-lanes.md` cannot be parsed → report "Model-lane mapping unreadable; cannot evaluate model routing. Fix references/model-lanes.md." and continue the rest of the audit.
+
+**No Step 6 menu entry, no TaskCreate item.** This step produces advisory report text and an optional inline prompt only — there is no `--execute` action because Claude cannot switch the model on the user's behalf. It must not wedge into the route terminal tasks (4g) or the execution menu.
+
+**Grounding:** [model-lanes.md](../model-lanes.md), SKILL.md § Directives (Model-Lane Routing Gate), SKILL.md § The `update` Command (prompt-style precedent).
+
 ### Step 4g: Route Index & Embed (final task list items)
 
 After all sub-commands and the priority ranking panel finish, the audit's execution task list MUST end with these two items, in this exact order:
@@ -231,6 +251,19 @@ Surface the full Dead Wiring table from the hooks sub-report (Skill | Hook | Eve
 | Skill | Risk Level | Exposure | Temporal Hook |
 |-------|-----------|----------|---------------|
 | /skill-1 | HIGH/MEDIUM | [temporal patterns found] | present/MISSING |
+
+## Model Lane
+*(Include only if Step 4f found at least one declared lane with a non-empty preferred model. Omit entirely when the mapping is unconfigured — absence is not a gap. Always omitted in `audit --quick`.)*
+
+Active session model: `[ACTIVE_MODEL]`
+
+| Skill | Lane | Lane Source | Preferred | Active | Match |
+|-------|------|-------------|-----------|--------|-------|
+| /skill-1 | creative | frontmatter/table | claude-opus-4-6 | claude-opus-4-8 | ✗ MISMATCH |
+
+*Undeclared skills (advisory suggestions only — not flagged):* [skill → suggested lane (confidence), or "none"]
+
+If mismatches exist and prompting is not suppressed, the batched switch prompt (one per distinct preferred model) follows this report — see Step 4f.
 
 ## Validation Cascade
 [from Step 4d — per-skill cascade risk]

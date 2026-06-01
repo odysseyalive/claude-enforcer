@@ -56,6 +56,10 @@ hooks:
 > **"Exception to the no-hooks-distribution rule: skill-builder's own load-bearing enforcement hooks — protect-directives.sh and unique-persona.sh — DO ship in the source distribution and the installer fetches them. They protect two sacred user directives (no rewording of immutable blocks; persona uniqueness across agents). Without them, every fresh install silently loses load-bearing enforcement. The general no-distribute rule still applies to every other hook on the host system. Wiring into settings.local.json remains host-local."**
 
 *— Added 2026-05-11, source: user directive (after the regenerate-and-rewire loop revealed that no-distribute leaves load-bearing enforcement off on every fresh host).*
+
+> **"Bifurcate jobs based on the currently selected model — split jobs between creative work (ie image generation, content generation, and design generation) and coding (everything else, including testing). When we run an audit, I want to make sure it's fluid in managing switching between models, with prompting, or not."**
+
+*— Added 2026-06-01, source: user directive (the lane→model mapping is intentionally arbitrary/configurable because models change constantly; the model IDs live in references/model-lanes.md, never inside this immutable block).*
 <!-- /origin -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -119,6 +123,20 @@ CHECKPOINT — No-Distribute-Hooks Gate:
    - 4b. If the basename is NOT in EXCEPTION_HOOKS → STOP. Adding the fetch line violates the directive.
 5. Hooks ARE permitted in the runtime copy (`.claude/skills/skill-builder/hooks/`) and in runtime `SKILL.md` frontmatter, but only when generated on the host system via `/skill-builder hooks <skill> --execute` or maintained by hand by the host operator. The two EXCEPTION_HOOKS additionally arrive via the installer's fetch loop. Runtime hooks NOT in EXCEPTION_HOOKS never propagate back to the source distribution.
 6. IF a workflow proposes shipping a hook NOT in EXCEPTION_HOOKS via `install`, adding non-exception hook scripts to `skill-builder/`, or declaring hooks in source frontmatter → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only — only protect-directives.sh and unique-persona.sh are permitted in source per the 2026-05-11 exception."
+<!-- END ENFORCEMENT ANNOTATION -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "Bifurcate jobs based on the currently selected model — split jobs between creative work (ie image generation, content generation, and design generation) and coding (everything else, including testing). When we run an audit, I want to make sure it's fluid in managing switching between models, with prompting, or not." -->
+CHECKPOINT — Model-Lane Routing Gate (fires during `audit`; see audit.md § Step 4f):
+1. Read `references/model-lanes.md`. Parse the Lane→Model table and the Skill→Lane table.
+2. IF `references/model-lanes.md` is absent, OR the Skill→Lane table has no active (non-commented) rows AND no skill self-declares a `lane:` frontmatter key → the mapping is UNCONFIGURED. STOP this gate silently (no report section, no prompt). An undeclared preference is correctly absent, not a gap.
+3. Determine `ACTIVE_MODEL`: read the session system-context line "The exact model ID is ...", strip any `[1m]`/`[200k]` suffix, lowercase. This is a concrete read (no judgment) → no agent required.
+4. For each audited skill, resolve its lane ONLY from a declared source: `lane:` frontmatter → Skill→Lane table → NO LANE. A skill with no declared lane is SKIPPED — never auto-classified into a flag. (Audit MAY print a non-blocking lane *suggestion* for undeclared skills per model-lanes.md § Advisory Lane Suggestion; a suggestion never triggers a prompt.)
+5. Look up the resolved lane's Preferred Model. IF empty/absent → do NOT flag (lane flagging disabled by an empty cell). IF non-empty AND `preferred_model != ACTIVE_MODEL` → record a mismatch.
+6. Reporting: list every mismatch in the Step 5 "Model Lane" report section (Skill | Lane | Preferred | Active | Source). This is report-only and never blocks.
+7. Prompting ("flag + prompt to switch"): in an INTERACTIVE session, after the report, emit ONE batched switch prompt per distinct preferred model (not one per skill) via AskUserQuestion, styled on the `update` CHECKPOINT — a skill CANNOT change the session model itself; the prompt instructs the user to run `/model`. Offer "switched / skip / continue". After acknowledgement, re-read the model line ONCE to confirm; do not loop.
+8. Suppression ("or not"): IF `--no-model-prompt` is set, OR the session is headless/non-interactive (e.g. `verify`), OR this is `audit --quick` → SUPPRESS the prompt and report only (quick: omit the section entirely). `--model-prompt` forces the prompt even when it would otherwise be report-only.
+9. IF the gate fired but the model-lanes mapping could not be read while at least one skill declares a lane → STOP. Report: "Model-lane mapping unreadable; cannot evaluate model routing. Fix references/model-lanes.md."
 <!-- END ENFORCEMENT ANNOTATION -->
 
 ---
@@ -352,6 +370,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
    - This ensures context can be refreshed mid-execution without losing track, no tasks get forgotten during long context windows, and the user can see progress and resume if interrupted
 5. **Scope discipline during execution.** Execute ONLY the tasks in the task list. Do not add bonus tasks, expand scope, or create deliverables not in the original plan. If execution reveals a new opportunity, note it in the completion report — do not act on it. The task list is the contract.
 6. **Post-action chaining.** Any action that modifies a skill (`new`, `inline`, adding directives) automatically chains into a scoped mini-audit for the affected skill — running optimize, agents, and hooks in display mode, then offering execution choices. Use `--no-chain` to suppress.
+7. **Model-lane prompting (audit only).** When `audit` finds a skill whose declared lane's preferred model differs from the active session model (see § Directives → Model-Lane Routing Gate and audit.md § Step 4f), the default in an interactive session is to **report + prompt** the user to switch via `/model` (the "flag + prompt" behavior). Use `--no-model-prompt` to report-only ("or not"); use `--model-prompt` to force the prompt even where it would otherwise be suppressed. The prompt is always suppressed in headless/non-interactive runs and in `audit --quick`. A skill cannot change the session model itself — the prompt instructs the user, mirroring the `update` command's permission-mode prompt.
 <!-- /origin -->
 
 ---
@@ -374,6 +393,7 @@ Grounding protocol (read-before-use, state which pattern will be used) is docume
 Reference files:
 - [references/principles.md](references/principles.md) — Core Principles, Sacred Directive Pattern, Output Discipline, Grounding Protocol (READ FIRST for high-risk commands)
 - [references/enforcement.md](references/enforcement.md) — Hook JSON, permissions, context mutability, provenance permission model
+- [references/model-lanes.md](references/model-lanes.md) — Lane→Model routing map (user-editable), active-model detection, advisory lane classification (read by audit Step 4f)
 - [references/agents.md](references/agents.md) — Agent templates, opportunity detection, creation workflow
 - [references/agents-personas.md](references/agents-personas.md) — Persona assignment rules, selection heuristic, research backing
 - [references/agents-teams.md](references/agents-teams.md) — Individual vs. team routing, invocation patterns, mandatory agent situations

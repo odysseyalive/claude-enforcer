@@ -48,3 +48,5 @@ For each fix, offer direct execution:
 > Fix these now? (y/n per item, or "all")
 
 No sub-command display-mode pass. No structural invariant scanning. No narrative report. Just findings and fixes.
+
+**Excluded from quick audit:** the Model Lane Check (full audit Step 4f) does NOT run here — it is a structural/narrative scan plus an interactive prompt, both outside the quick path's contract. Model-aware routing is surfaced only by the full `audit`.

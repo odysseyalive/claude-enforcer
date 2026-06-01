@@ -82,6 +82,16 @@ curl -fsSL "$REPO_URL/skill-builder/SKILL.md" -o "$SKILL_DIR/SKILL.md"
 for ref in agents agents-personas agents-teams enforcement eval-history-format eval-rubrics ledger-templates optimization-examples patterns platform portability principles templates temporal-validation token-efficiency; do
     curl -fsSL "$REPO_URL/skill-builder/references/${ref}.md" -o "$SKILL_DIR/references/${ref}.md"
 done
+
+# model-lanes.md is a USER-EDITABLE mapping (lane -> preferred model, skill -> lane).
+# Fetch it ONLY IF ABSENT so `/skill-builder update` never clobbers a user's edited
+# mapping. It is intentionally NOT in the unconditional loop above for that reason.
+if [ ! -f "$SKILL_DIR/references/model-lanes.md" ]; then
+    echo "Installing model-lanes.md (user-editable model routing map)..."
+    curl -fsSL "$REPO_URL/skill-builder/references/model-lanes.md" -o "$SKILL_DIR/references/model-lanes.md"
+else
+    echo "Keeping existing model-lanes.md (preserving your edits)..."
+fi
 for proc in audit verify quick-audit skills list optimize agents hooks new strip directives inline post-action-chain claude-md ledger cascade eval checksums convert shell-safety intent-router route; do
     curl -fsSL "$REPO_URL/skill-builder/references/procedures/${proc}.md" -o "$SKILL_DIR/references/procedures/${proc}.md"
 done
