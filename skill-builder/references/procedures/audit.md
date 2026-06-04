@@ -44,7 +44,7 @@ If no `.claude/skills/*/SKILL.md` files exist (excluding skill-builder itself):
 3. Analyze CLAUDE.md for extraction candidates (domain-specific sections, inline tables, procedures >10 lines, rules that only apply to specific tasks)
 4. Propose new skills to create from extraction candidates
 5. Present the CLAUDE.md optimization report with proposed skill extractions
-6. Offer execution: "Should I extract these sections into skills?"
+6. Offer execution **via AskUserQuestion** — never end the turn with a free-text "Should I extract these sections into skills?" (per SKILL.md § Display/Execute Mode Convention rule 8 — decision handoffs use a clickable menu, not prose). Options: "Extract these sections into skills" / "Let me pick which to extract" / "Skip for now".
 
 Skip Steps 3, 4 (sub-commands), 4c–4f (they require existing skills).
 
