@@ -180,6 +180,20 @@ For each skill with 2+ validators or evaluation agents:
 
 Skip silently for skills with 0-1 validators.
 
+### Step 4d-bis: Cross-Skill Reconciliation
+
+Where cascade (4d) analyzes validators *within* one skill, this step reads the next layer out — collisions *between* skills that make one silently fail to run: duplicate command/skill names, duplicate or conflicting hook matchers, selection-shadowing description overlap, circular/overridden dispatch chains, redundant skills, and contradicting directives. Run per [reconcile.md](reconcile.md).
+
+Governed by the sacred integrity-over-performance directive (SKILL.md § Directives, 2026-06-04): **only completion-breaking conflicts are reported — harmless or intentional overlap (chains, shared kernels, defense-in-depth) is dropped silently.** Redundancy alone is never a finding.
+
+- **SKIP this step entirely in `audit --quick`** — it is structural scanning, not a checklist item (same exclusion as 4a-bis and 4f).
+- Runs in **display mode** during audit. Per the Step 4 agent budget, reconcile's own judgment-class adjudication panels are **suppressed here** — the audit's only panel is the Step 4e priority ranking. Mechanical findings (duplicate names, duplicate/conflicting hook matchers, duplicate embed blocks) and the complementary-overlap allow-list are evaluated without panels; genuinely ambiguous judgment-class candidates are reported as "needs adjudication (run `reconcile [skill]` standalone)" rather than resolved inside the audit.
+- Findings feed the aggregate report's **Cross-Skill Reconciliation** section (Step 5). Apply absence-vs-gap: omit the section entirely when there are zero conflicts.
+- **Priority Fixes elevation:** completion-breaking findings (duplicate name, conflicting hook matchers, circular/overridden dispatch, redundant skill, contradicting directives) elevate into Priority Fixes — a skill that silently never runs is a larger regression than most optimizations.
+- **Execution:** the two mechanical auto-fixes (`reconcile --execute` on duplicate embed blocks / byte-identical hook dupes) and any confirmed redundant-skill `strip` hand-off surface in the Step 6 menu as discrete, deselectable items. Directive/description/persona/conflicting-hook findings remain flag-only — never auto-applied.
+
+**Grounding:** Read [reconcile.md](reconcile.md) for the collision-class table, the conflicts-only filter, the complementary-overlap allow-list, and the remediation ladder.
+
 ### Step 4e: Agent panel — priority ranking
 
 After collecting findings from all sub-commands, the audit must rank fixes by priority. This is a judgment call — which fix has the highest impact? Which is most urgent? Per directive: agents are mandatory when guessing is involved.
@@ -306,6 +320,17 @@ If mismatches exist and prompting is not suppressed, the batched switch prompt (
 |-------|-----------|-------------|-------------|
 | /skill-1 | [count] | [NONE/LOW/MODERATE/HIGH] | [summary] |
 
+## Cross-Skill Reconciliation
+*(from Step 4d-bis. Include only if at least one completion-breaking conflict was found. Omit entirely when there are zero conflicts — redundancy-only overlaps are never reported, per the integrity-over-performance directive. Always omitted in `audit --quick`.)*
+
+| ID | Class | Skills involved | Evidence (file:line) | Tier | Recommended action |
+|----|-------|-----------------|----------------------|------|--------------------|
+| R1 | Duplicate name | /a, /b | ... | FLAG | You choose which keeps the verb |
+| R3 | Duplicate hook entry | settings.local.json | ... | AUTO-FIX | Drop byte-identical dupe (`--execute`) |
+| R8 | Contradicting directives | /c, /d | ... | FLAG-NEVER-TOUCH | Both quoted verbatim; you resolve |
+
+*Judgment-class candidates needing adjudication (panels suppressed during audit):* [list, or "none"] — run `/skill-builder reconcile [skill]` standalone to adjudicate.
+
 ## Directives Inventory
 [List all directives found across all skills - ensures nothing is lost]
 
@@ -328,9 +353,10 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 6. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
 > 7. `hooks --execute` for dead wiring — auto-recover load-bearing + recoverable findings, auto-unwire advisory findings, stop on each protective / not-recoverable finding for user decision *(only if Step 2.5 surfaced dead wiring)*
 > 8. `code-eval create` / `code-eval sync` — create the `code-evaluator` skill if absent, or refresh its references if stale (auto-appended; runs before the route tasks, per § Step 4a-bis) *(only if code-evaluator is missing or its references are behind)*
-> 9. `route index --execute` + `route embed --execute` — refresh the `/route` index and reconcile consultation gates (auto-appended; final two tasks per § Step 4g)
-> 10. Skip — just review for now
+> 9. `reconcile --execute` — apply the mechanical-safe cross-skill fixes (collapse duplicate embed blocks, drop byte-identical hook dupes) and route any confirmed redundant skill through `strip` *(only if Step 4d-bis surfaced auto-fixable or strip-bound conflicts; directive/description/persona/conflicting-hook findings remain flag-only and are never offered for auto-fix)*
+> 10. `route index --execute` + `route embed --execute` — refresh the `/route` index and reconcile consultation gates (auto-appended; final two tasks per § Step 4g)
+> 11. Skip — just review for now
 
-When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress. Append tasks in this tail order so each prerequisite runs first: **(1)** per § Step 4a-bis, `code-eval create` (if code-evaluator is missing) and/or `code-eval sync` (if its references are stale) — auto-appended by default whenever any execute option is selected, so the evaluator exists and is current before routing; then **(2)** per § Step 4g, `route index` (second-to-last) and `route embed` (last) — auto-appended whenever option 9 is selected OR by default whenever any other execute option (1–4, 6, 7, 8) is selected, so `route embed` wires the (possibly newly-created) `code-evaluator` gates into code-touching skills. Option 5 (ledger creation) does not auto-trigger route refresh.
+When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress. Append tasks in this tail order so each prerequisite runs first: **(1)** per § Step 4a-bis, `code-eval create` (if code-evaluator is missing) and/or `code-eval sync` (if its references are stale) — auto-appended by default whenever any execute option is selected, so the evaluator exists and is current before routing; then **(2)** per § Step 4d-bis, any selected `reconcile --execute` mechanical fixes and `strip` hand-offs — run before the route tasks so a renamed verb or stripped skill is reflected in the catalog; then **(3)** per § Step 4g, `route index` (second-to-last) and `route embed` (last) — auto-appended whenever option 10 is selected OR by default whenever any other execute option (1–4, 6, 7, 8, 9) is selected, so `route embed` wires the (possibly newly-created) `code-evaluator` gates into code-touching skills. Option 5 (ledger creation) does not auto-trigger route refresh. Reconcile (option 9) is **never auto-appended** — it is only included when the user explicitly selects it, because its actions touch other skills' files.
 
 **Follow § Output Discipline** (in SKILL.md) for cascade execution and cross-skill separation.

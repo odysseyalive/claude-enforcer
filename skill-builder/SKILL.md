@@ -60,6 +60,10 @@ hooks:
 > **"Bifurcate jobs based on the currently selected model — split jobs between creative work (ie image generation, content generation, and design generation) and coding (everything else, including testing). When we run an audit, I want to make sure it's fluid in managing switching between models, with prompting, or not."**
 
 *— Added 2026-06-01, source: user directive (the lane→model mapping is intentionally arbitrary/configurable because models change constantly; the model IDs live in references/model-lanes.md, never inside this immutable block).*
+
+> **"It shouldn't make any decisions based on performance, but the full completion of integrity of skills expected to be performed by the user. Don't make decisions based on 'shortcut' mentality."**
+
+*— Added 2026-06-04, source: user directive (governs the `reconcile` command: redundancy is never the target; only completion-breaking conflict is actionable; integrity over performance, never a shortcut).*
 <!-- /origin -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -139,6 +143,17 @@ CHECKPOINT — Model-Lane Routing Gate (fires during `audit`; see audit.md § St
 9. IF the gate fired but the model-lanes mapping could not be read while at least one skill declares a lane → STOP. Report: "Model-lane mapping unreadable; cannot evaluate model routing. Fix references/model-lanes.md."
 <!-- END ENFORCEMENT ANNOTATION -->
 
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "It shouldn't make any decisions based on performance, but the full completion of integrity of skills expected to be performed by the user. Don't make decisions based on 'shortcut' mentality." -->
+CHECKPOINT — Integrity-Over-Performance Gate (governs the `reconcile` command; see reconcile.md):
+1. This gate fires for every `reconcile` finding and for any cross-skill remediation decision.
+2. **Redundancy alone is NEVER a reason to act.** Before reporting or fixing anything, confirm the overlap demonstrably threatens a skill's *full completion* (selection-shadowing, dispatch-bypass, suppression cascade, mutation race, or a hard name/embed collision). IF it does not → DROP it silently. It is not a finding.
+3. **No performance/tidiness justification.** IF the only rationale for a removal or modification is speed, token savings, deduplication, or "cleaner" — STOP. That is the shortcut mentality this directive forbids. Do not act.
+4. **No shortcut on judgment.** A non-obvious conflict call requires the agent panel (per the Non-Obvious Decision Gate). Skipping the panel to reach a faster verdict is forbidden. Agents disagree → keep both, flag for the human.
+5. **Directive blocks are untouchable.** Any remediation whose edit span intersects an `<!-- origin: user | immutable: true -->` block downgrades to FLAG-ONLY, overriding its class default. Never reword, reorder, or delete to "resolve" a directive conflict.
+6. **Deletion is delegated, never reimplemented.** A confirmed redundant skill routes through `/skill-builder strip` (with its BREAKING detection and `--confirm-breaking` gate) — `reconcile` never deletes.
+<!-- END ENFORCEMENT ANNOTATION -->
+
 ---
 
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
@@ -185,6 +200,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `audit` | [audit.md](references/procedures/audit.md) | Full system audit |
 | `audit --quick` | [audit.md](references/procedures/audit.md) | Lightweight: frontmatter + line counts |
 | `cascade [skill]` | [cascade.md](references/procedures/cascade.md) | Validation cascade analysis (diagnostic only) |
+| `reconcile [skill]` | [reconcile.md](references/procedures/reconcile.md) | Cross-skill conflict detection + integrity-preserving remediation |
 | `convert [skill]` | [convert.md](references/procedures/convert.md) | Convert 4.6-era skill to 4.7-compatible (annotations + explicit steps) |
 | `optimize [skill]` | [optimize.md](references/procedures/optimize.md) | Restructure for context efficiency |
 | `optimize claude.md` | [claude-md.md](references/procedures/claude-md.md) | Extract domain content to skills |
@@ -290,6 +306,26 @@ Subcommands of `code-eval`:
 ---
 
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `reconcile` Command
+
+Detect redundancies and collisions **across** skills and remediate only the ones that are mechanically safe. Where `cascade` looks inside one skill for over-suppression, `reconcile` looks across the whole installed set for the colliding-task failure mode: as a project grows and skills accumulate, two skills can fight over the same trigger, hook matcher, command name, dispatch step, or file region — so a skill "seems to fail to run" when it was really shadowed, bypassed, suppressed, or overwritten.
+
+Governed by the sacred integrity-over-performance directive (§ Directives, 2026-06-04): **redundancy is never the target — only a conflict that breaks a skill's full completion is actionable. No shortcut mentality.** Harmless or intentional overlap (chains, shared kernels, defense-in-depth) is left alone.
+
+- Display mode (default): `/skill-builder reconcile` — scan all skills, report cross-skill conflicts with `file:line` evidence; change nothing
+- Targeted: `/skill-builder reconcile [skill]` — report conflicts involving one skill
+- Execute mode: `/skill-builder reconcile --execute` — apply ONLY the two mechanical auto-fixes (collapse a duplicate machine-generated embed block; drop a byte-identical duplicate hook entry). Everything touching a directive, description, persona, conflicting hook, or chain stays flag-only; a confirmed redundant skill is routed to `strip`, never deleted here
+
+High-risk command — defaults to display mode, requires `--execute`. `--execute` never edits `origin: user | immutable: true` content, never rewords descriptions or personas, and never deletes a skill directly.
+
+**Audit integration:** `reconcile` runs as audit **Step 4d-bis** (between cascade and the priority panel), display-only with its agent panels suppressed; completion-breaking findings elevate into Priority Fixes. Skipped in `audit --quick`. See [audit.md](references/procedures/audit.md) § Step 4d-bis.
+
+**Grounding:** Read [references/procedures/reconcile.md](references/procedures/reconcile.md) for the full procedure — the collision-class table with reliability tiers, the conflicts-only filter and complementary-overlap allow-list, the remediation ladder with the directive-touch hard floor, the mandatory agent adjudication for judgment-class findings, and the `strip` hand-off.
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
 ## The `strip` Command
 
 Delete a skill completely and remove every connection to it from other skills, settings, hook bindings, and dev-repo manifests. The destructive counterpart to `new`.
@@ -340,7 +376,7 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
    - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
    - NO  → `dev_mode = false`.
 2. Extract the first remaining positional argument as `first_arg`.
-3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, checksums, convert, shell-safety, route, code-eval, update }`.
+3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, update }`.
 4. IF `first_arg` is empty (no arguments remaining) → dispatch to the default full-audit flow per § Quick Commands. Do NOT invoke the intent router. STOP this CHECKPOINT.
 5. IF `first_arg` is in the known-command set → treat it as the command name. Determine whether a skill target was specified in the remaining arguments. CONTINUE to step 7.
 6. IF `first_arg` is NOT in the known-command set AND the remaining argument string is non-empty →
@@ -375,7 +411,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 | Risk | Commands | Default Mode |
 |------|----------|-------------|
 | **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `code-eval create`, `code-eval sync` | **Execute directly** |
-| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade`, `convert`, `route embed`, `code-eval review`, `code-eval sweep` | **Display mode** (requires `--execute`) |
+| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `audit`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep` | **Display mode** (requires `--execute`) |
 | **Destructive** (deletes files irreversibly) | `strip` | **Display mode** (requires `--execute`; `--confirm-breaking` if dependents exist) |
 
 | Mode | Behavior | Flag |
@@ -434,6 +470,7 @@ Reference files:
 - [references/procedures/shell-safety.md](references/procedures/shell-safety.md) — Shell-safety subcommand procedure (write / audit / lint)
 - [references/procedures/route.md](references/procedures/route.md) — Route subcommand procedure (index + embed) with `/route` skill bootstrap template
 - [references/procedures/code-eval.md](references/procedures/code-eval.md) — Code-eval subcommand procedure (create / review / sweep / sync) for the `code-evaluator` skill
+- [references/procedures/reconcile.md](references/procedures/reconcile.md) — Reconcile subcommand procedure (cross-skill collision detection, conflicts-only scope, integrity-preserving remediation ladder, strip hand-off)
 - [references/code-evaluator/](references/code-evaluator/) — Shipped intel for the generated `code-evaluator` skill: version.md (drift anchor), cross-file-detection.md, guards.md, mistake-taxonomy.md, native-tool-map.md, gotchas.md, skill-template.md
 - [references/shell-safety/](references/shell-safety/) — Shell-safety rule set (rules.md, templates.md, audit-patterns.md) — the canonical pitfall catalog used by hooks, verify, and shell-safety
 - [agents/optimize-diff-auditor/](agents/optimize-diff-auditor/) — Post-optimize semantic equivalence verification agent

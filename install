@@ -93,7 +93,7 @@ if [ ! -f "$SKILL_DIR/references/model-lanes.md" ]; then
 else
     echo "Keeping existing model-lanes.md (preserving your edits)..."
 fi
-for proc in audit verify quick-audit skills list optimize agents hooks new strip directives inline post-action-chain claude-md ledger cascade eval checksums convert shell-safety intent-router route code-eval; do
+for proc in audit verify quick-audit skills list optimize agents hooks new strip directives inline post-action-chain claude-md ledger cascade reconcile eval checksums convert shell-safety intent-router route code-eval; do
     curl -fsSL "$REPO_URL/skill-builder/references/procedures/${proc}.md" -o "$SKILL_DIR/references/procedures/${proc}.md"
 done
 for ss in rules templates audit-patterns; do
