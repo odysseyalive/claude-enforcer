@@ -36,9 +36,16 @@ Use the **normalized exact model ID** form: `claude-<family>-<major>-<minor>`
 
 ## Skill → Lane  (DECLARE YOUR SKILLS HERE)
 
+<!-- model-lane-setup: unset -->
+
 Only skills listed here (or self-declaring `lane:` in their own SKILL.md frontmatter) participate
 in model-mismatch flagging. **On a fresh install this table is empty of real assignments** — the
 rows below are commented-out examples, so the check is a no-op until you declare at least one skill.
+
+The `<!-- model-lane-setup: … -->` line above is the **per-project setup-state marker** that `audit`
+reads and writes (see § Setup State below). It is how each project remembers whether you have set up
+model lanes, declined, or not yet been asked — it lives here, in your project's own (update-preserved)
+copy of this file, so the decision is tracked per project.
 
 | Skill | Lane |
 |-------|------|
@@ -51,6 +58,31 @@ rows below are commented-out examples, so the check is a no-op until you declare
   skipped — it is NOT auto-assigned to `coding` for flagging purposes.
 - A skill's own `lane:` frontmatter key, if present, **wins** over this table.
 <!-- /origin -->
+
+---
+
+## Setup State (per-project tracking, managed by audit)
+
+The `<!-- model-lane-setup: <state> -->` marker inside the Skill→Lane block records this project's
+decision about model lanes. Audit reads it to decide whether to offer setup, and writes it after you
+respond. Three states:
+
+| State | Meaning | Audit behavior |
+|-------|---------|----------------|
+| `unset` | You have never configured lanes and never declined. The fresh-install default. | On a full interactive `audit`, offer the one-time **setup prompt** (Set it up now / Not now / Never ask in this project). |
+| `configured` | Lanes are set up. | Run the normal mismatch check (§ Comparison Rule) and the suppressible switch prompt. No setup offer. |
+| `declined` | You chose "Never ask in this project." | Silent no-op. Audit never offers setup again (until you change this marker by hand). |
+
+**Reconciliation (no nag for manual setups).** If the marker says `unset` (or is missing) BUT the
+Skill→Lane table already has active rows OR a skill self-declares a `lane:` key, audit treats the
+project as `configured` and upgrades the marker — so declaring lanes by hand never triggers the setup
+offer. "Not now" leaves the marker `unset` (you will be asked again next full audit); "Never ask"
+writes `declined`.
+
+**Suppression.** The setup prompt is offered ONLY on a full, interactive `audit`. It is suppressed
+in headless / non-interactive runs and in `audit --quick`, exactly like the switch prompt — those
+runs never write the marker. To re-enable the offer after declining, change `declined` back to
+`unset` (or just declare a lane).
 
 ---
 
@@ -96,6 +128,19 @@ has clearly superseded), downgrade the finding from a switch prompt to a one-lin
 
 ---
 
+## Invocation-Time Preflight Gate (the other half of "with prompting, or not")
+
+The Comparison Rule above is consumed in **two** places, not one:
+
+1. **Audit-time** — `audit` Step 4f scans every skill and prompts on mismatch, but only when the user explicitly runs `audit`.
+2. **Invocation-time** — a `MODEL-LANE-GATE` CHECKPOINT block embedded near the **top of each lane-declared skill's own workflow**, so the mismatch prompt fires *before that skill does generative work*, the moment it is invoked. This closes the gap where a `creative`-lane skill invoked on the `coding` model would draft content with no prompt.
+
+The invocation-time gate uses the **same** detection and rules defined here: lane resolution (§ Comparison Rule step 1), empty-cell no-op (step 3), Active-Model Detection (§ Active-Model Detection), and the stale-ID self-check (§ Comparison Rule → Stale-ID self-check). Like the audit prompt and the `update` command's permission-mode prompt, **the gate only prompts the user to run `/model` — a skill cannot switch the session model itself.**
+
+The gate is wired into skills by `/skill-builder route embed` as a managed-block family (see [procedures/route.md](procedures/route.md) § Step 8). It is embedded ONLY into skills that resolve to a lane with a non-empty preferred model, and `route embed` removes it automatically from any skill that later leaves a lane. **Suppression ("or not"):** the gate is a silent no-op in headless / non-interactive sessions, and a skill can opt out by setting `model-lane-gate: off` in its own frontmatter.
+
+---
+
 ## Advisory Lane Suggestion (suggest-only; never flags)
 
 For skills with **no declared lane**, audit MAY emit a non-blocking suggestion so you can decide
@@ -133,5 +178,7 @@ creative side while leaving true 1-apart cases at MEDIUM for human spot-check.
 
 ---
 
-*Read by `references/procedures/audit.md` § Step 4f. Installed if-absent by the project installer
-so your edits survive `/skill-builder update`. Excluded from `audit --quick`.*
+*Read by `references/procedures/audit.md` § Step 4f (audit-time check) and by the `MODEL-LANE-GATE`
+preflight that `references/procedures/route.md` § Step 8 embeds into lane-declared skills
+(invocation-time check). Installed if-absent by the project installer so your edits survive
+`/skill-builder update`. Excluded from `audit --quick`.*

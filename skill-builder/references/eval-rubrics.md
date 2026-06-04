@@ -148,18 +148,23 @@ Same skill fixes the frontmatter (single-line description, name match, allowed-t
 ```markdown
 ## Criterion: Voice/Style Compliance
 
-**What this measures:** Whether the skill's written output matches the voice and style directives. This is specific to content-creation skills that produce prose, articles, descriptions, or user-facing text.
+**What this measures:** Whether the skill's written output matches the voice and style directives. This is specific to content-creation skills that produce prose, articles, descriptions, or user-facing text. AI tells are scored at **two scopes**: *intra-passage* (within a sentence or paragraph) and *whole-document* (a pattern visible only across the full piece — see the structural-crutch criterion below).
 
 **Scoring anchors:**
 
 | Score | Label | Description |
 |-------|-------|-------------|
-| 3 | Fully meets | Output reads naturally in the specified voice. No AI tells (stacked adjectives, "delve into", promotional phrasing). Tone matches directives. A reader familiar with the desired voice would not flag any sentence. |
+| 3 | Fully meets | Output reads naturally in the specified voice. No intra-passage AI tells (stacked adjectives, "delve into", promotional phrasing) AND no whole-document structural crutch (see below). Tone matches directives. A reader familiar with the desired voice would not flag any sentence. |
 | 2 | Partially meets | Most output matches the voice, but 1-3 sentences contain AI tells or deviate from the specified tone. The overall piece reads correctly but has patches of wrong voice. |
 | 1 | Does not meet | Output is clearly AI-generated prose. Multiple sentences violate voice directives. Promotional language, constructed phrasing, or generic AI tone throughout. |
 
+**Whole-document tell — repeated structural crutch:** A single significance-announcing sentence-frame ("Here is the thing", "the part that nagged at me", "This is where") recurring **3+ times across the document**, even when no single passage clusters. One instance is voice; three spread evenly is formula. **A piece with such a frame repeated 3+ times across paragraphs cannot score 3**, regardless of how clean each individual passage is. *Voice-protection note:* count only content-free meta-frame signposts — the empty announcement that something matters. Do NOT count content-bearing first-person discovery beats (a sentence that announces AND delivers a specific observation is voice, not a crutch).
+
 **Counter-example (score of 1):**
 A skill with the directive "conversational, plain language, no promotional tone" produces: "Leveraging our cutting-edge approach, we've crafted an innovative solution that seamlessly integrates with your workflow." Every word violates the directive.
+
+**Counter-example (whole-document crutch, caps the score at 2):**
+Each paragraph is individually clean, but the piece opens three of its five sections with "Here's the thing:" / "Here's what's interesting:" / "Here's where it gets tricky:" — a content-free significance-announcing frame repeated as formula. No single passage clusters AI tells, so an intra-passage scan would pass it at 3; the whole-document criterion caps it at 2.
 
 **What a score of 3 looks like:**
 Same skill produces: "This hooks into your existing setup. You run it, it checks your skills, and it tells you what's broken." Plain. Conversational. No AI smell.

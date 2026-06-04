@@ -243,7 +243,7 @@ The START/END HTML comments are the replacement anchors. Future `route index` ru
 
 ## Mode: `embed`
 
-High-risk. Defaults to display mode. Inserts (or refreshes) a Route Consultation Gate annotation into other skills' SKILL.md. `route embed` manages **two managed-block families** in the same run: the `ROUTE-EMBED` gate (Steps 1–6, for freeform-follow-up skills) and the `CODE-EVAL-EMBED` gate (Step 7, for code-touching skills). They are classified independently — a skill may carry one, both, or neither.
+High-risk. Defaults to display mode. Inserts (or refreshes) a Route Consultation Gate annotation into other skills' SKILL.md. `route embed` manages **three managed-block families** in the same run: the `ROUTE-EMBED` gate (Steps 1–6, for freeform-follow-up skills), the `CODE-EVAL-EMBED` gate (Step 7, for code-touching skills), and the `MODEL-LANE-GATE` (Step 8, for skills that resolve to a model lane with a non-empty preferred model). They are classified independently — a skill may carry any combination, or none.
 
 `/route` is a peer to skill-builder's `intent-router`, not a replacement. `intent-router` is the live freeform dispatcher for `/skill-builder <text>` invocations and is part of the source distribution; `route embed` does NOT treat it as legacy and does NOT propose its removal. Self-exclusion rules apply normally: skill-builder is excluded from `embed` scans unless the invocation carries the `dev` prefix.
 
@@ -365,9 +365,9 @@ Use `/skill-builder route embed --execute` to apply.
 
 ### Step 4b: Manual Remove Mode
 
-`/skill-builder route embed --remove [skill]` removes the embed block from a single named skill, regardless of classification. Use when a user wants to opt a skill out even though heuristics say EMBED. Display by default; add `--execute` to apply.
+`/skill-builder route embed --remove [skill]` removes the embed block from a single named skill, regardless of classification. It strips ALL managed-block families present — `ROUTE-EMBED`, `CODE-EVAL-EMBED`, and `MODEL-LANE-GATE`. Use when a user wants to opt a skill out even though heuristics say EMBED. Display by default; add `--execute` to apply.
 
-If `[skill]` is omitted, list all skills currently containing a route embed and ask which to remove via AskUserQuestion.
+If `[skill]` is omitted, list all skills currently containing any managed embed block and ask which to remove via AskUserQuestion.
 
 ### Step 5: Execute Mode
 
@@ -443,7 +443,78 @@ CHECKPOINT — Code Evaluation Gate (fires only while this skill writes/edits/de
 <!-- CODE-EVAL-EMBED END -->
 ```
 
-Insertion / removal follows Step 3's rules, anchored on the `CODE-EVAL-EMBED` markers. `route embed --remove [skill]` strips BOTH families from the named skill. `route index` lists `code-evaluator`'s `review` and `sweep` commands in the catalog like any other skill (no special handling needed — it is a normal installed skill).
+Insertion / removal follows Step 3's rules, anchored on the `CODE-EVAL-EMBED` markers. `route embed --remove [skill]` strips ALL managed-block families (ROUTE-EMBED, CODE-EVAL-EMBED, and MODEL-LANE-GATE — see Step 8) from the named skill. `route index` lists `code-evaluator`'s `review` and `sweep` commands in the catalog like any other skill (no special handling needed — it is a normal installed skill).
+
+---
+
+## Step 8: Model-Lane Gate (the `MODEL-LANE-GATE` family — parallel to CODE-EVAL-EMBED)
+
+`route embed` manages a **third independent managed-block family**. The `ROUTE-EMBED` block (Steps 1–6) goes into freeform-follow-up skills; the `CODE-EVAL-EMBED` block (Step 7) goes into code-touching skills; the `MODEL-LANE-GATE` block defined here goes into skills that **resolve to a model lane with a non-empty preferred model**, wiring in an invocation-time preflight that prompts the user to `/model`-switch when the active session model does not match the skill's lane. All three families are reconciled in the same `route embed` run but classified independently — a skill may carry any combination, or none.
+
+**Why this gate exists (the gap it closes).** The model-lane directive (SKILL.md § Directives, 2026-06-01) asked for model-switch management that is "fluid… with prompting, or not." Audit Step 4f built only the *audit-time* half: it flags lane/model mismatches when the user explicitly runs `audit`. There was no check at **skill-invocation time** — so invoking a `creative`-lane skill while the session is on the `coding` model drafted content on the wrong model with no prompt. This gate is the invocation-time half: it fires at the TOP of a lane-declared skill's own workflow, before any generative step. Like Step 4f and the `update` command's permission-mode prompt, **the gate cannot switch the model itself — it only prompts the user to run `/model`.**
+
+**Unconfigured → no embeds (correct).** This family depends entirely on `references/model-lanes.md`. IF that file is absent, OR the Skill→Lane table has no active (non-commented) rows AND no skill self-declares a `lane:` frontmatter key, OR every resolved lane's Preferred Model cell is empty → there are **zero candidates** and the family embeds nothing. An empty Skill→Lane table is a clean no-op, never an error (acceptance criterion).
+
+### Step 8a: Classify lane-declared skills (concrete lookup — no agent)
+
+Glob `.claude/skills/*/SKILL.md` (apply Self-Exclusion: skill-builder excluded unless `dev`; also exclude `/route`). Read `references/model-lanes.md` once and parse the Lane→Preferred Model table and the Skill→Lane table. For each candidate, classify **LANE-DECLARED** vs **NO-LANE**:
+
+1. Resolve the skill's lane from a **DECLARED source only**: the skill's own `lane:` frontmatter key → the Skill→Lane table → **NO LANE**. A skill with no declared lane is **NO-LANE** — never auto-classified into a lane (this mirrors model-lanes.md's "lane assignment is declared, never inferred" principle; the advisory lane *suggestion* in model-lanes.md § Advisory Lane Suggestion is suggest-only and MUST NOT drive an embed).
+2. IF a lane resolves, look up its Preferred Model. IF the cell is empty/absent → treat as **NO-LANE** for embed purposes (flagging disabled by an empty cell, per the "absence vs. gap" rule).
+3. A candidate is **LANE-DECLARED** only when steps 1–2 yield a declared lane with a non-empty Preferred Model.
+
+This is a deterministic read of declared frontmatter/table cells — **no judgment, so no agent panel** (per SKILL.md § Non-Obvious Decision Gate, a decision that matches a concrete, measurable criterion — `lane:` field present / table row present / cell non-empty — continues without an agent). Unlike Steps 1b and 7b, there is no ambiguous middle to adjudicate: a lane is either declared or it is not.
+
+### Step 8b: Reconcile (same NEW/REFRESH/REMOVE/NOOP logic)
+
+Scan `.claude/skills/*/SKILL.md` for the `<!-- MODEL-LANE-GATE START -->` marker to build `prior_lane_embedded`. Intersect with the Step 8a classification exactly as Step 1c does for ROUTE-EMBED:
+
+| Prior state | New classification | Action |
+|-------------|-------------------|--------|
+| not embedded | LANE-DECLARED | **NEW** — insert a fresh block at top of workflow (Step 8d) |
+| embedded | LANE-DECLARED | **REFRESH** — replace block in place only if it differs byte-for-byte from the canonical block (Step 8c); else **NOOP** |
+| embedded | NO-LANE | **REMOVE** — the skill left its lane (table row deleted, `lane:` key removed, or its lane's preferred-model cell blanked). Strip the block. |
+| not embedded | NO-LANE | **NOOP** |
+
+Use the same byte-for-byte drift detection and the same tampering guard (a START marker without a matching END, or vice versa → report and SKIP that skill; do not auto-repair). The three families never interfere — reconcile each against its own marker set. **REMOVE is the acceptance-criterion behavior**: a skill that leaves a lane loses its gate on the next `route embed --execute`, idempotently.
+
+### Step 8c: The MODEL-LANE-GATE block (verbatim)
+
+```markdown
+<!-- MODEL-LANE-GATE START — auto-generated by /skill-builder route embed; safe to replace -->
+<!-- origin: skill-builder | modifiable: true -->
+## Model-Lane Preflight
+
+<!-- ENFORCEMENT ANNOTATION — Opus 4.7+ literal-execution gate -->
+<!-- Source: /skill-builder route embed (model-lane gate). Closes the invocation-time half of the 2026-06-01 model-lane directive — audit Step 4f only checks at audit time, so a lane-declared skill invoked on the wrong model would do generative work with no prompt. This fires at THIS skill's invocation, before any generative step. The gate CANNOT switch the model; it only prompts the user to run /model. -->
+CHECKPOINT — Model-Lane Preflight Gate (fires at the TOP of this skill's workflow, before any generative step):
+1. Resolve this skill's lane: this skill's own `lane:` frontmatter key → the Skill→Lane table in `.claude/skills/skill-builder/references/model-lanes.md` → NO LANE. IF no lane resolves → silent no-op; skip this gate and proceed.
+2. Look up the lane's Preferred Model in that file's Lane→Preferred Model table. IF the cell is empty or absent → silent no-op; skip this gate and proceed (an undeclared preference is correctly absent, not a gap).
+3. Suppression ("or not"). Skip this gate silently IF ANY of: this skill's frontmatter sets `model-lane-gate: off`; the session is headless / non-interactive (a prompt would block or loop because the model never changes between re-invocations); OR the user already chose "skip once" or "continue anyway" for this skill earlier in THIS session.
+4. Detect ACTIVE_MODEL: read the session system-context line "The exact model ID is …", strip any bracketed context-window suffix (`[1m]`, `[200k]`), lowercase, and keep the `claude-<family>-<major>-<minor>` shape verbatim — exactly as model-lanes.md § Active-Model Detection specifies. No env var, no Bash probe (there is nothing on disk to read; a shell call would only fail or fabricate).
+5. Stale-ID self-check. IF the Preferred Model is not of `claude-<family>-<major>-<minor>` shape, or names a family the active model has clearly superseded → do NOT prompt to switch. Emit a one-line advisory instead: "Model-lane mapping for this skill may be stale — review .claude/skills/skill-builder/references/model-lanes.md." Then proceed. Never validate against a hardcoded "known-live" list — it rots.
+6. Compare. IF `preferred_model == ACTIVE_MODEL` → silent no-op; proceed. IF `preferred_model != ACTIVE_MODEL` → STOP before any generative step and prompt (clause 7).
+7. Prompt, never switch. A skill CANNOT change the session model. In an interactive session, ask via AskUserQuestion (fall back to plain text if AskUserQuestion is unavailable): "This skill is in the `<lane>` lane (preferred model `<preferred>`), but the active model is `<active>`. Run `/model` to switch before generative work?" Offer EXACTLY three options — **switched** (you ran /model; re-read and continue), **skip once** (proceed this once on the current model), **continue anyway** (proceed and don't ask again for this skill this session).
+8. After acknowledgement: IF "switched" → re-read the system-context model line EXACTLY ONCE to confirm; if it now matches, proceed; if it still mismatches, say so once and proceed without looping. IF "skip once" or "continue anyway" → record the session opt-out per clause 3 and proceed. Never loop or re-prompt beyond that single re-read.
+<!-- END ENFORCEMENT ANNOTATION -->
+<!-- /origin -->
+<!-- MODEL-LANE-GATE END -->
+```
+
+The START/END HTML comments are the replacement anchors; future `route embed` runs locate them by exact match and replace the block in place. They are not user-modifiable; to disable the gate for a skill, run `/skill-builder route embed --remove [skill]`, or set `model-lane-gate: off` in that skill's frontmatter (clause 3 honors it without removing the block).
+
+### Step 8d: Insertion point (TOP of workflow — differs from Steps 3 and 7)
+
+Unlike ROUTE-EMBED and CODE-EVAL-EMBED (appended at end-of-file), the model-lane gate must run **before any generative step**, so it is inserted at the **top of the skill's workflow**:
+
+1. **NEW** → insert the block immediately after the `## Workflow` heading (before the first workflow step), separated by blank lines. IF the skill has no `## Workflow` heading, insert it after the frontmatter, the H1 title, and any `<!-- origin: user | immutable: true -->` directive blocks, but BEFORE the first procedural `##` section. The gate must precede the first step that could generate content.
+2. **REFRESH** → replace the entire block (between the existing START and END markers) in place. Do NOT move it and do NOT alter any content outside the markers.
+3. **REMOVE** → delete the START marker, the END marker, and all content between them, plus any blank-line padding that `route embed` added around it. Leave all other content untouched.
+4. **NOOP** → no file modification.
+
+**Never insert inside, before, or in a way that reorders an `<!-- origin: user | immutable: true -->` block.** The model-lane directive block and any other immutable user content stay verbatim — this gate is new machinery placed beneath/after them, never woven through them. The START/END markers and the `origin: skill-builder | modifiable: true` flag confirm the insert is mutable, machine-generated content.
+
+Display-mode output, execute-mode verification, and the post-embed index refresh all follow Steps 4–6 with the `MODEL-LANE-GATE` markers substituted for `ROUTE-EMBED`. In the Step 4 aggregate report, add a `MODEL-LANE: A/B/C/D` line alongside the route and code-eval family counts.
 
 ---
 
@@ -452,7 +523,7 @@ Insertion / removal follows Step 3's rules, anchored on the `CODE-EVAL-EMBED` ma
 Audit's task list includes these as the **final two items**, in this order:
 
 1. `route index` — second-to-last task. Refreshes the catalog after any optimize/agents/hooks changes that may have altered descriptions, modes, or skill membership. Also reconciles the dispatch CHECKPOINT in `/route`'s SKILL.md.
-2. `route embed` — last task. Surfaces (or refreshes) consultation gates after the catalog is current. Refreshes any out-of-date enforcement clauses in existing embeds.
+2. `route embed` — last task. Surfaces (or refreshes) consultation gates after the catalog is current. Refreshes any out-of-date enforcement clauses in existing embeds. This single task reconciles **all three managed-block families** in one pass — `ROUTE-EMBED`, `CODE-EVAL-EMBED`, and `MODEL-LANE-GATE` (Step 8) — so the invocation-time model-lane preflight is wired/refreshed/removed across lane-declared skills as a terminal audit action without adding a separate menu item.
 
 Both are presented in audit's Step 6 execution menu. The user can opt out by deselecting them, but they MUST appear last in the displayed task list. See [audit.md](audit.md) § Step 4g.
 
@@ -533,6 +604,8 @@ CHECKPOINT — Dispatch Required:
 ## Grounding
 
 - [audit.md](audit.md) § Step 4g — audit-time invocation of route index/embed
+- [audit.md](audit.md) § Step 4f — the audit-time model-lane check; Step 8's MODEL-LANE-GATE is the invocation-time complement
+- [../model-lanes.md](../model-lanes.md) — Lane→Model + Skill→Lane mapping, Active-Model Detection, and stale-ID self-check that Step 8's gate grounds against
 - [skills.md](skills.md) — canonical skill inventory pattern (reused in `index` Step 1)
 - [post-action-chain.md](post-action-chain.md) — for the `--execute` chaining pattern referenced in `embed` Step 6
 - SKILL.md § Self-Exclusion Rule — `dev` prefix semantics applied in preflight
