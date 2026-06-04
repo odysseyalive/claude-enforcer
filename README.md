@@ -150,6 +150,29 @@ As your skill library grows, so does the chance the AI silently picks a generic 
 
 See [COMMANDS.md § Routing](COMMANDS.md#routing) for the full command reference.
 
+## Catching Code Mistakes Before They Land
+
+AI writes code fast and leaves a mess behind it. Dead exports nothing imports. A helper reinvented three files over from one that already exists. A function that grew an extra layer of abstraction for its single caller. None of it breaks the build, and all of it accrues.
+
+The `code-eval` command builds a `code-evaluator` skill that watches for exactly that. It is language-agnostic. It uses ripgrep and whatever native tools a project already has instead of depending on one compiler, so it reads a Rust crate, a Python package, and a TypeScript app the same way.
+
+```
+/skill-builder code-eval create
+```
+
+The skill works in three layers. Before code gets written, an advisor agent checks the planned approach against the existing codebase and asks whether the thing already exists and whether it will rot. After code gets written, a reviewer agent reads the diff for dead code, duplication, and complexity. On demand, a full sweep surveys the whole tree.
+
+```
+/code-evaluator review
+/code-evaluator sweep
+```
+
+The safety model is deliberately strict. A grep that finds no references is a candidate, never a verdict. Only high-confidence findings that clear every false-positive guard get fixed automatically, and only when the build and the tests still pass afterward. Duplication and complexity are always left for a person to decide.
+
+Audit ties it together. Run `/skill-builder audit` and it creates the evaluator when it's missing, keeps the detection references current as they improve, and wires the pre-write and post-write gates into every skill that writes, edits, or debugs code.
+
+See [COMMANDS.md § Code Evaluation](COMMANDS.md#code-evaluation) for the full command reference.
+
 ## Philosophy
 
 | Layer | What It Is | Purpose | Drift-Resistant? |

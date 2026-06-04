@@ -111,6 +111,41 @@ Per-skill ledger integration recommendations (capture gaps, grounding notes) are
    ```
 2. This recommendation MUST appear in the report — do NOT skip silently. The audit is the orchestrator; even though optimize/agents/hooks correctly skip ledger analysis when no ledger exists, the audit is responsible for surfacing the gap.
 
+### Step 4a-bis: Code Evaluator Status & Reference Sync
+
+The `code-evaluator` skill prevents common AI coding mistakes (dead code, duplication, complexity). Audit ensures it exists and keeps its references current automatically. Like Step 4a, this is a **companion-skill singleton check** — run once, not per-skill. **SKIP in `audit --quick`** (it is a structural/file action, not a checklist item).
+
+Check if `.claude/skills/code-evaluator/SKILL.md` exists.
+
+**If it does NOT exist:**
+1. Report:
+   ```
+   **Code Evaluator:** Not installed
+   - Prevents dead code, duplication, complexity hotspots, reinvented helpers,
+     and leftover scaffolding in code the AI writes.
+   - Will be created automatically when you run audit with execution.
+   ```
+2. Append `code-eval create` to the execution task list (Step 6) — by default, not opt-in. It is low-risk/additive (scaffolds a new skill; touches nothing existing). Running it makes `code-evaluator` available and lets the route terminal tasks (4g) wire its gates into code-touching skills.
+
+**If it DOES exist:**
+1. Read its frontmatter `code_eval_ref_version` (= `recorded`).
+2. Read skill-builder's shipped version: the integer in `.claude/skills/skill-builder/references/code-evaluator/version.md` (= `shipped`). (In `dev` maintainer mode read from the source path `skill-builder/references/code-evaluator/version.md`.)
+3. Compare:
+   - `recorded >= shipped` → report **status only**:
+     ```
+     **Code Evaluator:** Installed (references v[recorded], current)
+     ```
+   - `recorded < shipped` → references are **stale**. Report:
+     ```
+     **Code Evaluator:** Installed (references v[recorded] → v[shipped] available)
+     - skill-builder ships newer evaluation intel; your copy is behind.
+     ```
+     and append `code-eval sync` to the execution task list (Step 6) — by default. Sync is a block-aware refresh of skill-builder-owned (`modifiable: true`) reference blocks that preserves any `origin: user` seams (see [code-eval.md](code-eval.md) § sync).
+
+**Both `code-eval create` and `code-eval sync` auto-append to audit's execute task list by default** — mirroring how `route index`/`route embed` are appended (Step 4g). The user may deselect them in the Step 6 menu, but they appear automatically; audit never silently writes during the display scan. In display mode, surface the pending create/sync as recommended actions in the report's Priority Fixes section.
+
+**Grounding:** Read [code-eval.md](code-eval.md) for the create/sync procedure and [../code-evaluator/version.md](../code-evaluator/version.md) for the drift-anchor format.
+
 ### Step 4b: Temporal Reference Risk
 
 For each skill, assess temporal reference risk:
@@ -292,9 +327,10 @@ After presenting the report, use **AskUserQuestion** (not plain text) to present
 > 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
 > 6. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
 > 7. `hooks --execute` for dead wiring — auto-recover load-bearing + recoverable findings, auto-unwire advisory findings, stop on each protective / not-recoverable finding for user decision *(only if Step 2.5 surfaced dead wiring)*
-> 8. `route index --execute` + `route embed --execute` — refresh the `/route` index and reconcile consultation gates (auto-appended; final two tasks per § Step 4g)
-> 9. Skip — just review for now
+> 8. `code-eval create` / `code-eval sync` — create the `code-evaluator` skill if absent, or refresh its references if stale (auto-appended; runs before the route tasks, per § Step 4a-bis) *(only if code-evaluator is missing or its references are behind)*
+> 9. `route index --execute` + `route embed --execute` — refresh the `/route` index and reconcile consultation gates (auto-appended; final two tasks per § Step 4g)
+> 10. Skip — just review for now
 
-When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress. Per § Step 4g, append `route index` (second-to-last) and `route embed` (last) to the task list whenever option 8 is selected, OR by default whenever any other execute option (1–4, 6, 7) is selected so the route system stays in sync with the changes just made. Option 5 (ledger creation) does not auto-trigger route refresh.
+When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress. Append tasks in this tail order so each prerequisite runs first: **(1)** per § Step 4a-bis, `code-eval create` (if code-evaluator is missing) and/or `code-eval sync` (if its references are stale) — auto-appended by default whenever any execute option is selected, so the evaluator exists and is current before routing; then **(2)** per § Step 4g, `route index` (second-to-last) and `route embed` (last) — auto-appended whenever option 9 is selected OR by default whenever any other execute option (1–4, 6, 7, 8) is selected, so `route embed` wires the (possibly newly-created) `code-evaluator` gates into code-touching skills. Option 5 (ledger creation) does not auto-trigger route refresh.
 
 **Follow § Output Discipline** (in SKILL.md) for cascade execution and cross-skill separation.
