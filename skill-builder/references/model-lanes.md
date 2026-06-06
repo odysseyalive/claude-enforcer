@@ -29,8 +29,13 @@ Use the **normalized exact model ID** form: `claude-<family>-<major>-<minor>`
 | `creative` | `claude-opus-4-6`   |
 | `coding`   | `claude-opus-4-8`   |
 
-- `coding` is the **default / everything-else** lane (includes testing).
-- `creative` covers image generation, content generation, and design generation.
+- `coding` is the **default / everything-else** lane (includes testing **and research**).
+- `creative` covers image generation, content generation, and design generation — plus
+  communication, language translation, and text evaluation (per the 2026-06-06 directive).
+- **Research precedence (2026-06-06 caveat):** anything that has to do with research is performed
+  by the coding model *before* being handed off to creative. Research signals therefore always
+  resolve to `coding` and take precedence over every creative signal in the suggestion heuristic
+  below (§ Advisory Lane Suggestion step 1).
 - **To DISABLE flagging for a lane**, blank out its Preferred Model cell (leave it empty).
   Audit never flags a lane whose preferred model is empty or absent.
 
@@ -148,27 +153,43 @@ whether to declare them. This is advisory text in the report only — it NEVER t
 prompt and NEVER assigns a lane on its own. Resolve signals in this exact order; **stop at the
 first that fires** and emit `<lane> (suggested, <confidence>)`:
 
-1. **Generative-media tool signal → `creative`, HIGH.** Scan `allowed-tools` and any `mcp__*` tool
+1. **Research precedence → `coding`, HIGH.** Per the 2026-06-06 caveat (research is performed by
+   the coding model before being handed off to creative), this fires BEFORE every creative signal:
+   IF the lowercase `name` contains the token `research`, OR the lowercase `description` + H1 title
+   contains `research` or `cited` → suggest `coding` and STOP.
+2. **Generative-media tool signal → `creative`, HIGH.** Scan `allowed-tools` and any `mcp__*` tool
    names in the SKILL.md body (case-insensitive) for: `nanobanana`, `generate_image`,
    `gemini_generate_image`, `gemini_edit_image`, `text_to_image`, `elevenlabs`, `text_to_speech`,
-   `text_to_sound`, `text_to_voice`, `voice_clone`, `compose_music`, `speech_to_speech`.
+   `text_to_sound`, `text_to_voice`, `voice_clone`, `compose_music`, `speech_to_speech`,
+   `speech_to_text`, `translate_text`, `transcribe`, `deepl`.
    Generic tools (`Read`/`Glob`/`Grep`/`Bash`/`Task`/`Skill`/`ToolSearch`) are **never** a signal.
-2. **Name token → HIGH.** Lowercase `name`. Creative tokens: `image`, `img`, `voice`, `audio`,
+3. **Name token → HIGH.** Lowercase `name`, split on `-`/`_` — tokens match whole name segments,
+   never raw substrings (so `text` matches `text-eval` but not `context-manager`). Creative tokens:
+   `image`, `img`, `voice`, `audio`,
    `music`, `writing`, `write`, `copy`, `content`, `edit`, `prose`, `design`, `frontend`, `ui`,
-   `ux`, `style`, `newsletter`, `present`, `slide`. Coding tokens: `review`, `security`, `verify`,
+   `ux`, `style`, `newsletter`, `present`, `slide`, `text`, `translate`, `translation`, `language`,
+   `communication`, `email`, `message`, `correspondence`, `speech`. Coding tokens: `review`,
+   `security`, `verify`,
    `test`, `lint`, `build`, `run`, `init`, `deploy`, `refactor`, `simplify`, `debug`, `audit`,
-   `migrate`, `research`, `ledger`, `hook`, `agent`, `mcp`, `config`. Match exactly one list → that
+   `migrate`, `research`, `ledger`, `hook`, `agent`, `mcp`, `config`, `server`, `commit`. Match
+   exactly one list → that
    lane. Match both or neither → fall through.
-3. **Description verbs → HIGH/MEDIUM.** Lowercase `description` + H1 title. Count hits:
+4. **Description verbs → HIGH/MEDIUM.** Lowercase `description` + H1 title. Count hits:
    - creative: `generate`, `image`, `watercolor`, `illustration`, `voice`, `tone`, `aesthetic`,
      `design`, `distinctive`, `polished`, `creative`, `prose`, `copy`, `content`, `draft`,
-     `narrative`, `caption`, `tells`, `authenticity`, `style`, `palette`, `frontend interface`.
+     `narrative`, `caption`, `tells`, `authenticity`, `style`, `palette`, `frontend interface`,
+     `communication`, `correspondence`, `translate`, `translation`, `email`, `speech`,
+     `evaluate text`, `language translation`, `proofread`.
    - coding: `code`, `bug`, `correctness`, `test`, `lint`, `compile`, `build`, `run`, `deploy`,
      `refactor`, `simplify`, `security`, `vulnerability`, `audit`, `verify`, `validate`,
-     `frontmatter`, `hook`, `agent`, `skill`, `research`, `cited`, `migrate`, `API`, `config`.
+     `frontmatter`, `hook`, `agent`, `skill`, `research`, `cited`, `migrate`, `API`, `config`,
+     `commit`.
    - `creative_hits ≥ coding_hits + 2` → `creative` HIGH; `coding_hits ≥ creative_hits + 2` →
      `coding` HIGH; difference of 1 → leading lane at MEDIUM; tie → `AMBIGUOUS`.
-4. **AMBIGUOUS** → do not guess a suggestion. Per the repo directive *"When a decision needs to be
+   - Bare `language` and bare `text`/`message` are deliberately NOT description terms (they are
+     name tokens only): "language-agnostic", "plain text", and "commit message" are routine coding
+     phrasing and would misfire here. Use the multiword forms above instead.
+5. **AMBIGUOUS** → do not guess a suggestion. Per the repo directive *"When a decision needs to be
    made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY"*, only spawn a
    classification agent if the user explicitly asks audit to auto-assign lanes. For a passive audit
    suggestion, simply print `lane undetermined — declare manually` and move on.

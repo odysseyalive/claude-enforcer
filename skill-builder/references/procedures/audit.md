@@ -235,7 +235,7 @@ Make the audit model-aware per the user directive (SKILL.md § Directives → Mo
 
 Fires only from step 2 when the feature is unconfigured, the marker is `unset`, and the run is a full interactive `audit` (never headless, never `--quick`, never `--no-model-prompt`, never when `declined`). This is the "fluid… with prompting, or not" onboarding the directive asks for: it offers to set up model lanes instead of staying silently no-op so the user discovers the capability per project.
 
-1. **Offer.** Emit ONE prompt via **AskUserQuestion**: *"This project hasn't set up model lanes. Want to differentiate which model handles creative work (image / content / design generation) vs. coding (everything else)? Audit and your skills can then prompt you to `/model`-switch to the right model."* Options — **Set it up now** / **Not now** / **Never ask in this project**.
+1. **Offer.** Emit ONE prompt via **AskUserQuestion**: *"This project hasn't set up model lanes. Want to differentiate which model handles creative work (image / content / design generation, plus communication, language translation, and text evaluation) vs. coding (everything else, including testing and research)? Audit and your skills can then prompt you to `/model`-switch to the right model."* Options — **Set it up now** / **Not now** / **Never ask in this project**.
    - **Not now** → leave the marker `unset` (you will be offered again on the next full audit). Omit the Model Lane section. Stop this step.
    - **Never ask in this project** → write `<!-- model-lane-setup: declined -->` into `model-lanes.md`. Stop this step. (Reversible by hand: set it back to `unset`.)
    - **Set it up now** → continue to clause 2.

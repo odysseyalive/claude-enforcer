@@ -64,6 +64,12 @@ hooks:
 > **"It shouldn't make any decisions based on performance, but the full completion of integrity of skills expected to be performed by the user. Don't make decisions based on 'shortcut' mentality."**
 
 *— Added 2026-06-04, source: user directive (governs the `reconcile` command: redundancy is never the target; only completion-breaking conflict is actionable; integrity over performance, never a shortcut).*
+
+> **"When a project is audited and the model switching setup is deciding what is most likely creative, I want to make sure to flag any skill that has to do with communication, language translation, text evaluation, etc as creative."**
+
+> **"Anything that has to do with research must be performed by the coding model before being handed off to creative."**
+
+*— Added 2026-06-06, source: user directive (widens the creative lane of the 2026-06-01 bifurcation directive to communication / language-translation / text-evaluation skills, with research explicitly staying on the coding model and taking precedence over creative signals; the signal lists implementing this live in references/model-lanes.md § Advisory Lane Suggestion, never inside this immutable block).*
 <!-- /origin -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -154,6 +160,16 @@ CHECKPOINT — Integrity-Over-Performance Gate (governs the `reconcile` command;
 4. **No shortcut on judgment.** A non-obvious conflict call requires the agent panel (per the Non-Obvious Decision Gate). Skipping the panel to reach a faster verdict is forbidden. Agents disagree → keep both, flag for the human.
 5. **Directive blocks are untouchable.** Any remediation whose edit span intersects an `<!-- origin: user | immutable: true -->` block downgrades to FLAG-ONLY, overriding its class default. Never reword, reorder, or delete to "resolve" a directive conflict.
 6. **Deletion is delegated, never reimplemented.** A confirmed redundant skill routes through `/skill-builder strip` (with its BREAKING detection and `--confirm-breaking` gate) — `reconcile` never deletes.
+<!-- END ENFORCEMENT ANNOTATION -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "When a project is audited and the model switching setup is deciding what is most likely creative, I want to make sure to flag any skill that has to do with communication, language translation, text evaluation, etc as creative." + "Anything that has to do with research must be performed by the coding model before being handed off to creative." -->
+CHECKPOINT — Creative-Scope Classification Gate (fires wherever a lane is SUGGESTED: audit Step 4f advisory suggestions and the Step 4f-setup onboarding's per-skill lane suggestions):
+1. Before emitting any lane suggestion for a skill, test its name and description against the signal lists in references/model-lanes.md § Advisory Lane Suggestion. Those lists implement this directive: communication, language-translation, and text-evaluation signals resolve to `creative`.
+2. RESEARCH PRECEDENCE — evaluate BEFORE any creative signal: IF the skill's name or description indicates research (name token `research`; description terms `research`, `cited`) → suggest `coding` and STOP, regardless of creative hits. Research is performed by the coding model before any handoff to creative.
+3. IF no research signal fired AND the skill's purpose is communication (email, messages, correspondence), language translation, or text evaluation → the suggestion MUST be `creative`. Never suggest `coding` for such a skill.
+4. This gate widens SUGGESTIONS only — lane assignment stays declared-never-inferred (model-lanes.md principle 2); a suggestion never auto-assigns a lane and never triggers a switch prompt by itself.
+5. IF a new class of skill requires a signal-list change to honor steps 2–3 → edit references/model-lanes.md; do NOT reword this directive or the 2026-06-01 directive.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 ---
