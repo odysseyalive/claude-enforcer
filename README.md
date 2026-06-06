@@ -1,8 +1,8 @@
 # Claude Enforcer
 
-> **Claude Enforcer is now compatible with Opus 4.7.** [Learn what changed →](#claude-47-upgrade)
+> **Claude Enforcer is now compatible with Opus 4.7+.** [Learn what changed →](#claude-47-upgrade)
 
-> **Content generation skills can fall back to 4.6 if needed.** [See the workaround →](#content-generation-workaround)
+> **Content generation skills can fall back to 4.6 if needed.** [See the workaround →](#hemispheric-model-delegation)
 
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
@@ -52,35 +52,13 @@ To pull the latest version, run the installer again or use `/skill-builder updat
 
 ## Hemispheric Model Delegation
 
-```
-          L E F T   B R A I N                         R I G H T   B R A I N
-     ┌─────────────────────────┐                 ┌─────────────────────────┐
-    ╱  Analytical / Coding      ╲               ╱  Creative / Expressive    ╲
-   │                             │             │                             │
-   │   code review               │             │   content generation        │
-   │   debugging                 │             │   image creation            │
-   │   testing                   │             │   communication             │
-   │   research                  │             │   language translation      │
-   │   security analysis         │             │   text evaluation           │
-   │   data processing           │             │   design generation         │
-   │                             │             │                             │
-    ╲                           ╱               ╲                           ╱
-     ╲                         ╱                 ╲                         ╱
-      ╲                       ╱                   ╲                       ╱
-       ╲─────────────────────╱                     ╲─────────────────────╱
-              │                                           │
-              │              ┌───────────┐                │
-              └──────────────┤  HARNESS  ├────────────────┘
-                             │ model:    │
-                             │ routing   │
-                             └───────────┘
-```
+![A watercolor brain split into two hemispheres, cool blues on the left and warm amber on the right, colors bleeding together where they meet](assets/images/hemispheric-delegation.png)
 
-You don't need one model that does everything. You need the right model for each thing, switching between them dynamically. That's how your own brain works. Analytical processing dominates one hemisphere. Creative synthesis dominates the other. They don't take turns running the whole show. They run in parallel, each doing what it's best at, passing results back and forth across the bridge between them.
+Have you ever noticed that some models are good at comprehending abstract ideas, while others are really good at coding? Why rely on just one model that does everything, when you can switch between two models dynamically? Some say that's how our own brain works. Analytical processing dominates one hemisphere, while creative synthesis dominates the other. The idea here is that both AI run in parallel, each doing what it does best, passing results back and forth somewhere in the middle. Neuroscience might have debunked the left-brain/right-brain thing years ago, but it makes a great blueprint for AI. A little fake taxonomy never hurt anyone.
 
-AI models work the same way. One writes tighter code. Another writes warmer prose. Treating them as a single tool you swap in and out mid-conversation ignores that. The switching itself is expensive. Every time you break a session to change models, the new model inherits the context but not the reasoning that built it. And the skill's workflow gets interrupted by a detour through model selection that has nothing to do with the task.
+Why can't AI models work the same way? One writes tighter code. Another writes warmer prose. Treating them as a single tool you swap in and out mid-conversation is possible through the use of agents and skills. The switching itself is expensive. Winding down to smaller models that are good for creative work can often force content compaction. This system is designed to make the transition easier on both the model and the user.
 
-Hemispheric delegation keeps each model in its lane. During the audit, skill-builder asks which model handles each side. The left brain gets your analytical model. The right brain gets your creative model. From that point forward, when a skill's workflow crosses into the other hemisphere, it doesn't stop and ask you to switch. It delegates to a focused agent pinned to the right model for that task. The agent does one job, returns the result, and the main model picks up where it left off. A creative chatbot that needs research spins up a coding-model agent for the lookup and brings the result back inline. A coding skill that needs a draft does the same in the other direction. The workflow keeps moving and the skill stays intact.
+Hemispheric delegation keeps each model in its lane. During the audit, skill-builder asks which model handles each side of the AI brain. The left brain gets your analytical model. The right brain gets your creative model. From that point forward, when a skill's workflow crosses into the other hemisphere, it doesn't stop and ask you to switch. It delegates to a focused agent pinned to the right model for that task. The agent does one job, returns the result, and the main model picks up where it left off. A creative chatbot that needs research spins up a coding-model agent for the lookup and brings the result back inline. A coding skill that needs a draft does the same in the other direction. The workflow keeps moving and the skill stays intact.
 
 ## Building & Modifying Skills
 
@@ -134,9 +112,9 @@ See [COMMANDS.md § Creating & Adding](COMMANDS.md#creating--adding) for `new`, 
 
 ## Keep Your Skills Current
 
-Skills age. A directive that worked perfectly on one model gets under-executed on the next. A hook that felt essential two releases ago might now be redundant with a new platform feature. An agent panel that made sense when every judgment call needed an outside vote might now be firing too often against too little signal. None of this is a failure of the skill. It's the model underneath shifting shape.
+Have you ever noticed a skill that used to work perfectly start under-delivering after a model update? A directive that fired reliably on 4.6 suddenly needs more explicit instructions on 4.7. A hook that felt essential two releases ago might now be redundant with a new platform feature. Our skills aren't failing. The model underneath is shifting shape, and the rules need to shift with it.
 
-The `/skill-builder audit` command is the health check for that. It scans your CLAUDE.md, your rules, and every installed skill, and it flags what's gotten stale. Directives that need enforcement annotations for the current model. Hooks that could downshift from agent to command. Oversized SKILL.md files carrying machinery that should live in a reference. Effort levels that cost more than they return. After every Claude update, run it. After anything fundamental changes in how you work with the tool, run it. Every so often just because.
+The `/skill-builder audit` command keeps that evolution manageable. It scans your CLAUDE.md, your rules, and every installed skill, and surfaces what needs attention. Directives that need enforcement annotations for the current model. Hooks that could downshift from agent to command. Oversized SKILL.md files carrying machinery that should live in a reference. Effort levels that cost more than they return. Run it after every Claude update, after anything fundamental changes in how you work with the tool, or every so often just because.
 
 ```
 /skill-builder audit
@@ -152,9 +130,9 @@ See [COMMANDS.md § Inspection & Diagnostics](COMMANDS.md#inspection--diagnostic
 
 ## Routing Instead of Freelancing
 
-A skill exists for a reason. Someone codified the rules, wrote the directives, wired the hooks. When the AI picks up a task and runs its own ad-hoc tool calls instead of consulting that skill, the rules get bypassed. Not by intent. By default. The model reaches for the most direct path through whatever tools it remembers, and the carefully built skill sits unused.
+Ever build a skill that works perfectly, then watch the AI ignore it on the next task and freelance its own approach? It's not malicious. The model reaches for the most direct path through whatever tools it remembers, and our carefully built skills sit unused. The rules we codified, the directives we wrote, the hooks we wired. All of it bypassed because nothing told the AI to look.
 
-The `route` system fixes that. It has two halves.
+The `route` system changes that. It has two halves.
 
 ```
 /skill-builder route index
@@ -178,15 +156,15 @@ This walks every installed skill and looks for places where the workflow tends t
 
 Both commands are smart on re-run. Index diffs against the prior catalog and reports what changed. Embed reconciles its consultation gates against what's already on disk. New skills get gates added. Skills that no longer need a gate get them removed. Stale gates get refreshed. The audit appends both as the last two task items, so every audit ends with a current index and current gates.
 
-As your skill library grows, so does the chance the AI silently picks a generic path through tasks that have purpose-built skills. Route is the pattern that keeps that drift from compounding. Build a skill once. The system finds it.
+As our skill libraries grow, route makes sure the investment compounds. Build a skill once. The system finds it every time.
 
 See [COMMANDS.md § Routing](COMMANDS.md#routing) for the full command reference.
 
 ## Catching Code Mistakes Before They Land
 
-AI writes code fast and leaves a mess behind it. Dead exports nothing imports. A helper reinvented three files over from one that already exists. A function that grew an extra layer of abstraction for its single caller. None of it breaks the build, and all of it accrues.
+How many dead exports are sitting in your codebase right now? Helpers that got reinvented three files over from one that already exists. A function that grew an extra layer of abstraction for its single caller. None of it breaks the build, so none of it gets caught. Until the codebase starts feeling heavier than it should.
 
-The `code-eval` command builds a `code-evaluator` skill that watches for exactly that. It is language-agnostic. It uses ripgrep and whatever native tools a project already has instead of depending on one compiler, so it reads a Rust crate, a Python package, and a TypeScript app the same way.
+The `code-eval` command builds a `code-evaluator` skill that spots exactly this kind of drift. It is language-agnostic, using ripgrep and whatever native tools a project already has instead of depending on one compiler. It reads a Rust crate, a Python package, and a TypeScript app the same way.
 
 ```
 /skill-builder code-eval create
@@ -242,29 +220,19 @@ Stay at the terminal while these run. Each step may pause to ask a follow-up que
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 ```
 
-2. Convert every installed skill to 4.7 compatibility
+2. Convert every installed skill to 4.7+ compatibility
 
 ```bash
-claude /skill-builder convert --all --execute
+/skill-builder convert --all --execute
 ```
 
 3. Re-audit every skill after conversion
 
 ```bash
-claude /skill-builder audit
+/skill-builder audit
 ```
 
-Each skill runs through a per-skill conversion with its own precheck and revert path. See [COMMANDS.md § Upgrading to Opus 4.7](COMMANDS.md#upgrading-to-opus-47) for what each conversion does and how to roll back if a particular skill's result looks off.
-
-### Content generation workaround
-
-Some creative work lands thinner on 4.7. Voice skills, writing skills, anything that leans on the model inferring tone from soft directives. Every skill audited by Claude Enforcer stays backwards compatible with Opus 4.6, so when 4.7's output doesn't sound right, step back to 4.6, rerun the same skill, and compare.
-
-```
-/model claude-opus-4-6
-```
-
-Read both outputs side by side. If 4.6 produces the voice you recognize, keep that model on for that kind of work and switch back to 4.7 for everything else.
+Each skill runs through a per-skill conversion with its own precheck and revert path. See [COMMANDS.md § Upgrading to Opus 4.7+](COMMANDS.md#upgrading-to-opus-47) for what each conversion does and how to roll back if a particular skill's result looks off.
 
 ## Learn More
 
