@@ -60,6 +60,14 @@ Persona Assignment Gate before writing either AGENT.md:
    → choose a distinct alternative persona that still fits the role, and report
    the substitution. Do not proceed with a duplicate.
 
+### Step 2-bis — Model assignment (sacred directive, 2026-06-06)
+When `create` (or `sync` touching an agent) runs during an audit, both generated
+agents get an explicit `model:` field per SKILL.md § Directives → Audit Agent
+Model-Assignment Gate: their work is code analysis/review → the everything-else
+(coding) lane's full model ID from `references/model-lanes.md`. Lanes
+unconfigured or the cell empty → leave `model:` absent and flag; never invent an
+ID. Standalone (non-audit) runs apply the same rule when lanes are configured.
+
 ### Step 3 — Write the skill
 From [../code-evaluator/skill-template.md](../code-evaluator/skill-template.md),
 write:

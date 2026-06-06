@@ -28,6 +28,7 @@ When creating agents, ask: **"If I could only gather 3 to 5 people who were at t
 2. **Relevant to scope** — The persona must match the specific aspect the agent is evaluating. A security reviewer doesn't evaluate UX; a voice coach doesn't evaluate database schemas.
 3. **Named in the agent file** — The persona appears in the AGENT.md frontmatter as `persona:` and in the opening instruction line.
 4. **Creative vs. academic** — For creative output, choose a notable practitioner or famous figure whose sensibility matches. For analytical tasks, choose a disciplinary expert. The distinction matters because creative evaluation requires taste, not just correctness.
+5. **Composed scheme for lane-pinned excursion agents** — bespoke per-skill agents (see [lane-delegation.md](lane-delegation.md)) compose `<discipline expert> + <skill-domain qualifier>`, e.g. "Investigative research librarian specializing in [skill-domain] source verification". The qualifier guarantees verbatim uniqueness mechanically while keeping the persona relevant to scope (Rule 2). **Paraphrase clarification:** the same discipline with a *different domain qualifier* is NOT a paraphrase collision — the domain is the distinct evaluative lens. Without this clarification the uniqueness gate would false-positive on every second skill's researcher.
 
 ---
 *Split from agents.md by skill-builder optimize. Enforcement boundary: agent creation workflow.*

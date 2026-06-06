@@ -37,7 +37,10 @@ Use the **normalized exact model ID** form: `claude-<family>-<major>-<minor>`
   resolve to `coding` and take precedence over every creative signal in the suggestion heuristic
   below (§ Advisory Lane Suggestion step 1).
 - **To DISABLE flagging for a lane**, blank out its Preferred Model cell (leave it empty).
-  Audit never flags a lane whose preferred model is empty or absent.
+  Audit never flags a lane whose preferred model is empty or absent. A blanked cell also disables
+  excursion delegation in that direction (no agent is ever pinned to a removed model).
+- **Changing a cell at audit time fans out** to every generated lane-pinned excursion agent's
+  `model:` frontmatter — see [lane-delegation.md](lane-delegation.md) § Fleet Rewrite on Remap.
 
 ## Skill → Lane  (DECLARE YOUR SKILLS HERE)
 
@@ -75,7 +78,7 @@ respond. Three states:
 | State | Meaning | Audit behavior |
 |-------|---------|----------------|
 | `unset` | You have never configured lanes and never declined. The fresh-install default. | On a full interactive `audit`, offer the one-time **setup prompt** (Set it up now / Not now / Never ask in this project). |
-| `configured` | Lanes are set up. | Run the normal mismatch check (§ Comparison Rule) and the suppressible switch prompt. No setup offer. |
+| `configured` | Lanes are set up. | Run the **Lane→Model picker** (re-confirm which model is creative and which is coding/everything-else, current values pre-selected as defaults — see [lane-delegation.md](lane-delegation.md) § Lane→Model Picker), then the normal mismatch check (§ Comparison Rule) and the suppressible switch prompt. No *setup* offer. |
 | `declined` | You chose "Never ask in this project." | Silent no-op. Audit never offers setup again (until you change this marker by hand). |
 
 **Reconciliation (no nag for manual setups).** If the marker says `unset` (or is missing) BUT the
@@ -88,6 +91,13 @@ writes `declined`.
 in headless / non-interactive runs and in `audit --quick`, exactly like the switch prompt — those
 runs never write the marker. To re-enable the offer after declining, change `declined` back to
 `unset` (or just declare a lane).
+
+**2026-06-06 semantics change.** `configured` no longer means never-ask-again for the *mapping*:
+every full interactive audit re-confirms the Lane→Model choices via the picker (one click when
+nothing changes — current values are the pre-selected defaults). Only `declined` silences audit
+entirely. The marker answers "does this project use lanes at all?"; the picker is a mapping
+refresh that only exists once lanes exist. There is deliberately NO fourth marker state to opt out
+of the re-ask. The picker never writes this marker.
 
 ---
 
@@ -146,6 +156,20 @@ The gate is wired into skills by `/skill-builder route embed` as a managed-block
 
 ---
 
+## Excursion Delegation (pointer)
+
+The two checks above govern a skill's **primary lane**. Cross-lane steps *inside* a skill's
+workflow (a creative skill's research step; a coding skill's prose step) do **not** re-prompt for a
+switch — they are delegated to bespoke, lane-pinned subagents whose `model:` frontmatter carries
+the other lane's full model ID, returning results to the main model. Research precedence holds:
+research is always coding-lane work, so it is delegated *from* creative skills and runs natively in
+coding skills. The full specification — excursion classification, the NON-DELEGABLE hard-stop list,
+the Context Contract, the per-skill Delegation Map block, the Lane→Model picker, and the fleet
+rewrite on remap — lives in [lane-delegation.md](lane-delegation.md). Designed and placed by
+`/skill-builder agents` (agents.md § Step 4d); reconciled by `route embed` (route.md § Step 9).
+
+---
+
 ## Advisory Lane Suggestion (suggest-only; never flags)
 
 For skills with **no declared lane**, audit MAY emit a non-blocking suggestion so you can decide
@@ -199,7 +223,10 @@ creative side while leaving true 1-apart cases at MEDIUM for human spot-check.
 
 ---
 
-*Read by `references/procedures/audit.md` § Step 4f (audit-time check) and by the `MODEL-LANE-GATE`
-preflight that `references/procedures/route.md` § Step 8 embeds into lane-declared skills
-(invocation-time check). Installed if-absent by the project installer so your edits survive
-`/skill-builder update`. Excluded from `audit --quick`.*
+*Read by `references/procedures/audit.md` § Step 4f (audit-time check + Lane→Model picker), by the
+`MODEL-LANE-GATE` preflight that `references/procedures/route.md` § Step 8 embeds into
+lane-declared skills (invocation-time check), and by the excursion-delegation machinery in
+`references/lane-delegation.md` / `references/procedures/agents.md` § Step 4d. Installed if-absent
+by the project installer so your edits survive `/skill-builder update` — normative delegation rules
+therefore live in lane-delegation.md (shipped unconditionally), not here. Excluded from
+`audit --quick`.*

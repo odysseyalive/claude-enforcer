@@ -12,7 +12,7 @@ Commands that read without modifying. Safe to run any time.
 
 ### `/skill-builder audit`
 
-**What it does.** Full audit of CLAUDE.md, your rules, and every installed skill. Runs `optimize`, `agents`, and `hooks` in display mode, aggregates findings, flags priority fixes. As of the Opus 4.7 upgrade, the audit also runs a Token Efficiency Scan on each skill (see [Technical Background § Token Efficiency](#token-efficiency--strictness)).
+**What it does.** Full audit of CLAUDE.md, your rules, and every installed skill. Runs `optimize`, `agents`, and `hooks` in display mode, aggregates findings, flags priority fixes. As of the Opus 4.7 upgrade, the audit also runs a Token Efficiency Scan on each skill (see [Technical Background § Token Efficiency](#token-efficiency--strictness)). When model lanes are configured, every full interactive audit also re-confirms the Lane to Model mapping via a batched picker (options: `claude-opus-4-6`, `claude-opus-4-8`, and the latest released model discovered live by official ID), scans lane-declared skills for uncovered cross-lane excursion steps and legacy mid-workflow switch prompts, and flags any agent missing an explicit `model:` field. A confirmed remap rewrites the `model:` line of every generated lane-pinned agent.
 
 **When to use.** Quarterly health check. After any Claude model update. Any time a project starts feeling "off" and you need a full picture of what's drifting.
 
@@ -221,7 +221,7 @@ Apply changes.
 
 ### `/skill-builder agents [skill]`
 
-**What it does.** Analyzes a skill's directives and suggests where agents could help. Individual agents (independent perspectives for evaluation) versus agent teams (coordinated implementation across files). Each agent suggestion includes a distinct persona per the cross-skill uniqueness rule.
+**What it does.** Analyzes a skill's directives and suggests where agents could help. Individual agents (independent perspectives for evaluation) versus agent teams (coordinated implementation across files). Each agent suggestion includes a distinct persona per the cross-skill uniqueness rule. For skills with a declared model lane, it also detects cross-lane excursion steps (research inside a creative skill, prose inside a coding skill) and designs bespoke lane-pinned excursion agents: subagents whose `model:` frontmatter carries the other lane's full model ID, so the step runs on the right model without prompting a mid-workflow `/model` switch. Every agent it creates or modifies during an audit gets an explicit `model:` per the user's lane choices.
 
 **When to use.** When a skill's directives involve judgment or cross-file validation that hooks can't mechanically catch. When you want to know whether a skill should spawn validators, and what kind.
 
@@ -443,7 +443,7 @@ Display-only summary without writing.
 
 ### `/skill-builder route embed`
 
-**What it does.** For each installed skill, classifies whether a Route Consultation Gate belongs in its SKILL.md based on workflow heuristics (skills with research, web search, or open-ended follow-up steps qualify). Reconciles the classification against any existing `<!-- ROUTE-EMBED START -->` markers and labels each skill NEW, REFRESH, REMOVE, or NOOP. Display mode by default; `--execute` applies the plan.
+**What it does.** For each installed skill, classifies whether a Route Consultation Gate belongs in its SKILL.md based on workflow heuristics (skills with research, web search, or open-ended follow-up steps qualify). Reconciles the classification against any existing `<!-- ROUTE-EMBED START -->` markers and labels each skill NEW, REFRESH, REMOVE, or NOOP. The same run reconciles all four managed-block families: `ROUTE-EMBED`, `CODE-EVAL-EMBED`, the `MODEL-LANE-GATE` primary-lane preflight, and the `LANE-AGENT-EMBED` Excursion Delegation Map (reconcile-only: delegation maps are created by `/skill-builder agents`, which designs bespoke lane-pinned excursion agents so cross-lane workflow steps run on the other lane's model via a pinned subagent instead of prompting a mid-workflow `/model` switch). `--remove [skill]` strips all four. Display mode by default; `--execute` applies the plan.
 
 **When to use.** After adding new skills with open-ended workflow steps. After significantly restructuring a skill's workflow. The audit runs this automatically as the last task item, immediately after `route index`.
 

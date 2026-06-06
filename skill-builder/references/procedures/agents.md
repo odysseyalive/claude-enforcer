@@ -46,6 +46,26 @@ When running `/skill-builder agents [skill]`:
    - **Check for existing capture integration first:** Before recommending, verify no capture mechanism already exists (workflow step, hook, or agent). One capture mechanism per skill.
    - If recommending, add **Capture Recommender** to the evaluation table with reasoning referencing specific trigger patterns.
 
+4d. **Excursion detection & lane-pinned placement pass** — *Precondition (deterministic, no agent needed to enter): model lanes are configured AND the target skill resolves to a declared lane with a non-empty preferred model (lane resolution per model-lanes.md § Comparison Rule step 1). Otherwise skip this step silently.* Read [../lane-delegation.md](../lane-delegation.md) in full before proceeding (Bespoke Excursion-Agent Gate, SKILL.md § Directives 2026-06-06).
+
+   1. Resolve the skill's primary lane and preferred model.
+   2. Walk the skill's workflow **step by step**, classifying each step against lane-delegation.md § Excursion Signal Vocabulary (research precedence fires first — a research step in a `coding` skill is native, never an excursion) and the § NON-DELEGABLE Hard-Stop List.
+   3. For each cross-lane candidate, check coverage: is it already governed by an entry in the skill's `LANE-AGENT-EMBED` Delegation Map block? Covered → NOOP. Uncovered → propose delegation (NEW).
+   4. **Legacy revamp scan:** flag any non-managed mid-workflow model-switch instruction (`/model`, "switch model" outside START/END markers) as REVAMP. Candidates inside `origin: user | immutable: true` blocks are FLAG-ONLY — the machine never rewords sacred text, even to revamp it.
+   5. **Ambiguity → agent panel mandatory** (3 unique personas, e.g. workflow-integrity inspector / context-dependence auditor / lane-classification specialist). Panel split → NO-DELEGATE. *(Panel suppressed when running as audit's display-mode sub-command, per audit's agent-budget rule — heuristic-only flagging there; the panel fires standalone or in `--execute`.)*
+   6. Report section (append to the step 7 report):
+
+```markdown
+### Lane Excursion Opportunities
+Primary lane: [lane] (preferred model [id]; active model [id])
+
+| Step (anchor) | Other-lane signal | Proposed agent | model: | tools: | Status |
+|---|---|---|---|---|---|
+| "[quoted phrase]" | research | [skill]-researcher | [other-lane full ID] | Read, Grep, Glob, Bash, WebFetch, WebSearch | NEW |
+| "[quoted phrase]" | — | — | — | — | NON-DELEGABLE ([reason]) |
+| "[/model prompt at ...]" | legacy switching | — | — | — | REVAMP |
+```
+
 5. **Agent panel: type applicability and routing** *(skip when running as sub-command of audit — fires only in standalone or `--execute` mode)* — Deciding which agent types apply to a skill and whether they should be individual or team is itself a judgment call. Spawn 3 individual agents in parallel (Task tool, `subagent_type: "general-purpose"`):
 
    - **Agent 1** (persona: Systems architect who designs for failure modes) — Review the skill's directives and workflows. Which agent types would prevent the highest-risk failures? What happens if each agent type is absent?
@@ -94,9 +114,18 @@ When running `/skill-builder agents [skill] --execute`:
 2. **Generate task list from findings** using TaskCreate — one task per agent to create (e.g., "Create security-reviewer agent with penetration tester persona for /auth")
 3. Execute each task sequentially, marking complete via TaskUpdate as it goes
 4. Each task: create the agent file in `.claude/skills/[skill]/agents/`, following templates from `references/agents.md`
+4b. **Model assignment (sacred directive, 2026-06-06):** every AGENT.md created or modified by these tasks gets an explicit `model:` field per SKILL.md § Directives → Audit Agent Model-Assignment Gate — classify the agent's own work (creative vs everything-else; research → everything-else) and stamp the matching lane's full model ID from model-lanes.md. Lanes unconfigured or cell empty → leave `model:` absent and flag; never invent an ID.
+4c. **Lane-pinned excursion tasks** (from step 4d findings, one task each, in this order per excursion):
+   1. Design the bespoke agent from the skill's reviewed material (Bespoke Excursion-Agent Gate clauses 1–4; template + Context Contract per `references/lane-delegation.md`).
+   2. Persona uniqueness check across the extended glob union (both skill-agent forms + `.claude/agents/*.md`, deref symlinks, dedupe; composed scheme per agents-personas.md Rule 5).
+   3. Curate the minimal `tools:` list from lane-delegation.md's curation table (never Task/Skill/Edit).
+   4. Write `.claude/skills/[skill]/agents/[name]/AGENT.md`; create the registration symlink `.claude/agents/[name].md` (copy fallback where symlinks are unavailable — report which was used).
+   5. Insert or refresh the skill's single `LANE-AGENT-EMBED` Delegation Map block immediately after its MODEL-LANE-GATE block (insertion + anchor rules in lane-delegation.md § The Delegation Map; never inside/before/reordering an immutable block; the workflow body stays byte-identical).
+   6. REVAMP removals: strip a legacy mid-workflow switch instruction ONLY if it is machine-generated / `modifiable: true` content; user-authored prose stays flagged, never edited.
+   7. Verify: frontmatter parses (including `lane-pinned:`, `generated-by:`, `excursion-skill:`, `model:`), the map block appears exactly once, every anchor matches exactly once, no immutable block was touched. Note that `route embed` (audit's terminal task) keeps the block reconciled from here on.
 5. **Verify persona uniqueness** — after creating all agents, confirm no two share the same persona
 6. **For agent teams**: verify `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled in `.claude/settings.local.json`
 7. **For agent teams**: always include the mandatory research assistant teammate in the generated team definition. The research assistant gathers reference information using the project's configured search tools. Other teammates reference the research assistant by name when they need research. See `references/agents-teams.md` § "Mandatory Research Assistant Teammate" for full specification.
 8. **For agent teams**: verify research tool permissions are configured. Check `.claude/settings.local.json` for `permissions.allow` including the project's configured search tools. The install script sets these automatically. Additionally, recommend running `/skill-builder hooks --execute` to generate a PreToolUse hook that auto-approves these tools (belt-and-suspenders). See `references/agents-teams.md` § "Permissions" for details.
 
-**Grounding:** `references/agents.md`
+**Grounding:** `references/agents.md`, `references/lane-delegation.md` (step 4d / execute 4b–4c)

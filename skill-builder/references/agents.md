@@ -163,11 +163,14 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 | Awareness-ledger skill exists in project | **Ledger Consultation Agents** | Cross-reference changes against institutional memory (incidents, decisions, patterns, flows) |
 | Skill produces findings/decisions AND awareness-ledger exists | **Capture Recommender Agent** | Evaluate skill output for institutional knowledge worth recording in the ledger |
 | Skill uses `optimize --execute` | **Optimize Diff Auditor** | Verify semantic equivalence after optimization (directives verbatim, workflow order, content moved not rewritten) |
+| Workflow step belongs to the OTHER model lane | **Lane-Pinned Excursion Agent** | Creative skill needs research → coding-pinned researcher; coding skill needs release notes → creative-pinned drafter. See § 7 and [lane-delegation.md](lane-delegation.md) |
 
 **Ledger integration (bidirectional):** When `.claude/skills/awareness-ledger/` exists, the agents command evaluates two directions:
 
 - **READ (Consultation):** Does the skill modify code, make architectural decisions, or touch areas with existing ledger records? If yes, recommend integrating the three consultation agents (Regression Hunter, Skeptic, Premortem Analyst) into the skill's workflow. These run as individual agents with `context: none`, reading from the ledger directories. See `references/ledger-templates.md` § "Agent Definitions" for full specifications.
 - **WRITE (Capture):** Does the skill produce findings, decisions, debugging flows, or architectural rationale that constitute institutional knowledge? If yes, recommend a Capture Recommender Agent that evaluates skill output against the capture trigger patterns (see `references/ledger-templates.md` § "Capture Trigger Patterns") and suggests ledger records when warranted. See § "Capture Recommender Agent" below for the template. **Only recommend if no other capture mechanism exists** — check for workflow-step capture prompts and capture-reminder hooks first.
+
+**Model assignment (sacred directive, 2026-06-06):** every AGENT.md created or modified during an audit gets an explicit `model:` field, resolved from the user's Lane→Model choices — creative-lane work gets the creativity model, everything else (including research) gets the everything-else model. Lanes unconfigured → leave `model:` absent and flag; never invent an ID. See SKILL.md § Directives → Audit Agent Model-Assignment Gate and [lane-delegation.md](lane-delegation.md) § Audit Model-Assignment Rule.
 
 **Persona and routing:** Every agent must have a unique persona, and the agents command must route to individual agents or agent teams based on the task. See:
 - [agents-personas.md](agents-personas.md) — Persona assignment rules, selection heuristic, research backing
@@ -533,6 +536,23 @@ Prompt: "Read the output from .claude/skills/[skill]/[output].
 
 If agent recommends capture, present the suggestion to the user.
 ```
+
+### 7. Lane-Pinned Excursion Agent (Cross-Lane Delegation)
+
+**Purpose:** Execute a cross-lane workflow step (research inside a creative skill; prose inside a
+coding skill) on the OTHER lane's model — via `model:` frontmatter pinning — instead of prompting a
+mid-workflow `/model` switch. Results return to the main model; the parent workflow resumes
+unchanged.
+
+The full canonical template, tool-curation table, Context Contract rules, persona scheme, and the
+per-skill Delegation Map block live in [lane-delegation.md](lane-delegation.md) — read that file
+before designing one. Non-negotiables: designed per skill from the skill's reviewed material
+(Bespoke Excursion-Agent Gate); one agent per (skill, direction) by default; `model:` carries the
+other lane's FULL model ID; `tools:` is minimal and excursion-appropriate (never Task/Skill/Edit);
+frontmatter carries `lane-pinned:`, `generated-by: skill-builder lane-excursion`, and
+`excursion-skill:` markers so the audit Fleet Rewrite and `strip` can find it; persona follows the
+composed scheme in [agents-personas.md](agents-personas.md). Created by `agents` § Step 4d;
+reconciled by `route embed` § Step 9; never shipped — generated on the host.
 
 ## Creating Agents for a Skill
 

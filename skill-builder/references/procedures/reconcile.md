@@ -38,7 +38,7 @@ Glob `.claude/skills/*/SKILL.md` (respecting self-exclusion). For each skill, re
 | Command verbs | the skill's Commands/Quick-Commands table |
 | Hook entries | frontmatter `hooks:` + `settings.local.json` wiring → `(event, matcher, command)` tuples |
 | Auto-chain targets | directive/body text naming `/X` to invoke after a step |
-| Managed embed blocks | `<!-- ROUTE-EMBED START -->`, `<!-- CODE-EVAL-EMBED START -->` marker counts |
+| Managed embed blocks | `<!-- ROUTE-EMBED START -->`, `<!-- CODE-EVAL-EMBED START -->`, `<!-- MODEL-LANE-GATE START -->`, `<!-- LANE-AGENT-EMBED START -->` marker counts |
 | Agent personas | BOTH `agents/*.md` and `agents/*/AGENT.md` — union the two globs |
 | Immutable directive text | spans inside `<!-- origin: user | immutable: true -->` |
 
@@ -53,7 +53,7 @@ Evaluate each signal and tag it with its reliability tier. **MECHANICAL** = conc
 | ID | Collision | How it breaks completion | Tier | Default disposition |
 |----|-----------|--------------------------|------|---------------------|
 | R1 | **Duplicate slash/skill `name`** (same normalized verb, same tier) | First-wins discovery → the shadowed skill is permanently unreachable | MECHANICAL | Flag loudly (never auto-rename) |
-| R2 | **Duplicate machine-generated embed block** within one skill (two `ROUTE-EMBED` or two `CODE-EVAL-EMBED` blocks) | Double-dispatch / drift | MECHANICAL | **AUTO-FIX** — collapse to one (skill-builder-owned content, idempotent) |
+| R2 | **Duplicate machine-generated embed block** within one skill (two `ROUTE-EMBED`, `CODE-EVAL-EMBED`, `MODEL-LANE-GATE`, or `LANE-AGENT-EMBED` blocks) | Double-dispatch / drift | MECHANICAL | **AUTO-FIX** — collapse to one (skill-builder-owned content, idempotent) |
 | R3 | **Byte-identical duplicate hook entry** (same `(event, matcher, command)` registered twice) | Redundant runtime execution | MECHANICAL | **AUTO-FIX** — JSON-aware dedupe, re-validate |
 | R4 | **Conflicting hook matchers** (same `(event, matcher)`, *different* command) | Order-dependent; one can block/suppress the other | MECHANICAL detect / JUDGMENT verdict | FLAG-ONLY |
 | R5 | **Selection-shadowing** — `description`/`when_to_use` trigger overlap between two skills meant to be mutually exclusive | Claude picks one at selection time; the other silently never loads | HEURISTIC | "Look here" evidence only — **never** a merge/delete recommendation; descriptions are never edited |
@@ -155,6 +155,6 @@ Apply the **absence-vs-gap** rule: a class with zero findings is omitted entirel
 
 - [cascade.md](cascade.md) — the within-skill counterpart (scope boundary: intra-skill suppression vs cross-skill collision)
 - [strip.md](strip.md) — the destructive skill-removal command R7 delegates to (BREAKING detection, `--confirm-breaking`)
-- [route.md](route.md) — ROUTE-EMBED / CODE-EVAL-EMBED marker families (R2) and the "already-named" auto-chain exception (R6)
+- [route.md](route.md) — ROUTE-EMBED / CODE-EVAL-EMBED / MODEL-LANE-GATE / LANE-AGENT-EMBED marker families (R2) and the "already-named" auto-chain exception (R6)
 - [audit.md](audit.md) — Step 4d-bis integration, agent-budget rule, absence-vs-gap reporting
 - SKILL.md § Directives — the governing integrity-over-performance directive; § Core Principles — move-don't-rewrite, directives are sacred; § Display/Execute Mode Convention — high-risk default

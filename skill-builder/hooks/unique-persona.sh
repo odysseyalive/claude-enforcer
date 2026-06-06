@@ -66,15 +66,28 @@ NORM_PROPOSED=$(normalize "$PROPOSED_PERSONA")
 # Locate the project root (prefer $CLAUDE_PROJECT_DIR, fall back to pwd)
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 
-# Scan every other agent file (both forms) for an exact normalized match
+# Scan every other agent file for an exact normalized match. Three forms:
+#   - flat-file:   .claude/skills/<skill>/agents/<name>.md
+#   - subdir form: .claude/skills/<skill>/agents/<name>/AGENT.md
+#   - registered:  .claude/agents/<name>.md (often a symlink back into a skill form)
+# Symlinks are dereferenced and deduped by resolved path so a registration
+# symlink never double-counts (or false-conflicts with) its own target.
 CONFLICT_FILE=""
 CONFLICT_PERSONA=""
+EDIT_REAL=$(readlink -f -- "$FILE_PATH" 2>/dev/null || echo "$FILE_PATH")
+SEEN=""
 while IFS= read -r -d '' f; do
-    # Skip the file being edited
-    if [ "$f" = "$FILE_PATH" ]; then
+    REAL=$(readlink -f -- "$f" 2>/dev/null || echo "$f")
+    # Skip the file being edited (by resolved path)
+    if [ "$REAL" = "$EDIT_REAL" ]; then
         continue
     fi
-    EXISTING=$(grep -m1 -E '^persona:' "$f" 2>/dev/null | sed -E 's/^persona:[[:space:]]*//' | sed -E 's/^[\"'"'"']//; s/[\"'"'"']$//')
+    # Dedupe resolved targets (registration symlink + its target = one agent)
+    case "$SEEN" in
+      *"|$REAL|"*) continue ;;
+    esac
+    SEEN="$SEEN|$REAL|"
+    EXISTING=$(grep -m1 -E '^persona:' "$REAL" 2>/dev/null | sed -E 's/^persona:[[:space:]]*//' | sed -E 's/^[\"'"'"']//; s/[\"'"'"']$//')
     if [ -z "$EXISTING" ]; then
         continue
     fi
@@ -84,7 +97,7 @@ while IFS= read -r -d '' f; do
         CONFLICT_PERSONA="$EXISTING"
         break
     fi
-done < <(find "$ROOT/.claude/skills" -path '*/agents/*' -name '*.md' -print0 2>/dev/null)
+done < <({ find "$ROOT/.claude/skills" -path '*/agents/*' -name '*.md' -print0 2>/dev/null; find "$ROOT/.claude/agents" -maxdepth 1 -name '*.md' -print0 2>/dev/null; })
 
 if [ -n "$CONFLICT_FILE" ]; then
     echo "BLOCKED: persona '${PROPOSED_PERSONA}' conflicts with ${CONFLICT_FILE}: '${CONFLICT_PERSONA}'. Choose a different persona." >&2

@@ -58,7 +58,7 @@ If any dependent has a HARD reference → mark the strip as **BREAKING** in the 
 
 #### Step 4: Run the connection sweep
 
-Apply each of the 15 detection patterns below across `.claude/skills/`, `.claude/settings.local.json`, and (if present at repo root) the `install` script and dev-only docs (`CLAUDE.md`, `COMMANDS.md`). Capture every hit with file path and line number.
+Apply each of the 17 detection patterns below across `.claude/skills/`, `.claude/agents/`, `.claude/settings.local.json`, and (if present at repo root) the `install` script and dev-only docs (`CLAUDE.md`, `COMMANDS.md`). Capture every hit with file path and line number.
 
 | # | Pattern | Detection regex | Surface |
 |---|---|---|---|
@@ -77,8 +77,10 @@ Apply each of the 15 detection patterns below across `.claude/skills/`, `.claude
 | 13 | Repo-root `install` per-skill loops | `for (ref\|proc\|ss\|agent) in` containing the target's files | `/install` (dev-only) |
 | 14 | Repo-root `COMMANDS.md` mentions | target name as plain word | `/COMMANDS.md` (dev-only, if exists) |
 | 15 | Repo-root `CLAUDE.md` mentions | target name as plain word | `/CLAUDE.md` (dev-only, if exists) |
+| 16 | Lane-pinned excursion agents owned by the target | `excursion-skill: <target>` in agent frontmatter | All agent files (both skill forms) AND `.claude/agents/*.md` registration symlinks/copies (deref symlinks; remove the registration entry along with the agent) |
+| 17 | LANE-AGENT-EMBED map entries naming the target's agents | `<!-- LANE-AGENT-EMBED START -->` … `<target>-` … `<!-- LANE-AGENT-EMBED END -->` | All SKILL.md |
 
-Patterns 13–15 only fire if the corresponding files exist at the working-directory root (i.e., the user is running this in the source repo, not a downstream install). Surface them as "dev-repo cleanup" in the report; do not error if absent.
+Patterns 13–15 only fire if the corresponding files exist at the working-directory root (i.e., the user is running this in the source repo, not a downstream install). Surface them as "dev-repo cleanup" in the report; do not error if absent. Patterns 16–17 fire only when lane-pinned agents exist (see `references/lane-delegation.md`); they are swept before deletion like every other reference.
 
 #### Step 5: Produce the strip report
 
