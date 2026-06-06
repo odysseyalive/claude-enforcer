@@ -50,6 +50,38 @@ Then run your first audit.
 
 To pull the latest version, run the installer again or use `/skill-builder update` from inside a session. See [COMMANDS.md § Maintenance](COMMANDS.md#maintenance) for both update paths.
 
+## Hemispheric Model Delegation
+
+```
+          L E F T   B R A I N                         R I G H T   B R A I N
+     ┌─────────────────────────┐                 ┌─────────────────────────┐
+    ╱  Analytical / Coding      ╲               ╱  Creative / Expressive    ╲
+   │                             │             │                             │
+   │   code review               │             │   content generation        │
+   │   debugging                 │             │   image creation            │
+   │   testing                   │             │   communication             │
+   │   research                  │             │   language translation      │
+   │   security analysis         │             │   text evaluation           │
+   │   data processing           │             │   design generation         │
+   │                             │             │                             │
+    ╲                           ╱               ╲                           ╱
+     ╲                         ╱                 ╲                         ╱
+      ╲                       ╱                   ╲                       ╱
+       ╲─────────────────────╱                     ╲─────────────────────╱
+              │                                           │
+              │              ┌───────────┐                │
+              └──────────────┤  HARNESS  ├────────────────┘
+                             │ model:    │
+                             │ routing   │
+                             └───────────┘
+```
+
+You don't need one model that does everything. You need the right model for each thing, switching between them dynamically. That's how your own brain works. Analytical processing dominates one hemisphere. Creative synthesis dominates the other. They don't take turns running the whole show. They run in parallel, each doing what it's best at, passing results back and forth across the bridge between them.
+
+AI models work the same way. One writes tighter code. Another writes warmer prose. Treating them as a single tool you swap in and out mid-conversation ignores that. The switching itself is expensive. Every time you break a session to change models, the new model inherits the context but not the reasoning that built it. And the skill's workflow gets interrupted by a detour through model selection that has nothing to do with the task.
+
+Hemispheric delegation keeps each model in its lane. During the audit, skill-builder asks which model handles each side. The left brain gets your analytical model. The right brain gets your creative model. From that point forward, when a skill's workflow crosses into the other hemisphere, it doesn't stop and ask you to switch. It delegates to a focused agent pinned to the right model for that task. The agent does one job, returns the result, and the main model picks up where it left off. A creative chatbot that needs research spins up a coding-model agent for the lookup and brings the result back inline. A coding skill that needs a draft does the same in the other direction. The workflow keeps moving and the skill stays intact.
+
 ## Building & Modifying Skills
 
 You'll always be tweaking. A skill that works today might need adjustment next week as you discover edge cases, add new rules, or realize something drifts when it shouldn't. The whole point of the tool is to make that easy.
