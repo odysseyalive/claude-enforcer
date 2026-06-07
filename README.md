@@ -12,6 +12,23 @@ This tool helps you build a context system that resists drift.
 
 ![Instructions left at the start of a conversation, consumed by everything that follows](assets/images/breadcrumbs.png)
 
+## Philosophy
+
+| Layer | What It Is | Purpose | Drift-Resistant? |
+|-------|------------|---------|------------------|
+| `CLAUDE.md` | File loaded at conversation start | Universal guidance | No |
+| Rules | Files in `.claude/rules/` | Always-on context (keep lean) | No |
+| Skills | On-demand instruction files | Domain-specific rules | No (but refreshable) |
+| Hooks | Shell scripts before actions | Hard blocks on forbidden actions | Yes |
+| Agents | Subprocesses with isolated context | Independent evaluation without drift | Yes |
+| Teams | Coordinated parallel instances | Collaborative implementation | Yes |
+
+![Three figures at separate desks, each studying the same document under their own light](assets/images/independent-agents.png)
+
+There's a tension here worth naming. Validation keeps AI honest, but too much of it keeps AI from working. Three hooks firing on every SKILL.md edit means three Claude invocations before anything lands. Skill-builder keeps the hot path cheap. Mechanical checks (grep, regex, checksum) fire on every edit. The agent-heavy validators only run when execution tooling actually reshapes a skill, and even then a deterministic precheck skips the spawn when the change is trivial. The enforcement still happens. It just stops being the bottleneck.
+
+Each layer has its own details and tradeoffs. See [COMMANDS.md § Technical Background](COMMANDS.md#technical-background) for individual agents vs. agent teams, rules vs. skills, the optimization structure that splits SKILL.md and reference.md, and the awareness ledger that turns session knowledge into searchable memory.
+
 ## Install
 
 Claude Code **v2.1.32 or later** is required. Skills became user-invocable in v2.1.3 (January 2026). Earlier versions refuse to run `/skill-builder` directly. Check with `claude --version` and update with `claude update` if needed.
@@ -175,23 +192,6 @@ Full scan. For a lightweight pass (frontmatter + line counts + priority fixes on
 ```
 
 See [COMMANDS.md § Inspection & Diagnostics](COMMANDS.md#inspection--diagnostics) for what each mode covers and when `verify` or `cascade` is the better tool for the job.
-
-## Philosophy
-
-| Layer | What It Is | Purpose | Drift-Resistant? |
-|-------|------------|---------|------------------|
-| `CLAUDE.md` | File loaded at conversation start | Universal guidance | No |
-| Rules | Files in `.claude/rules/` | Always-on context (keep lean) | No |
-| Skills | On-demand instruction files | Domain-specific rules | No (but refreshable) |
-| Hooks | Shell scripts before actions | Hard blocks on forbidden actions | Yes |
-| Agents | Subprocesses with isolated context | Independent evaluation without drift | Yes |
-| Teams | Coordinated parallel instances | Collaborative implementation | Yes |
-
-![Three figures at separate desks, each studying the same document under their own light](assets/images/independent-agents.png)
-
-There's a tension here worth naming. Validation keeps AI honest, but too much of it keeps AI from working. Three hooks firing on every SKILL.md edit means three Claude invocations before anything lands. Skill-builder keeps the hot path cheap. Mechanical checks (grep, regex, checksum) fire on every edit. The agent-heavy validators only run when execution tooling actually reshapes a skill, and even then a deterministic precheck skips the spawn when the change is trivial. The enforcement still happens. It just stops being the bottleneck.
-
-Each layer has its own details and tradeoffs. See [COMMANDS.md § Technical Background](COMMANDS.md#technical-background) for individual agents vs. agent teams, rules vs. skills, the optimization structure that splits SKILL.md and reference.md, and the awareness ledger that turns session knowledge into searchable memory.
 
 ## Claude 4.7 Upgrade
 
