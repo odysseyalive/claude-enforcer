@@ -26,7 +26,7 @@ npx skills add odysseyalive/claude-enforcer
 
 Works across Claude Code, Cursor, Codex, and [37 other agents](https://skills.sh/docs).
 
-### Option B. curl
+### Option B. curl / PowerShell
 
 Includes extra setup (agent teams, auto-approved research tools).
 
@@ -36,9 +36,19 @@ claude /init
 
 If you haven't already initialized the project. Then run the installer.
 
+**Linux / macOS** (or Windows with Git Bash):
+
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 ```
+
+**Windows PowerShell:**
+
+```powershell
+irm https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install.ps1 | iex
+```
+
+Both installers ship identical content from a shared `manifest.txt`. The bundled enforcement hooks come in two variants, bash and PowerShell, so Windows keeps the mechanical backstop without Git Bash. Hooks stay dormant until wired; run `/skill-builder hooks dev skill-builder --execute` inside a session to wire the variant that matches your OS.
 
 Then run your first audit.
 
@@ -219,6 +229,8 @@ Stay at the terminal while these run. Each step may pause to ask a follow-up que
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
 ```
+
+Windows PowerShell: `irm https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install.ps1 | iex`
 
 2. Convert every installed skill to 4.7+ compatibility
 

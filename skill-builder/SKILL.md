@@ -101,6 +101,10 @@ hooks:
 > **"I don't mind the two questions for choosing the creative model and analytical model. that needs asked every time audit is ran, regardless. Just limit any additional questions. Always do the work, instead of suggestion to skip work that will improve the system."**
 
 *— Added 2026-06-06, source: user directive (first clause issued in reaction to audit Step 6's batched execution menu — "questions like this" refers to that Fixes/System multi-select AskUserQuestion; "likewise" extends the same-day no-switch-prompt directive from model-switch prompts to execution menus. Second clause is the user's clarification in the same session: the Lane→Model picker's two model questions are asked on EVERY audit run, regardless; everything else is limited; improvement work is DONE, never offered as skippable. Together they abolish audit's Step 6 execution menu and every mid-audit decision question: disclaimer acceptance (audit Step 0, whose backup warning is the consent instrument) authorizes the run — audit scans, reports, then auto-executes its recommended fixes and terminal route tasks as a sequential TaskCreate list, including bootstrap-mode CLAUDE.md extraction at high confidence and Awareness Ledger creation, with agent panels — never user menus — resolving judgment; ambiguity resolves to the conservative alternative or DEFERS to the report's Deferred Items table with a ready-to-run command, never a guess, never a question, never a silent skip. Only genuinely destructive or ratification-gated work defers: strip deletions, convert/migration (inline sacred gates), quarantine repairs of hand-authored files, protective/unrecoverable dead wiring, and git-dependent fixes in no-VCS projects. The only questions any audit may ask are exactly three: the Step 0 disclaimer, the one-time 4f-setup onboarding, and the every-audit Lane→Model picker. Supersedes execution-menu mechanics only, newest-wins: Rule 3's "offers the user a choice", the Step 6 menu, the bootstrap extraction menu, quick-audit's per-item y/n offer, and the under-audit post-action-chain menu all become automatic; standalone commands invoked outside audit keep their own menus. The AUTO/DEFER tiering and execution mechanics live in references/procedures/audit.md § Step 6, never inside this immutable block.)*
+
+> **"The 2026-05-11 hooks-in-source exception extends to the PowerShell companions of the same two hooks — protect-directives.ps1 and unique-persona.ps1 — so Windows hosts keep the mechanical backstop. The exception set is exactly these four files: the two bash originals and their two PowerShell ports. Nothing else about the no-hooks-distribution rule changes; wiring into settings.local.json remains host-local, and the hooks procedure wires the OS-appropriate variant."**
+
+*— Added 2026-06-06, source: user directive (ratified via AskUserQuestion — "Ship .ps1 companions" — during the cross-platform installer session; see ledger DEC-2026-06-06-cross-platform-installer. Drafted from the ratified option's stated scope and ratified as a unit. Amends the 2026-05-11 exception's file set only; that directive's text above stays verbatim. The .ps1 ports are fail-open and remain dormant on any host until wired via /skill-builder hooks; the port implementations live in skill-builder/hooks/, never inside this immutable block.)*
 <!-- /origin -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -153,17 +157,17 @@ CHECKPOINT — Source-First Ordering Gate (fires when `dev_mode == true`):
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
 <!-- Source directive: "No hooks! We don't distribute hooks. The project only makes hooks on the host system." -->
-<!-- Exception directive (2026-05-11): protect-directives.sh and unique-persona.sh DO ship in source. -->
+<!-- Exception directive (2026-05-11, extended 2026-06-06): protect-directives.{sh,ps1} and unique-persona.{sh,ps1} DO ship in source. -->
 CHECKPOINT — No-Distribute-Hooks Gate:
-1. Define the EXCEPTION_HOOKS set: `{ protect-directives.sh, unique-persona.sh }`. Every step below applies to all hooks EXCEPT those in this set; the exception steps (1b, 3b) cover the two named hooks explicitly.
-2. Before adding any hook script under `skill-builder/hooks/` whose basename is NOT in EXCEPTION_HOOKS → STOP. The source distribution MUST NOT contain hook scripts other than the two named exceptions. Hooks live only in the runtime copy on the host system.
-   - 2b. Exception path: adding `skill-builder/hooks/protect-directives.sh` or `skill-builder/hooks/unique-persona.sh` is PERMITTED and REQUIRED per the 2026-05-11 sacred directive. These ship in source.
+1. Define the EXCEPTION_HOOKS set: `{ protect-directives.sh, unique-persona.sh, protect-directives.ps1, unique-persona.ps1 }` (the two bash originals per the 2026-05-11 directive, plus their PowerShell companions per the 2026-06-06 extension). Every step below applies to all hooks EXCEPT those in this set; the exception steps (1b, 3b) cover the named hooks explicitly.
+2. Before adding any hook script under `skill-builder/hooks/` whose basename is NOT in EXCEPTION_HOOKS → STOP. The source distribution MUST NOT contain hook scripts other than the named exceptions. Hooks live only in the runtime copy on the host system.
+   - 2b. Exception path: adding any of the four EXCEPTION_HOOKS files under `skill-builder/hooks/` is PERMITTED and REQUIRED per the 2026-05-11 sacred directive and its 2026-06-06 PowerShell-companion extension. These ship in source.
 3. Before adding a `hooks:` frontmatter block to source `skill-builder/SKILL.md` → STOP. Source SKILL.md MUST NOT declare hooks. The runtime SKILL.md may declare hooks the host has generated locally; source must not.
-4. Before adding any line to the `install` script that fetches a hook script via `curl` → check against EXCEPTION_HOOKS.
-   - 4a. If the basename is in EXCEPTION_HOOKS → PERMITTED. The installer is expected to fetch these two files. Confirm the fetch loop targets `.claude/skills/skill-builder/hooks/` on the host.
-   - 4b. If the basename is NOT in EXCEPTION_HOOKS → STOP. Adding the fetch line violates the directive.
-5. Hooks ARE permitted in the runtime copy (`.claude/skills/skill-builder/hooks/`) and in runtime `SKILL.md` frontmatter, but only when generated on the host system via `/skill-builder hooks <skill> --execute` or maintained by hand by the host operator. The two EXCEPTION_HOOKS additionally arrive via the installer's fetch loop. Runtime hooks NOT in EXCEPTION_HOOKS never propagate back to the source distribution.
-6. IF a workflow proposes shipping a hook NOT in EXCEPTION_HOOKS via `install`, adding non-exception hook scripts to `skill-builder/`, or declaring hooks in source frontmatter → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only — only protect-directives.sh and unique-persona.sh are permitted in source per the 2026-05-11 exception."
+4. Before adding any hook-script entry to `manifest.txt` (the shared file list consumed by both `install` and `install.ps1`) or any fetch line to either installer script → check against EXCEPTION_HOOKS.
+   - 4a. If the basename is in EXCEPTION_HOOKS → PERMITTED. The manifest is expected to list these four files (the `.sh` pair with the `hook` flag for the unix executable bit; the `.ps1` pair as plain entries). Confirm the destination resolves to `.claude/skills/skill-builder/hooks/` on the host.
+   - 4b. If the basename is NOT in EXCEPTION_HOOKS → STOP. Adding the manifest entry or fetch line violates the directive.
+5. Hooks ARE permitted in the runtime copy (`.claude/skills/skill-builder/hooks/`) and in runtime `SKILL.md` frontmatter, but only when generated on the host system via `/skill-builder hooks <skill> --execute` or maintained by hand by the host operator. The two EXCEPTION_HOOKS additionally arrive via the installers' manifest-driven fetch. Runtime hooks NOT in EXCEPTION_HOOKS never propagate back to the source distribution.
+6. IF a workflow proposes shipping a hook NOT in EXCEPTION_HOOKS via the installers, adding non-exception hook scripts to `skill-builder/`, or declaring hooks in source frontmatter → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only — only protect-directives.{sh,ps1} and unique-persona.{sh,ps1} are permitted in source per the 2026-05-11 exception and its 2026-06-06 extension."
 <!-- END ENFORCEMENT ANNOTATION -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -304,7 +308,7 @@ The runtime is gitignored. It gets overwritten on every `bash install`. Runtime-
 2. **Then mirror the same change to `.claude/skills/skill-builder/<path>`** so the running session matches source. The mirror is a content sync, not a wholesale overwrite. Preserve runtime-only content the source intentionally lacks: local hooks frontmatter, `.directives.sha` sidecars, generated artifacts.
 3. **Never reverse the order.** Runtime contains intentional runtime-only content that must NOT propagate to source.
 
-**Hooks-in-source exception:** Two skill-builder hooks ship in the source distribution per the 2026-05-11 sacred directive — `protect-directives.sh` and `unique-persona.sh`. When `dev` mode targets either file, the canonical source path is `skill-builder/hooks/<name>` — edit there first, then mirror to `.claude/skills/skill-builder/hooks/<name>`. Every other hook file remains runtime-only and follows the original no-distribute rule.
+**Hooks-in-source exception:** Four skill-builder hooks ship in the source distribution — `protect-directives.sh` and `unique-persona.sh` per the 2026-05-11 sacred directive, plus their PowerShell companions `protect-directives.ps1` and `unique-persona.ps1` per the 2026-06-06 extension. When `dev` mode targets any of these files, the canonical source path is `skill-builder/hooks/<name>` — edit there first, then mirror to `.claude/skills/skill-builder/hooks/<name>`. Every other hook file remains runtime-only and follows the original no-distribute rule.
 
 **CHECKPOINT — fires before any skill-builder Read/Edit/Write when `dev` is in the invocation:**
 
@@ -314,7 +318,7 @@ The runtime is gitignored. It gets overwritten on every `bash install`. Runtime-
 2. For every planned Edit/Write whose path starts with `.claude/skills/skill-builder/`:
    - REWRITE the path BEFORE issuing the tool call: replace `.claude/skills/skill-builder/` with `skill-builder/`. The source path is the canonical first-pass edit target.
    - IF the source file does not exist while the runtime file does → STOP. Report: "Runtime is ahead of source for [path]. Determine canonical state before editing." Do not auto-mirror.
-   - Hook path exception: paths matching `.claude/skills/skill-builder/hooks/protect-directives.sh` or `.claude/skills/skill-builder/hooks/unique-persona.sh` rewrite to `skill-builder/hooks/<name>` (these two ship in source per the 2026-05-11 directive). Any OTHER `.claude/skills/skill-builder/hooks/*.sh` path stays runtime-only — do NOT rewrite to source for those.
+   - Hook path exception: paths matching `.claude/skills/skill-builder/hooks/<name>` where `<name>` is one of `protect-directives.sh`, `unique-persona.sh`, `protect-directives.ps1`, `unique-persona.ps1` rewrite to `skill-builder/hooks/<name>` (these four ship in source per the 2026-05-11 directive and its 2026-06-06 extension). Any OTHER `.claude/skills/skill-builder/hooks/*` path stays runtime-only — do NOT rewrite to source for those.
 3. For Reads on skill-builder content: prefer `skill-builder/<path>` so planning grounds on canonical source. Reads from runtime are allowed but second choice — the runtime may be stale.
 4. After all source edits land, perform the runtime mirror as a separate, explicit phase. For each `skill-builder/<path>` modified in this session, replicate the same change to `.claude/skills/skill-builder/<path>`. Touch only the changed sections; do not overwrite runtime-only frontmatter, hook scripts, or sidecars.
 5. End-of-session check: `git status --short -- skill-builder/`. Empty output when changes were expected = FAIL. The edits landed in the runtime only. Reverse order and retry from step 2.
@@ -374,7 +378,11 @@ The installer issues many file writes and bash calls in sequence. Without auto-a
    >
    > I cannot detect or set this mode from inside the session — it has to be you. Reply with anything (e.g., "go") once it's enabled and I'll run the installer.
 
-2. After the user acknowledges, run the installer via Bash: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"`
+2. After the user acknowledges, select the installer by platform. Read the `Platform:` line from the session environment context (a concrete read, no judgment, no agent):
+   - IF platform is `linux` or `darwin` (macOS) → run via the shell tool: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"`
+   - IF platform is `windows`/`win32` → run via the shell tool: `powershell -NoProfile -Command "irm https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install.ps1 | iex"` (this works whether the session's shell tool is Git Bash or PowerShell, so no shell detection is needed)
+   - IF the platform line is absent or unrecognized → ask the user which OS they are on before running anything.
+   Both installers consume the same shared `manifest.txt`, so they ship identical content.
 3. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill loaded in memory, so start a new conversation. Once you're back, run `/skill-builder audit` — updates often add new recommendations that apply to your existing skills.
 <!-- /origin -->
 
@@ -535,7 +543,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 
 **Post-dev check:** After any `dev` command that modifies skill-builder files, run BOTH of the following:
 
-1. **Manifest check.** Glob `skill-builder/**/*.md`. Compare against the files downloaded in the installer's `for ref`, `for proc`, `for ss`, and `for ce` loops, plus the explicit `curl` lines for `SKILL.md` and `agents/*/AGENT.md`. Flag any new/renamed/removed files the installer doesn't handle. This prevents drift between the repo and what users receive on install. (skill-builder no longer ships hook scripts; users generate per-system hooks via `/skill-builder hooks` if they want them.)
+1. **Manifest check.** Glob `skill-builder/**/*.md`. Compare against the paths listed in the repo-root `manifest.txt` — the single authoritative shipped-file list consumed by BOTH installers (`install` for bash, `install.ps1` for PowerShell). Flag any new/renamed/removed files the manifest doesn't list. This prevents drift between the repo and what users receive on install, on every platform at once. (The only shipped hook scripts are the two 2026-05-11 exceptions, listed in the manifest with the `hook` flag; users generate all other per-system hooks via `/skill-builder hooks`.)
 2. **Source-edit verification.** Run `git status --short -- skill-builder/`. If the dev session was expected to produce changes and the output is empty, the edits landed in the runtime copy. Report the failure with the runtime/source diff so the user can mirror canonical changes back to source.
 <!-- /origin -->
 

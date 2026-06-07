@@ -1,0 +1,93 @@
+# Claude Enforcer install manifest
+#
+# The single authoritative list of every file the installers ship.
+# Consumed by BOTH installers: `install` (bash, Linux/macOS) and
+# `install.ps1` (PowerShell, Windows). Add every new shipped file here;
+# there are no per-installer fetch loops to keep in sync anymore.
+#
+# Format: [flag] <path relative to repo root>
+#   (no flag)  fetch unconditionally, overwriting any existing copy
+#   keep       fetch only if absent on the host (user-editable file; never clobber)
+#   hook       fetch unconditionally; mark executable on unix systems
+#
+# Host destination: .claude/skills/skill-builder/<path minus leading "skill-builder/">
+
+skill-builder/SKILL.md
+
+# References
+skill-builder/references/agents.md
+skill-builder/references/agents-personas.md
+skill-builder/references/agents-teams.md
+skill-builder/references/enforcement.md
+skill-builder/references/eval-history-format.md
+skill-builder/references/eval-rubrics.md
+skill-builder/references/lane-delegation.md
+skill-builder/references/ledger-templates.md
+skill-builder/references/optimization-examples.md
+skill-builder/references/patterns.md
+skill-builder/references/platform.md
+skill-builder/references/portability.md
+skill-builder/references/principles.md
+skill-builder/references/templates.md
+skill-builder/references/temporal-validation.md
+skill-builder/references/token-efficiency.md
+
+# model-lanes.md is a USER-EDITABLE mapping (lane to preferred model, skill to lane).
+# `keep` so `/skill-builder update` never clobbers a user's edited mapping.
+keep skill-builder/references/model-lanes.md
+
+# Procedures
+skill-builder/references/procedures/audit.md
+skill-builder/references/procedures/verify.md
+skill-builder/references/procedures/quick-audit.md
+skill-builder/references/procedures/skills.md
+skill-builder/references/procedures/list.md
+skill-builder/references/procedures/optimize.md
+skill-builder/references/procedures/agents.md
+skill-builder/references/procedures/hooks.md
+skill-builder/references/procedures/new.md
+skill-builder/references/procedures/strip.md
+skill-builder/references/procedures/directives.md
+skill-builder/references/procedures/inline.md
+skill-builder/references/procedures/post-action-chain.md
+skill-builder/references/procedures/claude-md.md
+skill-builder/references/procedures/ledger.md
+skill-builder/references/procedures/cascade.md
+skill-builder/references/procedures/reconcile.md
+skill-builder/references/procedures/eval.md
+skill-builder/references/procedures/checksums.md
+skill-builder/references/procedures/convert.md
+skill-builder/references/procedures/shell-safety.md
+skill-builder/references/procedures/intent-router.md
+skill-builder/references/procedures/route.md
+skill-builder/references/procedures/code-eval.md
+
+# Shell-safety rule set
+skill-builder/references/shell-safety/rules.md
+skill-builder/references/shell-safety/templates.md
+skill-builder/references/shell-safety/audit-patterns.md
+
+# code-evaluator intel set: shipped to skill-builder AND copied into a user's
+# generated code-evaluator skill by `/skill-builder code-eval create`.
+skill-builder/references/code-evaluator/version.md
+skill-builder/references/code-evaluator/cross-file-detection.md
+skill-builder/references/code-evaluator/mistake-taxonomy.md
+skill-builder/references/code-evaluator/native-tool-map.md
+skill-builder/references/code-evaluator/guards.md
+skill-builder/references/code-evaluator/gotchas.md
+skill-builder/references/code-evaluator/skill-template.md
+
+# Agents
+skill-builder/agents/optimize-diff-auditor/AGENT.md
+skill-builder/agents/intent-router/AGENT.md
+
+# The load-bearing hook scripts (2026-05-11 exception to no-distribute,
+# extended 2026-06-06 with the PowerShell companions for Windows hosts).
+# The .sh pair runs on bash hosts; the .ps1 pair runs on native Windows.
+# All four stay dormant until wired host-locally; run
+#   /skill-builder hooks dev skill-builder --execute
+# to wire the OS-appropriate variant into .claude/settings.local.json.
+hook skill-builder/hooks/protect-directives.sh
+hook skill-builder/hooks/unique-persona.sh
+skill-builder/hooks/protect-directives.ps1
+skill-builder/hooks/unique-persona.ps1

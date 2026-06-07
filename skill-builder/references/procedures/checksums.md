@@ -76,6 +76,7 @@ Also check for enforcement hooks:
    - Write sidecar in the format specified below
 3. **Generate `protect-directives` hook** (if not present) — Create `.claude/skills/skill-builder/hooks/protect-directives.sh` following the spec below. Make executable. Wire in `settings.local.json` under PreToolUse for Edit and Write.
 4. **Generate `unique-persona` hook** (if not present) — Create `.claude/skills/skill-builder/hooks/unique-persona.sh` following the spec below. Make executable. Wire in `settings.local.json` under PreToolUse for Write and Edit.
+4-bis. **Windows wiring (OS-appropriate variant).** Read the `Platform:` line from the session environment context. IF the platform is `windows`/`win32` → wire the PowerShell companions instead of the `.sh` scripts: the installer already ships `protect-directives.ps1` and `unique-persona.ps1` alongside the bash originals (2026-06-06 extension of the 2026-05-11 hooks-in-source exception), so do NOT generate new hook code — wire the existing files with a command of the form `powershell -NoProfile -ExecutionPolicy Bypass -File "$CLAUDE_PROJECT_DIR/.claude/skills/skill-builder/hooks/<name>.ps1"`. No executable bit is needed for `.ps1` files. On bash platforms (`linux`, `darwin`, Windows with Git Bash as the shell tool) wire the `.sh` variants per steps 3 and 4. Never wire both variants for the same hook on one host.
 5. Report generated checksums with directive previews
 
 ### Sidecar File Format (`.directives.sha`)
@@ -89,6 +90,8 @@ sha256:<hash>  directive:2  "<first 50 chars of directive>..."
 ```
 
 ### Hook Generation Specifications
+
+The specs below describe the bash variants. The shipped PowerShell companions (`protect-directives.ps1`, `unique-persona.ps1`) implement the same logic, normalization, and exit semantics for Windows hosts and are fetched by the installer — they are wired (per step 4-bis), never regenerated here.
 
 #### protect-directives.sh
 
