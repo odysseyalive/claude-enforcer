@@ -35,6 +35,16 @@ mappings) — the normative rules live here so existing installs receive them on
 5. **A skill cannot switch the session model.** Unchanged. Delegation does not switch anything
    either — it spawns a subagent whose own `model:` pin the harness honors (confirmed: subagent
    frontmatter accepts full model IDs; see code.claude.com/docs/en/sub-agents).
+6. **Platoon, not army (sacred directive, 2026-06-06 — see SKILL.md § Directives → Platoon Gate).**
+   The delegation rationale vocabulary is exhaustive: (a) **MODEL-FIT** — the step's lane differs
+   from the executing session's lane; (b) **CONTEXT ISOLATION** — unbiased evaluation requires a
+   fresh context (the text-eval/image-eval pattern). There is NO third rationale. Token efficiency
+   and speed remain forbidden justifications. Same-lane delegation without a named isolation
+   rationale is forbidden — the step runs in the main session as written. The NON-DELEGABLE list
+   below is the floor; this principle is the ceiling.
+7. **Spawns are sequential.** Minion spawns within a workflow run in step order; concurrent
+   minions touching the same file are forbidden until a concurrency model exists. The "army"
+   mental image never licenses a fan-out.
 
 ---
 
@@ -53,6 +63,33 @@ differs from the skill's declared primary lane.
 - Creative-excursion signals inside coding skills: draft release notes / announcements / copy,
   write user-facing prose, translate, evaluate text or voice, design copy or naming.
 - Steps matching neither list, or matching both → AMBIGUOUS → the agent panel rule below.
+
+## Mode-Detection Ladder (per-function lanes; 2-Brain Harness, 2026-06-06)
+
+Per-function lane rows (`skill:function` table rows in model-lanes.md, or a `lanes:` frontmatter
+map) are permitted ONLY for functions that exist by this ladder's evidence. **Never emit a function
+row for a function that didn't pass rung (i) or (ii) without explicit user confirmation** —
+route's catalog discipline extends to functions: never invent a mode name.
+
+1. **(i) Explicit mode table** in the skill's SKILL.md (`## Modes`, `## Commands`, or similar) →
+   extract the mode names verbatim. AUTHORITATIVE.
+2. **(ii) Frontmatter `description` "Modes: a, b, c" token list** → extract, then cross-check each
+   token against the body; a token with no body presence falls off the list. AUTHORITATIVE when the
+   cross-check passes.
+3. **(iii) Heading patterns** (`## Workflow: X`, usage fences naming subcommands) → CANDIDATE only.
+   Per the agents-mandatory directive, a candidate list requires the agent panel before any use,
+   and even panel-approved candidates are SUGGESTIONS for the user to confirm — never auto-written.
+4. **(iv) Prose-only workflow, or panel non-consensus** → STOP. The skill is single-function for
+   lane purposes: one skill-level lane covers everything; cross-lane steps inside it are excursion
+   candidates (§ Excursion Signal Vocabulary below), not functions. Ask the user only if they
+   explicitly requested per-function granularity for this skill.
+
+**Staleness (STALE-FUNCTION):** `route index` re-runs rungs (i)/(ii) on every regeneration; a
+declared `skill:function` row whose function no longer passes → reported as `STALE-FUNCTION`
+(report-only; the user edits the declaration). Never fuzzy-match a renamed mode; never auto-delete
+a declared row.
+
+---
 
 ## NON-DELEGABLE Hard-Stop List (mechanical — no agent needed)
 
@@ -84,8 +121,13 @@ Contract` section with two halves:
 
 - **REQUIRES** — the enumerated inputs the spawner MUST serialize into the agent prompt: task
   statement, file paths to read, the relevant constraint set, acceptance criteria.
-- **RETURNS** — the structured output format, with a mandatory failure sentinel
-  (`INCOMPLETE: <missing input>`) so a starved agent fails loudly, never plausibly.
+- **RETURNS** — the structured output format, with TWO mandatory sentinels:
+  `INCOMPLETE: <missing input>` (a starved agent fails loudly, never plausibly) and
+  `AMBIGUOUS: <question>` (an agent with every REQUIRES item present but two or more valid
+  interpretations hands the decision back — **a minion never guesses**; sacred directive,
+  2026-06-06). On an `AMBIGUOUS:` return, the ORCHESTRATOR owns the AskUserQuestion (subagents
+  cannot prompt the user), then re-spawns with the answer serialized — this counts as the single
+  permitted retry.
 
 Rules:
 
@@ -99,10 +141,18 @@ Rules:
 3. **Return verification.** The main model checks the return against RETURNS before continuing. On
    violation: retry exactly once, naming the gap. Second failure → fall back to main-session
    execution and report. Never loop (single-retry discipline, matching MODEL-LANE-GATE clause 8).
-4. **Observable delegation.** Announce every spawn:
-   `Excursion: step "<anchor>" delegated to <agent> (lane <x>, model <id>)` and surface the
+4. **Observable delegation — rollup, not wallpaper.** At the FIRST spawn of a workflow run, print
+   ONE delegation table covering every planned spawn for the run (anchor | agent | lane | model).
+   After that, per-spawn lines are printed ONLY for deviations: a retry, an `INCOMPLETE:`/
+   `AMBIGUOUS:` return, a degraded-path fallback, STALE-ANCHOR, or CONTRACT-DRIFT. Surface every
    returned artifact in conversation. Invisible delegation is forbidden — the user must be able to
-   inspect the trade they accepted.
+   inspect the trade they accepted — but at platoon scale, identical per-spawn lines bury the
+   deviations that matter; the rollup preserves signal.
+5. **Degraded-path honesty.** When the fallback executes a cross-lane step on the wrong-lane main
+   model (map clause 2), the run's report carries it as a QUALITY CAVEAT ("step '<anchor>' ran on
+   <wrong-lane model> — degraded"), never as a neutral notice. Repeated degraded runs of the SAME
+   map entry escalate to an audit Priority Fixes item instead of re-printing the same nag — a
+   warning the user has tuned out is not observability.
 
 ---
 
@@ -124,6 +174,7 @@ model: [FULL official model ID of the OTHER lane's preferred model, e.g. claude-
 lane-pinned: [coding|creative]        # fleet-membership marker — Fleet Rewrite targets this
 generated-by: skill-builder lane-excursion
 excursion-skill: [skill]              # must equal the containing skill directory
+contract-stamp: [sha256 of the normalized skill workflow text the agent was designed from — computed at design time by agents § Step 4d; route embed § Step 9 compares it against the CURRENT workflow to detect CONTRACT-DRIFT]
 tools: [minimal excursion-appropriate list — see Tool Curation below]
 ---
 
@@ -133,7 +184,9 @@ You are [persona]. You perform exactly ONE kind of excursion for the /[skill] wo
 
 ## Context Contract
 - REQUIRES: [enumerated inputs the spawner must provide]
-- RETURNS: [structured output] — or `INCOMPLETE: <missing input>` if any REQUIRES item is absent.
+- RETURNS: [structured output] — or `INCOMPLETE: <missing input>` if any REQUIRES item is absent,
+  or `AMBIGUOUS: <question>` if all inputs are present but more than one valid interpretation
+  exists. Never guess between interpretations — return the question.
 
 You do NOT perform any other step of /[skill]'s workflow, do NOT route to other skills, and do NOT
 modify files unless this excursion's RETURNS contract is explicitly a file.
@@ -178,7 +231,8 @@ CHECKPOINT — Excursion Delegation Map:
    the same step's position — order, gates, and routing points preserved exactly.
 2. IF the agent file is missing or the spawn fails → report "Lane-pinned agent [agent-name] missing — run
    /skill-builder agents [skill] --execute", then perform the step in the main session AS WRITTEN
-   (degraded path; never silently skip the step, never block, never loop).
+   (degraded path; never silently skip the step, never block, never loop). The degraded run is a
+   QUALITY CAVEAT in the output — the step executed on the wrong-lane model — not a neutral notice.
 3. Workflow preservation overrides everything: no shortcut, no token-efficiency reasoning, no merging
    an excursion into other steps (sacred directive, 2026-06-06).
 <!-- END ENFORCEMENT ANNOTATION -->

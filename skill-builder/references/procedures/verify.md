@@ -97,6 +97,15 @@ For each agent file:
 - Does it have valid frontmatter?
 - Is it referenced (by name or filename) in the parent SKILL.md?
 
+### Step 4b: Fleet Registration & Contract Health (2-Brain Harness, 2026-06-06)
+
+For each agent carrying `generated-by: skill-builder lane-excursion` (from the Step 4 union):
+
+- **Registered?** A `.claude/agents/<name>.md` registration must resolve to it (dereference symlinks; a copy-fallback counts). Unregistered → **FAIL** — "minion unregistered: spawns fall to the degraded path (wrong-lane main-session execution). Re-register via `agents [skill] --execute`." *(Panel-measured precedent: a live fleet had 104 agent files with 2 registrations — the whole fleet was silently degraded.)*
+- **Model pinned?** `model:` present while lanes are configured (per `references/model-lanes.md`). Missing → WARN with the Audit Agent Model-Assignment Gate fix path.
+- **Contract stamped?** `contract-stamp:` present → recompute against the current skill workflow; mismatch → WARN `CONTRACT-DRIFT` ("skill changed under the minion — run `agents [skill]`"). Absent → WARN `UNSTAMPED`.
+- **Orphaned?** `excursion-skill:` names a directory that no longer exists → WARN with the consented-retirement path (audit Step 6 menu).
+
 ### Step 5: Summary Output
 
 ```
@@ -113,6 +122,8 @@ For each agent file:
 | Shell-safety lint (hooks/settings) | [N]/[N] [PASS/WARN/FAIL] |
 | Stale artifacts | [NONE/WARN — list] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
+| Minions registered (lane-excursion fleet) | [N]/[N] [PASS/FAIL/N/A] |
+| Minion contracts current (stamp check) | [N]/[N] [PASS/WARN/N/A] |
 | Agent Teams enabled | [PASS/FAIL/N/A] |
 | Research assistant in teams | [N]/[N] [PASS/WARN/N/A] |
 

@@ -37,6 +37,13 @@ Read the target's directory tree. Record:
 
 This becomes the "to be deleted" inventory in the report.
 
+#### Step 2b: In-target sacred content precheck (directive-touch hard floor extended to deletion)
+
+Scan every file in the Step 2 inventory for `<!-- origin: user | ... immutable: true -->` blocks. **Deleting a file IS an edit span intersecting the immutable block** — the directives-are-sacred convention does not stop applying because the whole container is being removed.
+
+- IF any immutable block exists in the target → the strip is **BREAKING (sacred content)** regardless of dependents, and execute mode additionally requires **rehoming evidence**: the impact report must list each sacred block verbatim with its proposed new home (a surviving file the user names — e.g. the project's model-lanes.md directive region or a project directives file), and the user must have confirmed the rehomed copy as canonical BEFORE `--execute --confirm-breaking` is honored. The move is verbatim, markers intact — move-don't-rewrite applies absolutely. The completion report records every `old path → new path`.
+- IF no immutable blocks → no change to the normal flow.
+
 #### Step 3: Detect hard dependents
 
 Some skills are referenced as load-bearing infrastructure by other skills. Stripping them leaves dangling reads that fail at runtime. Detect dependents by scanning every other skill for references to the target:
@@ -131,9 +138,10 @@ Execute mode applies the changes from the display report.
 
 #### Step 0: Re-confirm and gate
 
-1. Re-read display-mode results (rerun steps 1–4) to detect any drift since display.
+1. Re-read display-mode results (rerun steps 1–4, including the Step 2b sacred-content precheck) to detect any drift since display.
 2. If status is BREAKING and the invocation lacks `--confirm-breaking`, REFUSE and print the report's confirmation hint. Stop.
-3. If the user passed `--confirm-breaking` but status is SAFE (no HARD references), proceed normally — the flag is harmless when unneeded.
+3. If the target contains sacred content (Step 2b) and there is no confirmed rehoming for every immutable block → REFUSE even with `--confirm-breaking`. Print: "Target contains immutable user directives with no ratified rehoming. Confirm each block's new home first — sacred text is never deleted, only moved verbatim." Stop.
+4. If the user passed `--confirm-breaking` but status is SAFE (no HARD references, no sacred content), proceed normally — the flag is harmless when unneeded.
 
 #### Step 1: Build the task list
 

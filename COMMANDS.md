@@ -470,6 +470,22 @@ Manually opt a single skill out of the gate.
 
 ---
 
+### `/skill-builder route lane-status [skill]`
+
+**What it does.** Read-only legibility report for the 2-Brain Harness. For one skill (or all lane-declared skills when no target is given), prints the resolved lane and its provenance, preferred vs. active model, gate state (embedded, off, or suppressed and why), and a one-line verdict: "no prompt expected; silence is correct" or "would prompt at next invocation." Run for all skills, it ends with the coverage accounting line (N declared, M none, K gate-off, J undeclared). Answers "why wasn't I prompted?" without re-deriving the logic by hand.
+
+**When to use.** Whenever gate silence is surprising. After declaring or changing lanes. After a `/model` switch mid-session.
+
+**Example.**
+
+```
+/skill-builder route lane-status study-prep
+```
+
+**Under the hood.** Same procedure file as `index` (the Mode: `lane-status` section). Reads `model-lanes.md` and the session's model line. Writes nothing, never prompts.
+
+---
+
 ### `/route [task description]`
 
 **What it does.** User-facing dispatcher. Reads the auto-generated index, matches the task description against catalog entries, and invokes the right skill and mode. Refuses to invent skill names. If the top match is below clear-best confidence, it stops and asks which to use.

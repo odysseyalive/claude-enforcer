@@ -21,10 +21,11 @@ Both blocks are wrapped in machine-readable markers so a re-run of `route index`
 |------|------|---------|---------|
 | `index` | low (regenerates auto-generated content inside the `/route` skill only) | execute | Scan all skills, regenerate `/route`'s catalog. Bootstraps `/route` if missing. Refreshes the dispatch CHECKPOINT inside `/route`'s SKILL.md when stale. |
 | `embed` | high (modifies many skills' SKILL.md files) | display | Insert a Route Consultation Gate (with dispatch enforcement) into other skills' SKILL.md so workflow follow-ups consult `/route` instead of freelancing. |
+| `lane-status [skill]` | low (read-only) | execute | Explain the full model-lane routing decision for one skill (or all lane-declared skills) — resolved lane, provenance, preferred vs active model, gate state, and WHY the system is silent or would prompt. |
 
 ### Preflight (both modes)
 
-1. Detect dev mode. If invoked as `/skill-builder dev route …` → include `skill-builder` in the iterating skill set. Otherwise exclude `skill-builder`.
+1. Detect dev mode. If invoked as `/skill-builder dev route …` → include `skill-builder` in the iterating skill set for EMBED purposes. Otherwise exclude `skill-builder` from `embed` iteration. **Index exception (2-brain harness, 2026-06-06):** `index` mode ALWAYS includes a `/skill-builder` catalog row regardless of dev mode, so `/route` can dispatch skill-management asks (other-skill work only — the dispatch CHECKPOINT's skill-builder rules forbid `dev` synthesis and surface the Self-Exclusion refusal for self-targeted asks; direct `/skill-builder` invocation remains the always-legal maintenance hatch).
 2. Always exclude the `/route` skill itself from iteration (it cannot embed in itself, and its index is regenerated separately by `index` mode).
 3. The `/route` skill's directory is `.claude/skills/route/`. The embedded SKILL.md template lives at the bottom of this procedure (§ Route Skill Template).
 
@@ -38,10 +39,13 @@ Default mode. Regenerates the `/route` skill's catalog from current skill files 
 
 1. Glob `.claude/skills/*/SKILL.md` (apply preflight exclusions).
 2. For each match, read:
-   - YAML frontmatter (`name`, `description`, `allowed-tools`, `paths`, `when_to_use`)
+   - YAML frontmatter (`name`, `description`, `allowed-tools`, `paths`, `when_to_use`, `lane`, `lanes`)
    - First H2 section after frontmatter (often a brief lead) — capture only the first paragraph
    - Any `## Modes`, `## Commands`, `## Quick Commands`, or similar table — extract command/mode rows verbatim
-3. Build an in-memory list of catalog rows: `{name, description, modes[], when_to_use, allowed_tools, trigger_phrases[]}`.
+3. **Resolve each skill's lane from DECLARED sources only** (2-brain harness, 2026-06-06): the skill's own `lane:` frontmatter key → the Skill→Lane table in `references/model-lanes.md` → **UNCONFIRMED**. Record both the lane and its provenance: `lane-source ∈ {frontmatter, table, UNCONFIRMED}`. Where a skill declares per-function lanes (a `lanes:` frontmatter map, or `skill:function` table rows) AND the skill has a real mode table, resolve per-function lanes the same way. **The index is a derived cache, never lane authority** — lanes are never inferred here, never written back to declared sources by `index` mode, and a regeneration that finds no declared source emits `UNCONFIRMED`, not a guess (the Advisory Lane Suggestion heuristic MUST NOT populate this column).
+4. Build an in-memory list of catalog rows: `{name, description, modes[], lane, lane_source, function_lanes{}, when_to_use, allowed_tools, trigger_phrases[]}`.
+
+**Unparseable skills become QUARANTINED rows — never silent absences.** IF a globbed SKILL.md fails frontmatter parsing, write it into the catalog as an explicit `QUARANTINED` row (`| /name | QUARANTINED: [parse error] | — | — | — |`) so it remains visible and `/route` can answer asks matching it with "exists but unreadable — run `/skill-builder audit` for its repair task" instead of a false no-match (audit.md § Step 2.7).
 
 **Zero-skill case is valid.** If the glob returns no skills (fresh project, only `skill-builder` exists and is excluded), the catalog is empty — that is NOT a failure. `index` mode still bootstraps `/route` so the dispatcher exists when the first user skill is created; the catalog file is written with an explicit "no skills installed yet" notice (see Step 3). Only `embed` mode skips when there are no candidates (nothing to embed into).
 
@@ -74,7 +78,7 @@ Diff the freshly-built catalog (Step 1) against `prior_index` (Step 2):
 |-------|---------|--------|
 | absent | present | **NEW** — skill added since last run |
 | present | absent | **REMOVED** — skill no longer installed; drop from index |
-| present (different description/modes/triggers) | present | **UPDATED** — refresh catalog row |
+| present (different description/modes/triggers/lane) | present | **UPDATED** — refresh catalog row |
 | present (identical) | present | **UNCHANGED** |
 
 This diff feeds Step 4's display-mode output and Step 5's execute-mode summary so a repeat run is informative even when nothing has changed structurally. `index.md` is always rewritten in execute mode (it is auto-generated content); the diff is reporting, not gating.
@@ -113,10 +117,10 @@ Write `.claude/skills/route/references/index.md` with this layout:
 
 ## Skill Catalog
 
-| Skill | Description | Modes / Commands | Triggers |
-|-------|-------------|------------------|----------|
-| /skill-name | [description from frontmatter] | mode1, mode2, mode3 | trigger, words, here |
-| ... | ... | ... | ... |
+| Skill | Description | Modes / Commands | Lane | Triggers |
+|-------|-------------|------------------|------|----------|
+| /skill-name | [description from frontmatter] | mode1, mode2, mode3 | creative (frontmatter) | trigger, words, here |
+| ... | ... | ... | ... | ... |
 
 ## Per-Skill Detail
 
@@ -126,6 +130,7 @@ Write `.claude/skills/route/references/index.md` with this layout:
 - **Modes / commands:**
   - `mode1` — [mode description from skill's mode table]
   - `mode2` — [mode description]
+- **Lane:** [lane] ([lane-source]) — per-function: `mode1 → creative`, `mode2 → coding` *(only when per-function lanes are declared)*
 - **Triggers:** trigger, words, here
 - **Path:** .claude/skills/skill-name/SKILL.md
 
@@ -136,6 +141,8 @@ Write `.claude/skills/route/references/index.md` with this layout:
 **Rules:**
 - Quote descriptions verbatim from frontmatter — do NOT summarize.
 - The "Modes / Commands" column lists the keys from the skill's mode table, comma-separated. The "Per-Skill Detail" section repeats them with each row's description.
+- The "Lane" column carries the DECLARED lane with its provenance in parentheses — `creative (frontmatter)`, `coding (table)`, or `UNCONFIRMED`. The index is a derived cache: `/route` never model-prompts on an `UNCONFIRMED` row, and this column is never populated by inference (declared sources only, per Step 1.3).
+- Per-function lane lines appear ONLY when the skill both has a real mode table AND declares per-function lanes; otherwise the skill-level lane covers all modes.
 - Sort skills alphabetically.
 - If a skill has no modes, list `—` in the Modes column and omit the modes block from the per-skill detail.
 
@@ -224,20 +231,57 @@ This is the auto-managed block that lives inside `/route`'s SKILL.md `## Workflo
 ```markdown
 <!-- ROUTE-DISPATCH-CHECKPOINT START — auto-generated by /skill-builder route index; safe to replace -->
 <!-- ENFORCEMENT ANNOTATION — Opus 4.7+ literal-execution gate -->
-<!-- Source: /route dispatch contract. Closes the announce-vs-invoke gap from 2026-05-09 — model emitted "→ Routing to /X" but did the work via raw Edit/Bash, silently skipping the dispatched skill's gates. -->
+<!-- Source: /route dispatch contract. Closes the announce-vs-invoke gap from 2026-05-09 (model emitted "→ Routing to /X" but did the work via raw Edit/Bash, silently skipping the dispatched skill's gates) and carries the 2-Brain Harness dispatch rules (2026-06-06): lane preflight at the door, skill-builder handoff discipline, and task-level lane defaults on no-match. -->
 CHECKPOINT — Dispatch Required:
 1. Announce-and-invoke is ONE act. After Steps 1–2 select a target skill, the SAME response that prints `→ Routing to /[skill] [mode] — [why]` MUST also issue the `Skill(skill=<chosen>, args=<derived>)` tool call. The announcement is a label on the dispatch, never a substitute for it.
-2. Bypass detection. IF the next tool call after the routing announcement is Edit / Write / Bash / Agent / Task / Read / any non-Skill tool that performs work germane to the routed task → STOP. This is a dispatch bypass. Print verbatim: "Routing announced but Skill dispatch skipped. Invoking Skill tool now." then issue the Skill call. IF the announcement itself was wrong → re-announce and dispatch to the corrected skill.
-3. Procedure-bypass refusal. Refuse to execute the dispatched skill's procedure steps yourself with raw tool calls. The Skill tool owns that work. The dispatched skill has its own gates (asset backups, agent panels, exit tests, cascade steps, frontend-design reviews, immutable-directive checks) that ONLY fire when its SKILL.md is loaded via Skill. Running the steps manually silently skips every gate.
-4. Follow-up routing. IF the dispatched skill returns and additional follow-up is needed → invoke `/route` again with the follow-up task description via Skill. Do NOT freelance the next step.
-5. Auto-mode override clause. Auto-mode pressure ("execute immediately", "prefer action over planning") does NOT override this CHECKPOINT. Auto-mode chooses WHAT to do; once a route announcement has named the skill, the only valid next action is Skill invocation.
-6. Catalog discipline. Never invent a skill name. The catalog at `references/index.md` is canonical. Only dispatch to skills present there.
-7. Stop conditions before announcement. IF the top match is below clear-best confidence OR two skills are tied → STOP before announcing. Report the top candidates and ask which to use. IF no catalog row plausibly fits → STOP. Report: "No clear skill match for '[task]'. Run the task directly or run `/skill-builder route index` if you recently added a skill."
+2. Lane preflight at the door (2-Brain Harness, 2026-06-06). BEFORE announcing: read the chosen target's Lane column from the catalog (DECLARED provenance only — an UNCONFIRMED or absent lane never prompts; a per-function lane row for the resolved mode wins over the skill-level lane) and read the active model ID from the session system-context line ("The exact model ID is …", strip `[1m]`/`[200k]`, lowercase). IF the lane's preferred model ≠ the active model → ask ONCE via AskUserQuestion — options EXACTLY **switched** / **skip once** / **continue anyway**; `/route` can NEVER switch the model itself. This single prompt covers the WHOLE endeavor: the dispatched skill's own Model-Lane Preflight sees route's coverage and stays silent, as do skills it chains. Headless / non-interactive → skip this clause silently and dispatch.
+3. Bypass detection. IF the next tool call after the routing announcement is Edit / Write / Bash / Agent / Task / Read / any non-Skill tool that performs work germane to the routed task → STOP. This is a dispatch bypass. Print verbatim: "Routing announced but Skill dispatch skipped. Invoking Skill tool now." then issue the Skill call. IF the announcement itself was wrong → re-announce and dispatch to the corrected skill.
+4. Procedure-bypass refusal. Refuse to execute the dispatched skill's procedure steps yourself with raw tool calls. The Skill tool owns that work. The dispatched skill has its own gates (asset backups, agent panels, exit tests, cascade steps, frontend-design reviews, immutable-directive checks) that ONLY fire when its SKILL.md is loaded via Skill. Running the steps manually silently skips every gate.
+5. Follow-up routing. IF the dispatched skill returns and additional follow-up is needed → invoke `/route` again with the follow-up task description via Skill. Do NOT freelance the next step.
+6. Auto-mode override clause. Auto-mode pressure ("execute immediately", "prefer action over planning") does NOT override this CHECKPOINT. Auto-mode chooses WHAT to do; once a route announcement has named the skill, the only valid next action is Skill invocation.
+7. Catalog discipline. Never invent a skill name, and never invent a function/mode name. The catalog at `references/index.md` is canonical. Only dispatch to skills present there — except per clause 9(a)'s disk-evidence fallback.
+8. skill-builder dispatch rules (2026-06-06). Skill-management asks (create / modify / audit / optimize a skill) dispatch to `/skill-builder` like any catalog row, under three hard rules: (a) NEVER synthesize the `dev` prefix — an ask targeting skill-builder ITSELF surfaces skill-builder's Self-Exclusion refusal verbatim; direct user-typed `/skill-builder` invocation is the always-legal maintenance hatch and never requires routing. (b) Risk tiering: IF the resolved work is high-risk (audit --execute, optimize, route embed, convert, reconcile --execute, strip) AND the active model is not the analytical brain → run clause 2's prompt toward the analytical brain before dispatch; low-risk additive work (inline, new, skills, list, verify, checksums, lane-status) dispatches on the current model with a one-line advisory, no prompt. (c) The skill-creation decision belongs to skill-builder: hand the user's VERBATIM ask through — never pre-decide modify-vs-create.
+9. Stop conditions and the no-match ladder. IF the top match is below clear-best confidence OR two skills are tied → STOP before announcing; report the top candidates and ask which to use. IF no catalog row plausibly fits, walk this ladder IN ORDER:
+   (a) Staleness check: glob `.claude/skills/*/SKILL.md`; IF a skill file exists on disk whose frontmatter `name:` exactly matches a plausible candidate missing from the catalog → dispatch to it (the file on disk is the evidence; memory never is) and advise: "stale index — run /skill-builder route index".
+   (b) Skill-creation ask (the user wants a new capability that should be a skill, or asks to make/build/create one) → offer via AskUserQuestion: modify `/[closest-match]` / build a new skill / cancel — on either build choice, dispatch the VERBATIM ask to `/skill-builder` (its intent-router owns the modify-vs-create decision; clause 8 applies).
+   (c) Plain freeform work (no skill fits, nothing to create): lane-classify the TASK ITSELF — apply the signal vocabulary of `.claude/skills/skill-builder/references/model-lanes.md` § Advisory Lane Suggestion to the ask. Research signals or AMBIGUOUS resolve to the analytical (everything-else) brain — the default; it never prompts. ONLY clear creative signals prompt once toward the creative brain (clause 2 mechanics). Then proceed with the most direct manual approach and note the gap — the user may want to register a skill.
 <!-- END ENFORCEMENT ANNOTATION -->
 <!-- ROUTE-DISPATCH-CHECKPOINT END -->
 ```
 
 The START/END HTML comments are the replacement anchors. Future `route index` runs locate them by exact match and replace the block in place.
+
+---
+
+## Mode: `lane-status`
+
+Read-only legibility affordance (2-brain harness, 2026-06-06; direct remediation of ledger INC-2026-06-06-silent-lane-correctness). Correct gate silence is indistinguishable from broken silence without this — a user who expected a prompt and got none has no way to see that the silence was the system working. `lane-status` makes every routing decision inspectable. It writes nothing and never prompts.
+
+**Invocation:** `/skill-builder route lane-status [skill]` — one skill, or all lane-declared skills when `[skill]` is omitted.
+
+**Procedure:**
+
+1. Read `references/model-lanes.md` (Lane→Model table, Skill→Lane table, setup-state marker).
+2. Resolve the target skill's lane exactly as the Comparison Rule does: `lane:` frontmatter → Skill→Lane table → NO LANE. Capture provenance. Resolve per-function lanes where declared.
+3. Detect ACTIVE_MODEL per model-lanes.md § Active-Model Detection (system-context line; never a Bash probe).
+4. Read the skill's gate state: `model-lane-gate: off` frontmatter? MODEL-LANE-GATE block present/absent? Any session opt-out acknowledged this conversation?
+5. Print, per skill:
+
+```
+/[skill]
+  lane:            [lane] ([provenance: frontmatter | table | — undeclared])
+  per-function:    [mode → lane list, or "n/a (skill-level lane covers all modes)"]
+  preferred model: [model id, or "— (cell empty: flagging disabled)"]
+  active model:    [ACTIVE_MODEL]  → [MATCHED | MISMATCHED]
+  invocation gate: [embedded | off (frontmatter) | absent | suppressed this session (reason)]
+  verdict:         [one line — e.g. "no prompt expected; silence is correct" /
+                    "would prompt at next invocation" / "undeclared — not lane-managed;
+                    declare via the Skill→Lane table or lane: frontmatter to manage"]
+```
+
+6. When run for all skills, end with the coverage accounting line: `Lanes: N declared · M none · K gate-off · J UNCONFIRMED/undeclared`.
+
+This mode is also the answer to "why wasn't I prompted?" — quote the verdict line rather than re-deriving the logic in prose.
 
 ---
 
@@ -455,6 +499,8 @@ Insertion / removal follows Step 3's rules, anchored on the `CODE-EVAL-EMBED` ma
 
 **Why this gate exists (the gap it closes).** The model-lane directive (SKILL.md § Directives, 2026-06-01) asked for model-switch management that is "fluid… with prompting, or not." Audit Step 4f built only the *audit-time* half: it flags lane/model mismatches when the user explicitly runs `audit`. There was no check at **skill-invocation time** — so invoking a `creative`-lane skill while the session is on the `coding` model drafted content on the wrong model with no prompt. This gate is the invocation-time half: it fires at the TOP of a lane-declared skill's own workflow, before any generative step. Like Step 4f and the `update` command's permission-mode prompt, **the gate cannot switch the model itself — it only prompts the user to run `/model`.**
 
+**Slimmed, never stripped (2-Brain Harness directive, 2026-06-06).** The harness makes `/route` the preferred door with its own dispatch-time lane preflight — but this per-skill gate is the only enforcement that **travels with the skill** through every entry path: harness description-matching (the dominant path), user-typed slash invocations (hand-running is always permitted), skill-to-skill chains, and fresh sessions. It therefore stays in every lane-declared skill in slim form (5 clauses), and its clause 1 makes it a silent no-op when `/route` already covered the endeavor. Invariant: **at least one lane checkpoint on every entry path; at most one prompt per endeavor.** A change that strips this gate without the route-coverage no-op in place violates the Two-Brain Harness Gate (SKILL.md § Directives).
+
 **Unconfigured → no embeds (correct).** This family depends entirely on `references/model-lanes.md`. IF that file is absent, OR the Skill→Lane table has no active (non-commented) rows AND no skill self-declares a `lane:` frontmatter key, OR every resolved lane's Preferred Model cell is empty → there are **zero candidates** and the family embeds nothing. An empty Skill→Lane table is a clean no-op, never an error (acceptance criterion).
 
 ### Step 8a: Classify lane-declared skills (concrete lookup — no agent)
@@ -488,17 +534,13 @@ Use the same byte-for-byte drift detection and the same tampering guard (a START
 ## Model-Lane Preflight
 
 <!-- ENFORCEMENT ANNOTATION — Opus 4.7+ literal-execution gate -->
-<!-- Source: /skill-builder route embed (model-lane gate). Closes the invocation-time half of the 2026-06-01 model-lane directive — audit Step 4f only checks at audit time, so a lane-declared skill invoked on the wrong model would do generative work with no prompt. This fires at THIS skill's invocation, before any generative step. The gate CANNOT switch the model; it only prompts the user to run /model. -->
-CHECKPOINT — Model-Lane Preflight Gate (fires at the TOP of this skill's workflow, before any generative step):
-1. Resolve this skill's lane: this skill's own `lane:` frontmatter key → the Skill→Lane table in `.claude/skills/skill-builder/references/model-lanes.md` → NO LANE. IF no lane resolves → silent no-op; skip this gate and proceed.
-2. Look up the lane's Preferred Model in that file's Lane→Preferred Model table. IF the cell is empty or absent → silent no-op; skip this gate and proceed (an undeclared preference is correctly absent, not a gap).
-3. Suppression ("or not"). Skip this gate silently IF ANY of: this skill's frontmatter sets `model-lane-gate: off`; the session is headless / non-interactive (a prompt would block or loop because the model never changes between re-invocations); OR the user already chose "skip once" or "continue anyway" for this skill earlier in THIS session.
-4. Detect ACTIVE_MODEL: read the session system-context line "The exact model ID is …", strip any bracketed context-window suffix (`[1m]`, `[200k]`), lowercase, and keep the `claude-<family>-<major>-<minor>` shape verbatim — exactly as model-lanes.md § Active-Model Detection specifies. No env var, no Bash probe (there is nothing on disk to read; a shell call would only fail or fabricate).
-5. Stale-ID self-check. IF the Preferred Model is not of `claude-<family>-<major>-<minor>` shape, or names a family the active model has clearly superseded → do NOT prompt to switch. Emit a one-line advisory instead: "Model-lane mapping for this skill may be stale — review .claude/skills/skill-builder/references/model-lanes.md." Then proceed. Never validate against a hardcoded "known-live" list — it rots.
-6. Compare. IF `preferred_model == ACTIVE_MODEL` → silent no-op; proceed. IF `preferred_model != ACTIVE_MODEL` → STOP before any generative step and prompt (clause 7).
-7. Prompt, never switch. A skill CANNOT change the session model. In an interactive session, ask via AskUserQuestion (fall back to plain text if AskUserQuestion is unavailable): "This skill is in the `<lane>` lane (preferred model `<preferred>`), but the active model is `<active>`. Run `/model` to switch before generative work?" Offer EXACTLY three options — **switched** (you ran /model; re-read and continue), **skip once** (proceed this once on the current model), **continue anyway** (proceed and don't ask again for this skill this session).
-8. After acknowledgement: IF "switched" → re-read the system-context model line EXACTLY ONCE to confirm; if it now matches, proceed; if it still mismatches, say so once and proceed without looping. IF "skip once" or "continue anyway" → record the session opt-out per clause 3 and proceed. Never loop or re-prompt beyond that single re-read.
-9. Primary-lane scope. This gate fires ONCE, for this skill's PRIMARY lane. Mid-workflow steps that belong to the OTHER lane do NOT re-trigger this prompt — they are delegated to lane-pinned subagents via this skill's LANE-AGENT-EMBED Delegation Map, when present (see .claude/skills/skill-builder/references/lane-delegation.md). Delegation is never a substitute for THIS gate: coding/analysis primary work must run on the coding main model — never a creative main session orchestrating coding-pinned agents to avoid a switch.
+<!-- Source: /skill-builder route embed (model-lane gate, slim form per the 2026-06-06 2-Brain Harness directive: gates are slimmed, never stripped — this block is the lane checkpoint that travels with the skill through EVERY entry path, including hand-run invocations, which are always permitted. It goes silent when /route already covered the endeavor. The gate CANNOT switch the model; it only prompts the user to run /model. -->
+CHECKPOINT — Model-Lane Preflight Gate (slim; fires at the TOP of this skill's workflow, before any generative step):
+1. SKIP silently IF ANY of: `/route` dispatched this invocation after running its own lane preflight (a model-lane prompt already fired or was deliberately suppressed this user turn — route's coverage extends to the whole endeavor, including skills this one chains); this skill's frontmatter sets `model-lane-gate: off`; the session is headless / non-interactive; this gate is executing inside a subagent (a subagent cannot prompt the user and is already model-pinned via its own frontmatter); OR a prior "skip once"/"continue anyway" for this LANE is still standing AND the active model is unchanged since that choice (the opt-out is keyed to the (lane, active-model) pair — it self-expires the moment the user runs `/model`).
+2. Resolve this skill's lane (own `lane:` frontmatter → the Skill→Lane table in `.claude/skills/skill-builder/references/model-lanes.md` → NO LANE) and the lane's Preferred Model. IF no lane resolves OR the preferred-model cell is empty → silent no-op (correctly absent, not a gap). IF this skill declares per-function lanes AND the invocation's resolved mode has its own row → that function's lane governs; otherwise the skill-level lane covers all modes.
+3. Read ACTIVE_MODEL from the session system-context line "The exact model ID is …" (strip `[1m]`/`[200k]`, lowercase — model-lanes.md § Active-Model Detection; never an env var or Bash probe). IF the Preferred Model is malformed or names a clearly superseded family → emit the one-line stale-mapping advisory and proceed; never prompt from a stale mapping, never validate against a hardcoded list.
+4. Compare. Match → silent no-op. Mismatch → STOP before any generative step and prompt ONCE via AskUserQuestion (plain text fallback): "This work is in the `<lane>` lane (preferred `<preferred>`); the active model is `<active>`. Run `/model` to switch?" — options EXACTLY **switched** / **skip once** / **continue anyway**. A skill can NEVER switch the session model. After "switched": re-read the model line exactly once and proceed either way without looping. After an opt-out: record it keyed to (lane, active-model) per clause 1 and proceed.
+5. Primary-lane scope. This gate fires ONCE per invocation, for the resolved PRIMARY lane. Cross-lane mid-workflow steps never re-prompt — they delegate via this skill's LANE-AGENT-EMBED Delegation Map when present (see .claude/skills/skill-builder/references/lane-delegation.md). Delegation is never a substitute for THIS gate: analytical primary work runs on the analytical main model — never a creative main session orchestrating analytical-pinned agents to avoid a switch.
 <!-- END ENFORCEMENT ANNOTATION -->
 <!-- /origin -->
 <!-- MODEL-LANE-GATE END -->
@@ -544,11 +586,12 @@ For each embedded skill, read every lane-pinned agent it references (`.claude/sk
 | Skill left its lane / lanes unconfigured / its lane's preferred-model cell blanked | **REMOVE** the block. The agent files are NOT auto-deleted — report them for deletion (destructive → display-first, explicit task). Never spawn an agent pinned to a model the user removed. |
 | A referenced AGENT.md is missing | **REPORT-ORPHAN** — do not auto-strip the entry; recommend `agents [skill] --execute` (recreate) or `route embed --remove [skill]` (strip) |
 | An entry's quoted anchor matches the file zero times or more than once | **STALE-ANCHOR** — report; never fuzzy-match. Re-anchoring is a judgment call → agent panel, conservative default "drop the entry, keep the workflow untouched" |
+| An agent's `contract-stamp` ≠ sha256 of the CURRENT normalized skill workflow text | **CONTRACT-DRIFT** — the skill's semantics changed under the agent (an anchor can survive a meaning change; the stamp cannot). Report only; recommend `agents [skill]` to re-design from the current material. Never auto-rewrite the agent. Agents missing `contract-stamp` entirely (pre-stamp generation) → report as `UNSTAMPED`, fix path `agents [skill] --execute`. |
 | One marker without its pair | **REPORT + SKIP** (tamper guard, same as Step 1c.4) |
 
 **Uncovered-excursion recommendations:** while scanning, IF a lane-declared skill has cross-lane signals (per lane-delegation.md § Excursion Signal Vocabulary, heuristic pass only — no panel here) with no covering map entry → list "run `/skill-builder agents [skill]`" as a recommendation in the report. Step 9 itself never designs or inserts.
 
-Display-mode output, execute-mode verification, and the post-embed index refresh follow Steps 4–6 with the `LANE-AGENT-EMBED` markers substituted. In the Step 4 aggregate report, add a `LANE-AGENT: refresh/remove/noop/orphan/stale` line alongside the other family counts. `route embed --remove [skill]` strips this family too.
+Display-mode output, execute-mode verification, and the post-embed index refresh follow Steps 4–6 with the `LANE-AGENT-EMBED` markers substituted. In the Step 4 aggregate report, add a `LANE-AGENT: refresh/remove/noop/orphan/stale/drift` line alongside the other family counts. `route embed --remove [skill]` strips this family too.
 
 ---
 
@@ -594,7 +637,7 @@ The task description is freeform. Examples:
 
 ---
 
-<!-- origin: skill-builder | version: 1.1 | modifiable: true -->
+<!-- origin: skill-builder | version: 1.2 | modifiable: true -->
 ## Workflow
 
 1. **Read the index.** Read [references/index.md](references/index.md) — the auto-generated skill catalog. If the index is missing or empty, STOP and instruct the user: "Index not found. Run `/skill-builder route index` to generate it."
@@ -603,15 +646,20 @@ The task description is freeform. Examples:
 
 <!-- ROUTE-DISPATCH-CHECKPOINT START — auto-generated by /skill-builder route index; safe to replace -->
 <!-- ENFORCEMENT ANNOTATION — Opus 4.7+ literal-execution gate -->
-<!-- Source: /route dispatch contract. Closes the announce-vs-invoke gap from 2026-05-09 — model emitted "→ Routing to /X" but did the work via raw Edit/Bash, silently skipping the dispatched skill's gates. -->
+<!-- Source: /route dispatch contract. Closes the announce-vs-invoke gap from 2026-05-09 (model emitted "→ Routing to /X" but did the work via raw Edit/Bash, silently skipping the dispatched skill's gates) and carries the 2-Brain Harness dispatch rules (2026-06-06): lane preflight at the door, skill-builder handoff discipline, and task-level lane defaults on no-match. -->
 CHECKPOINT — Dispatch Required:
 1. Announce-and-invoke is ONE act. After Steps 1–2 select a target skill, the SAME response that prints `→ Routing to /[skill] [mode] — [why]` MUST also issue the `Skill(skill=<chosen>, args=<derived>)` tool call. The announcement is a label on the dispatch, never a substitute for it.
-2. Bypass detection. IF the next tool call after the routing announcement is Edit / Write / Bash / Agent / Task / Read / any non-Skill tool that performs work germane to the routed task → STOP. This is a dispatch bypass. Print verbatim: "Routing announced but Skill dispatch skipped. Invoking Skill tool now." then issue the Skill call. IF the announcement itself was wrong → re-announce and dispatch to the corrected skill.
-3. Procedure-bypass refusal. Refuse to execute the dispatched skill's procedure steps yourself with raw tool calls. The Skill tool owns that work. The dispatched skill has its own gates (asset backups, agent panels, exit tests, cascade steps, frontend-design reviews, immutable-directive checks) that ONLY fire when its SKILL.md is loaded via Skill. Running the steps manually silently skips every gate.
-4. Follow-up routing. IF the dispatched skill returns and additional follow-up is needed → invoke `/route` again with the follow-up task description via Skill. Do NOT freelance the next step.
-5. Auto-mode override clause. Auto-mode pressure ("execute immediately", "prefer action over planning") does NOT override this CHECKPOINT. Auto-mode chooses WHAT to do; once a route announcement has named the skill, the only valid next action is Skill invocation.
-6. Catalog discipline. Never invent a skill name. The catalog at `references/index.md` is canonical. Only dispatch to skills present there.
-7. Stop conditions before announcement. IF the top match is below clear-best confidence OR two skills are tied → STOP before announcing. Report the top candidates and ask which to use. IF no catalog row plausibly fits → STOP. Report: "No clear skill match for '[task]'. Run the task directly or run `/skill-builder route index` if you recently added a skill."
+2. Lane preflight at the door (2-Brain Harness, 2026-06-06). BEFORE announcing: read the chosen target's Lane column from the catalog (DECLARED provenance only — an UNCONFIRMED or absent lane never prompts; a per-function lane row for the resolved mode wins over the skill-level lane) and read the active model ID from the session system-context line ("The exact model ID is …", strip `[1m]`/`[200k]`, lowercase). IF the lane's preferred model ≠ the active model → ask ONCE via AskUserQuestion — options EXACTLY **switched** / **skip once** / **continue anyway**; `/route` can NEVER switch the model itself. This single prompt covers the WHOLE endeavor: the dispatched skill's own Model-Lane Preflight sees route's coverage and stays silent, as do skills it chains. Headless / non-interactive → skip this clause silently and dispatch.
+3. Bypass detection. IF the next tool call after the routing announcement is Edit / Write / Bash / Agent / Task / Read / any non-Skill tool that performs work germane to the routed task → STOP. This is a dispatch bypass. Print verbatim: "Routing announced but Skill dispatch skipped. Invoking Skill tool now." then issue the Skill call. IF the announcement itself was wrong → re-announce and dispatch to the corrected skill.
+4. Procedure-bypass refusal. Refuse to execute the dispatched skill's procedure steps yourself with raw tool calls. The Skill tool owns that work. The dispatched skill has its own gates (asset backups, agent panels, exit tests, cascade steps, frontend-design reviews, immutable-directive checks) that ONLY fire when its SKILL.md is loaded via Skill. Running the steps manually silently skips every gate.
+5. Follow-up routing. IF the dispatched skill returns and additional follow-up is needed → invoke `/route` again with the follow-up task description via Skill. Do NOT freelance the next step.
+6. Auto-mode override clause. Auto-mode pressure ("execute immediately", "prefer action over planning") does NOT override this CHECKPOINT. Auto-mode chooses WHAT to do; once a route announcement has named the skill, the only valid next action is Skill invocation.
+7. Catalog discipline. Never invent a skill name, and never invent a function/mode name. The catalog at `references/index.md` is canonical. Only dispatch to skills present there — except per clause 9(a)'s disk-evidence fallback.
+8. skill-builder dispatch rules (2026-06-06). Skill-management asks (create / modify / audit / optimize a skill) dispatch to `/skill-builder` like any catalog row, under three hard rules: (a) NEVER synthesize the `dev` prefix — an ask targeting skill-builder ITSELF surfaces skill-builder's Self-Exclusion refusal verbatim; direct user-typed `/skill-builder` invocation is the always-legal maintenance hatch and never requires routing. (b) Risk tiering: IF the resolved work is high-risk (audit --execute, optimize, route embed, convert, reconcile --execute, strip) AND the active model is not the analytical brain → run clause 2's prompt toward the analytical brain before dispatch; low-risk additive work (inline, new, skills, list, verify, checksums, lane-status) dispatches on the current model with a one-line advisory, no prompt. (c) The skill-creation decision belongs to skill-builder: hand the user's VERBATIM ask through — never pre-decide modify-vs-create.
+9. Stop conditions and the no-match ladder. IF the top match is below clear-best confidence OR two skills are tied → STOP before announcing; report the top candidates and ask which to use. IF no catalog row plausibly fits, walk this ladder IN ORDER:
+   (a) Staleness check: glob `.claude/skills/*/SKILL.md`; IF a skill file exists on disk whose frontmatter `name:` exactly matches a plausible candidate missing from the catalog → dispatch to it (the file on disk is the evidence; memory never is) and advise: "stale index — run /skill-builder route index".
+   (b) Skill-creation ask (the user wants a new capability that should be a skill, or asks to make/build/create one) → offer via AskUserQuestion: modify `/[closest-match]` / build a new skill / cancel — on either build choice, dispatch the VERBATIM ask to `/skill-builder` (its intent-router owns the modify-vs-create decision; clause 8 applies).
+   (c) Plain freeform work (no skill fits, nothing to create): lane-classify the TASK ITSELF — apply the signal vocabulary of `.claude/skills/skill-builder/references/model-lanes.md` § Advisory Lane Suggestion to the ask. Research signals or AMBIGUOUS resolve to the analytical (everything-else) brain — the default; it never prompts. ONLY clear creative signals prompt once toward the creative brain (clause 2 mechanics). Then proceed with the most direct manual approach and note the gap — the user may want to register a skill.
 <!-- END ENFORCEMENT ANNOTATION -->
 <!-- ROUTE-DISPATCH-CHECKPOINT END -->
 
@@ -623,6 +671,7 @@ CHECKPOINT — Dispatch Required:
 - **Prefer specific over general.** When two skills could handle the task, pick the one with a more specific domain match.
 - **Skip self-routing.** `/route` does NOT route to itself. If asked to dump the index, read `references/index.md` and return it.
 - **Trust the catalog.** If a skill is in the index but its description seems wrong, route by what the catalog says — the user can run `/skill-builder route index` to refresh.
+- **Routing is preferred, never mandatory.** Hand-running any skill directly (`/skill-name …`) is always fine — every lane-declared skill carries its own slim Model-Lane Preflight, so hand-runs stay lane-aware without the door. Direct `/skill-builder` invocation is the always-legal maintenance hatch; recovery from a broken index or a damaged `/route` never depends on routing.
 
 <!-- /origin -->
 

@@ -4,6 +4,8 @@
 
 Invoked by SKILL.md § Self-Exclusion Rule CHECKPOINT step 6, when the first positional argument is non-empty but is not in the known-command set.
 
+**Route handoff entry (2-Brain Harness, 2026-06-06).** `/route`'s no-match ladder (route.md, Dispatch CHECKPOINT clause 9(b)) dispatches skill-creation asks here with the user's VERBATIM ask as `intent_text`. The skill-creation decision belongs to this router, not to `/route`: classify modify-vs-create normally (`add-directive-to-existing` / `existing-skill-sub-command` → modify the closest match; `new-skill` → build new, with the user-confirmed name flow). Route-handoff invocations ALWAYS arrive with `dev_mode = false` — route never synthesizes the `dev` prefix, so a handoff that targets skill-builder itself falls to the Self-Exclusion refusal exactly like any non-dev invocation. The user retains maximum creative leeway through the proposal step; every create or modify is ratified via AskUserQuestion before dispatch.
+
 ### Step 1: Preflight
 
 1. Receive `intent_text` (the full remaining argument string, including the unmatched first token) and `dev_mode` (bool) from the caller.

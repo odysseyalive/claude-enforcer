@@ -65,6 +65,16 @@ copy of this file, so the decision is tracked per project.
 - A skill **not** listed here and **not** self-declaring a `lane:` resolves to **no lane** and is
   skipped — it is NOT auto-assigned to `coding` for flagging purposes.
 - A skill's own `lane:` frontmatter key, if present, **wins** over this table.
+- **Per-function rows (2-Brain Harness, 2026-06-06):** a multi-mode skill may declare
+  `| skill:function | lane |` rows (e.g. `| study-prep:chat | creative |`) — or a `lanes:`
+  frontmatter map (`lanes: {chat: creative, drill: coding}`) — for functions that pass the
+  Mode-Detection Ladder (§ below). Resolution precedence is **specificity first**: frontmatter
+  `lanes.<fn>` → table `skill:function` row → frontmatter `lane:` → table skill row → no lane.
+  Unlisted functions inherit the skill-level lane silently (the default IS a declaration — not a
+  gap); audit prints a non-blocking sub-coverage line only for skills that opted into function
+  granularity. `lane: none` is a valid declaration meaning "deliberately not lane-managed" — it
+  counts as accounted-for in coverage reporting, suppresses the advisory suggestion, and never
+  receives a gate.
 <!-- /origin -->
 
 ---
@@ -220,6 +230,18 @@ first that fires** and emit `<lane> (suggested, <confidence>)`:
 
 The `+2` margin keeps genuinely code-emitting-but-creative skills (e.g. `frontend-design`) on the
 creative side while leaving true 1-apart cases at MEDIUM for human spot-check.
+
+---
+
+## Mode-Detection Ladder (pointer)
+
+Per-function lane rows are permitted only for functions that pass the **Mode-Detection Ladder** —
+the normative spec lives in [lane-delegation.md](lane-delegation.md) § Mode-Detection Ladder
+(shipped unconditionally, so existing installs receive updates; this file is install-if-absent and
+holds only your editable mappings). Summary: explicit mode table or cross-checked frontmatter
+"Modes:" list are authoritative; heading patterns are panel-gated candidates needing your
+confirmation; prose-only skills are single-function for lane purposes. `route index` re-checks on
+every regeneration and reports `STALE-FUNCTION` rows; it never invents or auto-deletes a mode.
 
 ---
 
