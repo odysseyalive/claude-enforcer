@@ -1,6 +1,6 @@
 # Claude Enforcer
 
-> **This repo might not change, but model capabilities do.** It's a good habit to run `/skill-builder audit` after any major changes to Claude Code or available models.
+> **This repo might not change, but model capabilities do.** It's a good habit to run `/skill-builder audit` after any major changes to Claude Code or available models. [Keep your skills current →](#keep-your-skills-current)
 
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
@@ -88,24 +88,6 @@ The command list, formal frontmatter, hook wiring. None of that is something you
 
 See [COMMANDS.md](COMMANDS.md) for the full command reference when you want to go deeper.
 
-## Keep Your Skills Current
-
-Have you ever noticed a skill that used to work perfectly start under-delivering after a model update? A directive that fired reliably on 4.6 suddenly needs more explicit instructions on 4.7. A hook that felt essential two releases ago might now be redundant with a new platform feature. Our skills aren't failing. The model underneath is shifting shape, and the rules need to shift with it.
-
-The `/skill-builder audit` command keeps that evolution manageable. It scans your CLAUDE.md, your rules, and every installed skill, and surfaces what needs attention. Directives that need enforcement annotations for the current model. Hooks that could downshift from agent to command. Oversized SKILL.md files carrying machinery that should live in a reference. Effort levels that cost more than they return. Run it after every Claude update, after anything fundamental changes in how you work with the tool, or every so often just because.
-
-```
-/skill-builder audit
-```
-
-Full scan. For a lightweight pass (frontmatter + line counts + priority fixes only):
-
-```
-/skill-builder audit --quick
-```
-
-See [COMMANDS.md § Inspection & Diagnostics](COMMANDS.md#inspection--diagnostics) for what each mode covers and when `verify` or `cascade` is the better tool for the job.
-
 ## Routing Instead of Freelancing
 
 Ever build a skill that works perfectly, then watch the AI ignore it on the next task and freelance its own approach? It's not malicious. The model reaches for the most direct path through whatever tools it remembers, and our carefully built skills sit unused. The rules we codified, the directives we wrote, the hooks we wired. All of it bypassed because nothing told the AI to look.
@@ -175,6 +157,24 @@ The safety model is deliberately strict. A grep that finds no references is a ca
 Audit ties it together. Run `/skill-builder audit` and it creates the evaluator when it's missing, keeps the detection references current as they improve, and wires the pre-write and post-write gates into every skill that writes, edits, or debugs code.
 
 See [COMMANDS.md § Code Evaluation](COMMANDS.md#code-evaluation) for the full command reference.
+
+## Keep Your Skills Current
+
+Have you ever noticed a skill that used to work perfectly start under-delivering after a model update? A directive that fired reliably on 4.6 suddenly needs more explicit instructions on 4.7. A hook that felt essential two releases ago might now be redundant with a new platform feature. Our skills aren't failing. The model underneath is shifting shape, and the rules need to shift with it.
+
+The `/skill-builder audit` command keeps that evolution manageable. It scans your CLAUDE.md, your rules, and every installed skill, and surfaces what needs attention. Directives that need enforcement annotations for the current model. Hooks that could downshift from agent to command. Oversized SKILL.md files carrying machinery that should live in a reference. Effort levels that cost more than they return. Run it after every Claude update, after anything fundamental changes in how you work with the tool, or every so often just because.
+
+```
+/skill-builder audit
+```
+
+Full scan. For a lightweight pass (frontmatter + line counts + priority fixes only):
+
+```
+/skill-builder audit --quick
+```
+
+See [COMMANDS.md § Inspection & Diagnostics](COMMANDS.md#inspection--diagnostics) for what each mode covers and when `verify` or `cascade` is the better tool for the job.
 
 ## Philosophy
 
