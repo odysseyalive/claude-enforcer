@@ -1,8 +1,6 @@
 # Claude Enforcer
 
-> **Claude Enforcer is now compatible with Opus 4.7+.** [Learn what changed →](#claude-47-upgrade)
-
-> **Content generation skills can fall back to 4.6 if needed.** [See the workaround →](#hemispheric-model-delegation)
+> **This repo might not change, but model capabilities do.** It's a good habit to run `/skill-builder audit` after any major changes to Claude Code or available models.
 
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
@@ -17,18 +15,6 @@ This tool helps you build a context system that resists drift.
 ## Install
 
 Claude Code **v2.1.32 or later** is required. Skills became user-invocable in v2.1.3 (January 2026). Earlier versions refuse to run `/skill-builder` directly. Check with `claude --version` and update with `claude update` if needed.
-
-### Option A. npx (recommended)
-
-```bash
-npx skills add odysseyalive/claude-enforcer
-```
-
-Works across Claude Code, Cursor, Codex, and [37 other agents](https://skills.sh/docs).
-
-### Option B. curl / PowerShell
-
-Includes extra setup (agent teams, auto-approved research tools).
 
 ```bash
 claude /init
@@ -72,53 +58,35 @@ Hemispheric delegation keeps each model in its lane. During the audit, skill-bui
 
 ## Building & Modifying Skills
 
-You'll always be tweaking. A skill that works today might need adjustment next week as you discover edge cases, add new rules, or realize something drifts when it shouldn't. The whole point of the tool is to make that easy.
-
-Describe what you need in plain language. No structure required.
+Describe what you need. `/route` finds the right skill and runs it.
 
 ```
-/skill-builder I need a skill for deploying to production
+/route I need a skill for deploying to production
 ```
 
 ```
-/skill-builder add a rule to my deploy skill: always run tests first
+/route add a rule to my deploy skill: always run tests first
 ```
 
 ```
-/skill-builder my api skill is getting too long, help me split it up
+/route evaluate the code I just wrote
 ```
 
 ```
-/skill-builder I'm glad that problem got figured out. I never want to deal with that again. Can you make a skill for this and hook it into other skills affected by this?
-```
-
-Skill-builder shapes the problem from the description. The command list, formal frontmatter, hook wiring. None of that is something you need to know upfront.
-
-### Capturing Directives Mid-Session
-
-Sometimes you notice a pattern violation while you're working. Claude uses a forbidden phrase, drifts from your voice, or makes a mistake you want to prevent from ever happening again. You don't want to stop and run a full audit. You just want the rule captured.
-
-```
-/skill-builder inline writing Never use the phrase "in conclusion" in any article.
+/route audit the skills in this project
 ```
 
 ```
-/skill-builder inline deploy Always run the test suite before pushing to production.
+/route check this shell script for pitfalls
 ```
 
-This adds the directive verbatim to the target skill with a date and source attribution. If the directive is programmable (contains "never" or "always" with a specific value), skill-builder suggests a hook but won't create one unless you ask.
-
-### Retiring a Skill
-
-Sometimes a skill outlives its purpose. The directive moved into another skill, the workflow stopped getting invoked, the project shifted off the platform that needed it. `strip` handles the cleanup. It deletes the skill directory. Then it sweeps every cross-reference, hook binding, and route catalog entry across the rest of the project. Other skills don't sit pointing at a missing target.
-
 ```
-/skill-builder strip old-deploy
+/route record a decision about why we chose postgres
 ```
 
-Display mode by default. Add `--execute` to apply. If other skills hard-depend on the target, an additional `--confirm-breaking` flag is required.
+The command list, formal frontmatter, hook wiring. None of that is something you need to know upfront. Route reads the skill catalog, picks the best match, and dispatches.
 
-See [COMMANDS.md § Creating & Adding](COMMANDS.md#creating--adding) for `new`, `inline`, and `ledger`. See [COMMANDS.md § Removing](COMMANDS.md#removing) for `strip`. See [COMMANDS.md § Restructuring & Enforcement](COMMANDS.md#restructuring--enforcement) for `optimize`, `agents`, `hooks`, and `checksums`.
+See [COMMANDS.md](COMMANDS.md) for the full command reference when you want to go deeper.
 
 ## Keep Your Skills Current
 
@@ -152,7 +120,13 @@ This builds an index of every installed skill. Names, descriptions, modes, trigg
 
 ```
 /route find recent papers on transformer architecture
+```
+
+```
 /route summarize this URL
+```
+
+```
 /route audit the skills in this project
 ```
 
@@ -184,7 +158,16 @@ The skill works in three layers. Before code gets written, an advisor agent chec
 
 ```
 /code-evaluator review
+```
+
+```
 /code-evaluator sweep
+```
+
+Or let `/route` handle it.
+
+```
+/route check this code for dead exports and duplication
 ```
 
 The safety model is deliberately strict. A grep that finds no references is a candidate, never a verdict. Only high-confidence findings that clear every false-positive guard get fixed automatically, and only when the build and the tests still pass afterward. Duplication and complexity are always left for a person to decide.
@@ -219,32 +202,6 @@ This update is what that discipline looks like, applied to every skill in the en
 Now the part that matters more than this release. Anthropic shipped Mythos Preview the same month 4.7 became available. Codename Capybara. A new tier, not an Opus upgrade, restricted to a small circle of critical-infrastructure partners through something called Project Glasswing. It found thousands of zero-day vulnerabilities during testing, across every major operating system and web browser. It was kept behind structured access because its autonomous capabilities were judged too dangerous for broad API release. 4.7 is the less-risky sibling that shipped alongside it. Mythos-class capabilities will reach the rest of us eventually. They always do. And the harness this project builds is not 4.7 scaffolding. Sacred directives, mechanical enforcement hooks, fresh-context validators, directive checksums, explicit execution contracts. These are the infrastructure for steering much more capable, much more autonomous models without losing the plot. 4.7 teaches us the vocabulary. Mythos will require fluency. Building the muscle now on a model that forgives less than 4.6 but more than what's coming is preparation, not paranoia.
 
 ![A capybara sitting calmly at the edge of a misty river at dawn, birds resting on its back](assets/images/mythos-capybara.png)
-
-### Upgrade in three commands
-
-Stay at the terminal while these run. Each step may pause to ask a follow-up question or wait for your approval before it continues. The upgrade isn't finished until the last prompt clears.
-
-1. Install or Upgrade Claude Enforcer
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
-```
-
-Windows PowerShell: `irm https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install.ps1 | iex`
-
-2. Convert every installed skill to 4.7+ compatibility
-
-```bash
-/skill-builder convert --all --execute
-```
-
-3. Re-audit every skill after conversion
-
-```bash
-/skill-builder audit
-```
-
-Each skill runs through a per-skill conversion with its own precheck and revert path. See [COMMANDS.md § Upgrading to Opus 4.7+](COMMANDS.md#upgrading-to-opus-47) for what each conversion does and how to roll back if a particular skill's result looks off.
 
 ## Learn More
 
