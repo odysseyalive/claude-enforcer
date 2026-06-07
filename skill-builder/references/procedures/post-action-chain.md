@@ -83,7 +83,9 @@ Post-action review: No optimization, agent, or hook opportunities found for /[sk
 
 ### Step 3: Offer Execution Choices
 
-If any opportunities were found, use **AskUserQuestion** to present execution choices:
+**Under-audit suppression (Audit Autonomy Gate, 2026-06-06):** when this chain fires INSIDE an audit run (e.g., bootstrap extraction created the skill), do NOT present the menu — the audit's Step 0 disclaimer consent covers the chain. Execute the AUTO-tier opportunities directly (same tiers as audit.md § Step 6) and route the DEFER tier into the audit's Deferred Items table. The menu below applies only when the chain's parent is a standalone command (`new`, `inline`, …).
+
+If any opportunities were found (standalone parent), use **AskUserQuestion** to present execution choices:
 
 > "Which actions should I execute?"
 > 1. `optimize --execute` for /[skill]

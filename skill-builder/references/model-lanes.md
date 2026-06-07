@@ -2,8 +2,9 @@
 <!-- Enforcement: MEDIUM — read by audit Step 4f; flags only USER-DECLARED lane/model mismatches. -->
 
 This file makes `skill-builder` model-aware. It splits work into two **lanes** and maps each
-lane to a **preferred model**, so an audit can flag (and optionally prompt) when the active
-session model does not match a skill's declared lane.
+lane to a **preferred model**, so an audit can flag — as a report-only advisory, never a switch
+prompt (No-Switch-Prompt directive, 2026-06-06) — when the active session model does not match
+a skill's declared lane.
 
 **Two principles keep this safe:**
 
@@ -14,7 +15,7 @@ session model does not match a skill's declared lane.
    you have explicitly assigned to a lane (via the table below or a `lane:` frontmatter key). A
    skill with no declared lane is **silently skipped** — it is never auto-classified into a flag.
    (Audit *may* print a non-blocking advisory suggesting a lane for undeclared skills — see
-   § Advisory Lane Suggestion — but a suggestion never triggers a switch prompt.)
+   § Advisory Lane Suggestion — but a suggestion never produces anything beyond its own line.)
 
 ---
 
@@ -88,7 +89,7 @@ respond. Three states:
 | State | Meaning | Audit behavior |
 |-------|---------|----------------|
 | `unset` | You have never configured lanes and never declined. The fresh-install default. | On a full interactive `audit`, offer the one-time **setup prompt** (Set it up now / Not now / Never ask in this project). |
-| `configured` | Lanes are set up. | Run the **Lane→Model picker** (re-confirm which model is creative and which is coding/everything-else, current values pre-selected as defaults — see [lane-delegation.md](lane-delegation.md) § Lane→Model Picker), then the normal mismatch check (§ Comparison Rule) and the suppressible switch prompt. No *setup* offer. |
+| `configured` | Lanes are set up. | Run the **Lane→Model picker** (re-confirm which model is creative and which is coding/everything-else, current values pre-selected as defaults — see [lane-delegation.md](lane-delegation.md) § Lane→Model Picker), then the normal mismatch check (§ Comparison Rule), reported as one-line advisories only — never a switch prompt. No *setup* offer. |
 | `declined` | You chose "Never ask in this project." | Silent no-op. Audit never offers setup again (until you change this marker by hand). |
 
 **Reconciliation (no nag for manual setups).** If the marker says `unset` (or is missing) BUT the
@@ -97,10 +98,18 @@ project as `configured` and upgrades the marker — so declaring lanes by hand n
 offer. "Not now" leaves the marker `unset` (you will be asked again next full audit); "Never ask"
 writes `declined`.
 
-**Suppression.** The setup prompt is offered ONLY on a full, interactive `audit`. It is suppressed
-in headless / non-interactive runs and in `audit --quick`, exactly like the switch prompt — those
-runs never write the marker. To re-enable the offer after declining, change `declined` back to
-`unset` (or just declare a lane).
+**Suppression.** The setup offer is made ONLY on a full, interactive `audit`. It is suppressed
+in headless / non-interactive runs and in `audit --quick` — those runs never write the marker.
+To re-enable the offer after declining, change `declined` back to `unset` (or just declare a lane).
+
+**Audit-disclaimer marker (2026-06-06 sacred directive).** A second per-project marker lives beside
+`model-lane-setup`: `<!-- audit-disclaimer: accepted -->`. Audit's Step 0 disclaimer gate
+(audit.md § Step 0) writes it on the user's first interactive "Accept and proceed" and refreshes it
+on each subsequent acceptance. Its ONLY consumer is headless/non-interactive audit: with the marker
+present, a headless audit prints the disclaimer into its report and proceeds; with no marker, it
+refuses ("Audit disclaimer not yet accepted — run one interactive audit first"). Interactive audits
+always re-ask regardless of the marker. Delete the marker by hand to force headless runs to block
+again.
 
 **2026-06-06 semantics change.** `configured` no longer means never-ask-again for the *mapping*:
 every full interactive audit re-confirms the Lane→Model choices via the picker (one click when
@@ -147,22 +156,24 @@ For each audited skill:
 
 If a non-empty preferred model does **not** match the active session model's family format
 (e.g. it isn't of the shape `claude-<family>-<major>-<minor>`, or names a family the active model
-has clearly superseded), downgrade the finding from a switch prompt to a one-line advisory:
+has clearly superseded), downgrade the finding from a mismatch advisory to a one-line stale-mapping advisory:
 "mapping may be stale — review `references/model-lanes.md`". Never validate IDs against a hardcoded
 "known-live" list — that list rots too.
 
 ---
 
-## Invocation-Time Preflight Gate (the other half of "with prompting, or not")
+## Invocation-Time Preflight Gate (advisory-only)
 
-The Comparison Rule above is consumed in **two** places, not one:
+The Comparison Rule above is consumed in **two** places, not one — and per the No-Switch-Prompt
+directive (2026-06-06), BOTH are report-only: no function of skill-builder ever asks the user to
+switch models.
 
-1. **Audit-time** — `audit` Step 4f scans every skill and prompts on mismatch, but only when the user explicitly runs `audit`.
-2. **Invocation-time** — a `MODEL-LANE-GATE` CHECKPOINT block embedded near the **top of each lane-declared skill's own workflow**, so the mismatch prompt fires *before that skill does generative work*, the moment it is invoked. This closes the gap where a `creative`-lane skill invoked on the `coding` model would draft content with no prompt.
+1. **Audit-time** — `audit` Step 4f scans every skill and reports mismatches as one-line advisories, but only when the user explicitly runs `audit`.
+2. **Invocation-time** — a `MODEL-LANE-GATE` CHECKPOINT block embedded near the **top of each lane-declared skill's own workflow**, so the mismatch advisory prints *before that skill does generative work*, the moment it is invoked. This closes the gap where a `creative`-lane skill invoked on the `coding` model would draft content with no signal at all.
 
-The invocation-time gate uses the **same** detection and rules defined here: lane resolution (§ Comparison Rule step 1), empty-cell no-op (step 3), Active-Model Detection (§ Active-Model Detection), and the stale-ID self-check (§ Comparison Rule → Stale-ID self-check). Like the audit prompt and the `update` command's permission-mode prompt, **the gate only prompts the user to run `/model` — a skill cannot switch the session model itself.**
+The invocation-time gate uses the **same** detection and rules defined here: lane resolution (§ Comparison Rule step 1), empty-cell no-op (step 3), Active-Model Detection (§ Active-Model Detection), and the stale-ID self-check (§ Comparison Rule → Stale-ID self-check). **The gate's entire output is one advisory line — it never blocks, never emits an AskUserQuestion, never instructs the user to run `/model`, and a skill cannot switch the session model itself.**
 
-The gate is wired into skills by `/skill-builder route embed` as a managed-block family (see [procedures/route.md](procedures/route.md) § Step 8). It is embedded ONLY into skills that resolve to a lane with a non-empty preferred model, and `route embed` removes it automatically from any skill that later leaves a lane. **Suppression ("or not"):** the gate is a silent no-op in headless / non-interactive sessions, and a skill can opt out by setting `model-lane-gate: off` in its own frontmatter.
+The gate is wired into skills by `/skill-builder route embed` as a managed-block family (see [procedures/route.md](procedures/route.md) § Step 8). It is embedded ONLY into skills that resolve to a lane with a non-empty preferred model, and `route embed` removes it automatically from any skill that later leaves a lane. **Suppression:** the gate is a silent no-op in headless / non-interactive sessions, and a skill can opt out by setting `model-lane-gate: off` in its own frontmatter.
 
 ---
 

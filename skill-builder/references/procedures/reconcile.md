@@ -147,7 +147,7 @@ Apply the **absence-vs-gap** rule: a class with zero findings is omitted entirel
 
 ## Audit integration
 
-`reconcile` runs as **audit Step 4d-bis** (between cascade 4d and the priority panel 4e), in display mode, panels suppressed. Findings feed the aggregate report's "Cross-Skill Reconciliation" section; R1/R4/R6/R7/R8 (completion-breaking) elevate into Priority Fixes. **Skipped in `audit --quick`** (structural scan, not a checklist item). Confirmed R7 deletions and R2/R3 auto-fixes surface in audit's Step 6 execution menu as discrete, deselectable items. See audit.md § Step 4d-bis.
+`reconcile` runs as **audit Step 4d-bis** (between cascade 4d and the priority panel 4e), in display mode, panels suppressed. Findings feed the aggregate report's "Cross-Skill Reconciliation" section; R1/R4/R6/R7/R8 (completion-breaking) elevate into Priority Fixes. **Skipped in `audit --quick`** (structural scan, not a checklist item). R2/R3 mechanical auto-fixes run in audit's auto-execution phase (AUTO tier — machine-owned bytes only); confirmed R7 deletions DEFER into the audit's Deferred Items table as `/skill-builder strip <skill>` (Audit Autonomy Gate, 2026-06-06). See audit.md § Step 4d-bis.
 
 ---
 

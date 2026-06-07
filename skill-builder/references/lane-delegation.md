@@ -3,10 +3,11 @@
 
 This file is the canonical specification for **lane-pinned excursion delegation** — the second half
 of the model-lane system. Where [model-lanes.md](model-lanes.md) handles a skill's **primary lane**
-(prompting the user to `/model`-switch on mismatch), this spec handles **cross-lane excursion
-steps** inside a skill's workflow: instead of prompting another switch, the step is delegated to a
-bespoke subagent pinned to the other lane's model via `model:` frontmatter. The main model stays in
-charge; the agent hands results back.
+(surfacing a one-line advisory on mismatch — never a switch prompt, per the 2026-06-06
+No-Switch-Prompt directive), this spec handles **cross-lane excursion steps** inside a skill's
+workflow: instead of any mid-workflow signal, the step is delegated to a bespoke subagent pinned to
+the other lane's model via `model:` frontmatter. The main model stays in charge; the agent hands
+results back.
 
 This file ships unconditionally (unlike model-lanes.md, which is install-if-absent to preserve user
 mappings) — the normative rules live here so existing installs receive them on update.
@@ -15,9 +16,11 @@ mappings) — the normative rules live here so existing installs receive them on
 
 ## Principles
 
-1. **The primary lane still switches.** A skill's declared lane determines what the main session
-   model should be. The MODEL-LANE-GATE (route.md § Step 8) keeps prompting `/model` for
-   primary-lane mismatch. Delegation is never an escape hatch for a primary mismatch.
+1. **The primary lane still governs.** A skill's declared lane determines what the main session
+   model should be. The MODEL-LANE-GATE (route.md § Step 8) keeps surfacing the primary-lane
+   mismatch as a one-line advisory (advisory-only — it never asks the user to switch, per the
+   2026-06-06 No-Switch-Prompt directive). Delegation is never an escape hatch for a primary
+   mismatch.
 2. **Hard rule — coding main stays coding.** Coding/analysis *primary* work runs on the coding main
    model. Never run a creative main session orchestrating a swarm of coding-pinned agents to avoid
    a switch. (Sacred directive, 2026-06-06 workshop.)
@@ -125,8 +128,10 @@ Contract` section with two halves:
   `INCOMPLETE: <missing input>` (a starved agent fails loudly, never plausibly) and
   `AMBIGUOUS: <question>` (an agent with every REQUIRES item present but two or more valid
   interpretations hands the decision back — **a minion never guesses**; sacred directive,
-  2026-06-06). On an `AMBIGUOUS:` return, the ORCHESTRATOR owns the AskUserQuestion (subagents
-  cannot prompt the user), then re-spawns with the answer serialized — this counts as the single
+  2026-06-06). On an `AMBIGUOUS:` return, the ORCHESTRATOR owns the resolution (subagents cannot
+  prompt the user): under `audit`, resolve via agent panel → conservative alternative, or DEFER to
+  the report — never a mid-run user question (Audit Autonomy Gate); outside audit, AskUserQuestion
+  per Rule 8. Either way, re-spawn with the answer serialized — this counts as the single
   permitted retry.
 
 Rules:

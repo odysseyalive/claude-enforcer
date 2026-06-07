@@ -2,6 +2,31 @@
 
 **When invoked without arguments or with `audit`, run the full audit as an orchestrator.**
 
+### Step 0: Disclaimer Acceptance (BLOCKING — fires before anything else)
+
+Per the 2026-06-06 sacred directive (SKILL.md § Directives → Audit Disclaimer Gate), the audit disclaimer must be accepted by the user before the audit proceeds. This fires on EVERY audit entry — full `audit`, `audit --quick`, and the bare `/skill-builder` default — BEFORE any scan, sub-command, marker write, or report.
+
+1. **Interactive session** → present via AskUserQuestion and STOP until answered:
+
+   > **Disclaimer — acceptance required before the audit proceeds:**
+   > - skill-builder is designed to be used with Opus 4.7 or higher model.
+   > - However, skills created with skill-builder are backwards compatible with earlier models.
+   > - Please backup your CLAUDE.md and .claude directory before proceeding.
+   > - Accepting runs the audit and automatically applies its recommended fixes; deferred items are listed for manual follow-up.
+
+   Options EXACTLY: **Accept and proceed** / **Cancel audit**. On **Cancel audit** → STOP entirely; report that nothing was scanned or written. (The first three bullets are sacred minimum content, verbatim; the fourth is machinery disclosure for informed consent.)
+2. **On Accept** → write/refresh the `<!-- audit-disclaimer: accepted -->` marker in `references/model-lanes.md` (the project's runtime copy, next to the `model-lane-setup` marker — update-preserved, per-project), then continue to Step 0.5. If `model-lanes.md` does not exist in the project, skip the marker write silently (the gate still asked and was accepted; the marker only exists to unblock headless scans). **Acceptance is the run's single consent (Audit Autonomy Gate, 2026-06-06): it authorizes the scan AND the auto-execution phase (§ Step 6).** No further execution question is ever asked this run.
+3. **Headless / non-interactive run** → IF the `audit-disclaimer: accepted` marker exists → print the disclaimer text into the report header and proceed with the **scan only** — a marker never authorizes writes; the fix plan lands in the report as would-be tasks, and auto-execution requires a live interactive acceptance this run. IF NO marker → print the disclaimer and REFUSE: "Audit disclaimer not yet accepted — run one interactive audit first." Acceptance is never assumed or auto-granted.
+4. This gate asks about the disclaimer ONLY. It never asks the user to switch models — no audit step does (No-Switch-Prompt Gate). The full audit asks at most three questions ever: this disclaimer, the one-time 4f-setup onboarding, and the every-audit Lane→Model picker (Audit Autonomy Gate clause 1).
+
+### Step 0.5: VCS Preflight (containment — never blocks)
+
+Run `git rev-parse --is-inside-work-tree` and, if in a repo, `git status --porcelain -- CLAUDE.md .claude/`. Three states:
+
+- **Clean repo** → full AUTO tier available (§ Step 6).
+- **Dirty repo** → proceed with the full AUTO tier, but print one warning line in the report header: "Uncommitted changes in CLAUDE.md/.claude — the Step 0 backup advice is your rollback." Never block; the disclaimer was accepted.
+- **No VCS** → downgrade the git-dependent AUTO items to DEFER (`optimize --execute` — its immutable-block precheck and auto-revert depend on `git show`/`git checkout`; orphan minion deletions; dead-wiring git recovery), each with reason "no version control — these need a recovery path." Everything else stays AUTO.
+
 ### Step 1: Gather Metrics
 
 **Preflight — self-exclusion.** Detect invocation form:
@@ -43,8 +68,8 @@ If no `.claude/skills/*/SKILL.md` files exist (excluding skill-builder itself):
 2. Run the **CLAUDE.md Optimization Procedure** (see [claude-md.md](claude-md.md)) as the primary action
 3. Analyze CLAUDE.md for extraction candidates (domain-specific sections, inline tables, procedures >10 lines, rules that only apply to specific tasks)
 4. Propose new skills to create from extraction candidates
-5. Present the CLAUDE.md optimization report with proposed skill extractions
-6. Offer execution **via AskUserQuestion** — never end the turn with a free-text "Should I extract these sections into skills?" (per SKILL.md § Display/Execute Mode Convention rule 8 — decision handoffs use a clickable menu, not prose). Options: "Extract these sections into skills" / "Let me pick which to extract" / "Skip for now".
+5. Present the CLAUDE.md optimization report with proposed skill extractions, each tagged HIGH-confidence (mechanical, clearly self-contained section) or AMBIGUOUS (judgment about scope/splitting)
+6. **Auto-execute the extraction (Audit Autonomy Gate — no menu, no question):** extract the HIGH-confidence candidates immediately under the Step 0 consent (the disclaimer names CLAUDE.md by name as the backup target). AMBIGUOUS candidates DEFER to the report's Deferred Items table with the command `/skill-builder optimize claude.md --execute` — never guessed, never extracted without confidence, never offered as a menu.
 
 Skip Steps 3, 4 (sub-commands), 4c–4f (they require existing skills).
 
@@ -52,19 +77,19 @@ Skip Steps 3, 4 (sub-commands), 4c–4f (they require existing skills).
 
 **Still run Step 4g — but only the `route index` half.** `/route` can (and should) bootstrap with an empty catalog so the dispatcher exists the moment the user's first skill is created. The `route embed` half is SKIPPED in bootstrap mode (there are no skills to embed into). See [route.md](route.md) § Mode: `index` → Step 1 "Zero-skill case is valid" and § Mode: `embed` → Step 1 "Zero-candidate case." Surface `route index --execute` as a recommended terminal action in the bootstrap report.
 
-Go to Step 6 with execution choices that include:
-- CLAUDE.md extraction candidates (from above)
-- Awareness Ledger installation (from Step 4a, if not installed)
-- `route index --execute` — bootstrap `/route` with an empty catalog (from Step 4g, always offered in bootstrap mode if `/route` is not yet installed)
+Go to Step 6's auto-execution with a task list that includes:
+- CLAUDE.md extraction of HIGH-confidence candidates (from above; AMBIGUOUS → Deferred Items)
+- Awareness Ledger installation (from Step 4a, if not installed — improvement work runs, per "Always do the work")
+- `route index --execute` — bootstrap `/route` with an empty catalog (from Step 4g, always auto-run in bootstrap mode if `/route` is not yet installed)
 
-**Post-bootstrap chaining:** When CLAUDE.md extraction is executed and new skills are created, post-action chaining (per § Display/Execute Mode Convention rule 6) fires automatically — running optimize, agents, and hooks in display mode for each newly created skill, then offering execution choices. This ensures agents and hooks are surfaced in the same session, not deferred to a second audit. The chain also re-runs `route index` after new skills appear so the freshly-bootstrapped catalog picks them up.
+**Post-bootstrap chaining:** When CLAUDE.md extraction is executed and new skills are created, post-action chaining (per § Display/Execute Mode Convention rule 6) fires automatically — running optimize, agents, and hooks for each newly created skill **under the audit's Step 0 consent: the chain's execution menu is suppressed when its parent is audit** (post-action-chain.md § Step 3); its AUTO-tier recommendations execute and the rest defer. This ensures agents and hooks land in the same session, not deferred to a second audit. The chain also re-runs `route index` after new skills appear so the freshly-bootstrapped catalog picks them up.
 
 ### Step 2.7: Quarantine Unparseable Skills (fail-loud — never a silent skip)
 
 A skill audit cannot silently drop what it cannot read — under the 2-Brain Harness an unindexed skill is unroutable and outside model management entirely, so a silent parse-skip amounts to uninstalling the skill without telling anyone.
 
 1. Compute `quarantined = glob(.claude/skills/*/SKILL.md) − successfully_parsed` (frontmatter missing/invalid YAML, missing `---` delimiters, unreadable file). Empty set → continue silently.
-2. For each quarantined skill: report a **QUARANTINED** row (name + path + one-line parse error) in the Skills Summary AND add a **mandatory repair task** to the audit task list ("repair frontmatter of /[skill]: [error] — see templates.md § frontmatter and § Detecting Multi-line Descriptions"). Repair tasks are never auto-executed (the file may be hand-authored in ways parsing can't judge) — they appear in the Step 6 menu.
+2. For each quarantined skill: report a **QUARANTINED** row (name + path + one-line parse error) in the Skills Summary AND a **mandatory repair entry** in the Deferred Items table ("repair frontmatter of /[skill]: [error] — see templates.md § frontmatter and § Detecting Multi-line Descriptions"). Repair tasks are never auto-executed (the file may be hand-authored in ways parsing can't judge) — DEFER tier, with the repair instructions as the ready-to-run follow-up.
 3. Propagate to the index: `route index` writes quarantined skills as explicit `QUARANTINED` catalog rows (present but unroutable, with the parse error) — never silently absent. `/route` answering an ask that matches a quarantined name reports "exists but unreadable — run its repair task" instead of "no match".
 4. Quarantined skills are EXCLUDED from every downstream per-skill sub-command (they cannot be safely parsed) but INCLUDED in the final accounting line — `N audited · M quarantined` — so the totals never silently shrink.
 
@@ -83,10 +108,11 @@ A skill audit cannot silently drop what it cannot read — under the 2-Brain Har
 
 ### Step 4: Run Sub-Commands in Display Mode
 
-**Agent budget:** Sub-procedures running in display mode during audit skip their own agent panels. Agent panels fire only in standalone mode or `--execute` mode where decisions have real consequences. The audit's only agent panel is the priority ranking panel (Step 4f) — one per audit run, not per skill.
+**Agent budget:** Sub-procedures running in display mode during the SCAN phase skip their own agent panels. Agent panels fire only in standalone mode or execute mode where decisions have real consequences — and the audit's **auto-execution phase (§ Step 6) IS execute mode**: every panel a sub-procedure demands for its execute path (optimize 4b/5b, agents § 5, excursion classification, reconcile adjudication where its findings went AUTO) fires there exactly as written. Panels replace user menus, never the other way around (Audit Autonomy Gate clause 5).
 
-- Quick audit (`--quick`): **0 agent panels** — pure checklist, no spawning
-- Standard audit: **1 agent panel total** (Step 4f priority ranking), plus lightweight cascade guard checks (no panel)
+- Quick audit (`--quick`): **0 agent panels in the scan** — pure checklist, no spawning
+- Standard audit scan: **1 agent panel total** (Step 4e priority ranking), plus lightweight cascade guard checks (no panel)
+- Auto-execution phase: panels per the executing procedures' own contracts (uncapped — integrity over speed)
 
 For each skill found:
 1. Run **optimize** in display mode (skip agent panels in Steps 4b and 5b) → collect optimization findings
@@ -118,9 +144,9 @@ Per-skill ledger integration recommendations (capture gaps, grounding notes) are
    **Awareness Ledger:** Not installed
    - Captures incidents, decisions, patterns, and flows so diagnostic findings
      and architectural decisions persist across sessions.
-   - Available in the execution menu below.
+   - Will be created automatically in this run's execution phase.
    ```
-2. This recommendation MUST appear in the report — do NOT skip silently. The audit is the orchestrator; even though optimize/agents/hooks correctly skip ledger analysis when no ledger exists, the audit is responsible for surfacing the gap.
+2. This MUST appear in the report — do NOT skip silently. Append `ledger --execute` to the auto-execution task list (Audit Autonomy Gate clause 3: improvement work is done, never offered as skippable — it is additive scaffolding that touches nothing existing).
 
 ### Step 4a-bis: Code Evaluator Status & Reference Sync
 
@@ -153,7 +179,7 @@ Check if `.claude/skills/code-evaluator/SKILL.md` exists.
      ```
      and append `code-eval sync` to the execution task list (Step 6) — by default. Sync is a block-aware refresh of skill-builder-owned (`modifiable: true`) reference blocks that preserves any `origin: user` seams (see [code-eval.md](code-eval.md) § sync).
 
-**Both `code-eval create` and `code-eval sync` auto-append to audit's execute task list by default** — mirroring how `route index`/`route embed` are appended (Step 4g). The user may deselect them in the Step 6 menu, but they appear automatically; audit never silently writes during the display scan. In display mode, surface the pending create/sync as recommended actions in the report's Priority Fixes section.
+**Both `code-eval create` and `code-eval sync` auto-append to audit's execution task list by default** — mirroring how `route index`/`route embed` are appended (Step 4g). They run in the auto-execution phase under the Step 0 consent (Audit Autonomy Gate); audit never silently writes during the scan — the Execution Plan block lists them before they run. In `--review` mode, surface the pending create/sync as recommended actions in the report's Priority Fixes section.
 
 **Grounding:** Read [code-eval.md](code-eval.md) for the create/sync procedure and [../code-evaluator/version.md](../code-evaluator/version.md) for the drift-anchor format.
 
@@ -201,7 +227,7 @@ Governed by the sacred integrity-over-performance directive (SKILL.md § Directi
 - Runs in **display mode** during audit. Per the Step 4 agent budget, reconcile's own judgment-class adjudication panels are **suppressed here** — the audit's only panel is the Step 4e priority ranking. Mechanical findings (duplicate names, duplicate/conflicting hook matchers, duplicate embed blocks) and the complementary-overlap allow-list are evaluated without panels; genuinely ambiguous judgment-class candidates are reported as "needs adjudication (run `reconcile [skill]` standalone)" rather than resolved inside the audit.
 - Findings feed the aggregate report's **Cross-Skill Reconciliation** section (Step 5). Apply absence-vs-gap: omit the section entirely when there are zero conflicts.
 - **Priority Fixes elevation:** completion-breaking findings (duplicate name, conflicting hook matchers, circular/overridden dispatch, redundant skill, contradicting directives) elevate into Priority Fixes — a skill that silently never runs is a larger regression than most optimizations.
-- **Execution:** the two mechanical auto-fixes (`reconcile --execute` on duplicate embed blocks / byte-identical hook dupes) and any confirmed redundant-skill `strip` hand-off surface in the Step 6 menu as discrete, deselectable items. Directive/description/persona/conflicting-hook findings remain flag-only — never auto-applied.
+- **Execution (Audit Autonomy Gate):** the two mechanical auto-fixes (collapse duplicate machine-generated embed blocks / drop byte-identical hook dupes) are **AUTO tier** — they touch only machine-owned bytes and run in the auto-execution phase. Any confirmed redundant-skill `strip` hand-off is **DEFER tier** — deletion consent lives in strip's own gates; it lands in Deferred Items as `/skill-builder strip <skill>`. Directive/description/persona/conflicting-hook findings remain flag-only — never auto-applied.
 
 **Grounding:** Read [reconcile.md](reconcile.md) for the collision-class table, the conflicts-only filter, the complementary-overlap allow-list, and the remediation ladder.
 
@@ -220,9 +246,9 @@ Each agent reads the aggregated findings from optimize, agents, and hooks across
 - Items ranked top-3 by only 1 agent → medium priority
 - Present the synthesized ranking with attribution to each agent's rationale
 
-### Step 4f: Model Lane Check (report-only scan + every-audit Lane→Model picker + suppressible switch prompt)
+### Step 4f: Model Lane Check (report-only scan + every-audit Lane→Model picker; NO switch prompts)
 
-Make the audit model-aware per the user directive (SKILL.md § Directives → Model-Lane Routing Gate). This step runs **after** the priority panel (4e) and **before** the route terminal tasks (4g). It is report-only at its core; the optional switch prompt is interactive and never blocks.
+Make the audit model-aware per the user directives (SKILL.md § Directives → Model-Lane Routing Gate and No-Switch-Prompt Gate). This step runs **after** the priority panel (4e) and **before** the route terminal tasks (4g). It is report-only for mismatches — it never asks the user to switch models; the only questions it may ask are configuration ones (onboarding, picker).
 
 **SKIP this step entirely in `audit --quick`** — the quick path does no structural/narrative scanning (see [quick-audit.md](quick-audit.md) § Step 4).
 
@@ -231,35 +257,35 @@ Make the audit model-aware per the user directive (SKILL.md § Directives → Mo
    - **Reconcile first.** IF the table actually has active rows or a skill self-declares a lane → the project is `configured` (upgrade the marker if it still says `unset`); skip this fork and continue to step 3.
    - IF `model-lanes.md` is **absent** entirely → silent no-op (nothing to offer against); stop this step.
    - IF the marker is `declined` → **silent no-op** (the user opted out for this project). Omit the Model Lane section. Stop this step.
-   - IF the run is **suppressed for prompting** (headless/non-interactive, or `audit --quick`, or `--no-model-prompt`) → silent no-op; do NOT write the marker. Omit the section. Stop this step.
+   - IF the run is **suppressed for setup questions** (headless/non-interactive, or `audit --quick`) → silent no-op; do NOT write the marker. Omit the section. Stop this step.
    - IF the marker is `unset` AND this is a full interactive `audit` → **run the Setup Onboarding Flow** (§ Step 4f-setup below). Then either continue to step 3 with the freshly-written lanes (if the user set them up) or stop this step (if "Not now"/"Never ask").
    - Otherwise (configured) → run the **Lane→Model Picker** (step 2-bis), then continue to step 3. **(Absence-vs-gap still holds:** a `declined` or suppressed run reports nothing; only an `unset` interactive run surfaces the one-time offer.)
 
-2-bis. **Lane→Model Picker (every full interactive audit; sacred 2026-06-06 workshop decision).** Fires whenever the project is `configured` — including immediately after 4f-setup configures it (4f-setup clause 3 IS this picker). Suppressed under exactly the same set as step 8 (headless/non-interactive, `audit --quick`, `--no-model-prompt`) → skip silently and continue to step 3. Full spec in [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker; summary:
+2-bis. **Lane→Model Picker (every full interactive audit; sacred 2026-06-06 workshop decision).** Fires whenever the project is `configured` — including immediately after 4f-setup configures it (4f-setup clause 3 IS this picker). Suppressed when headless/non-interactive or `audit --quick` → skip silently and continue to step 3. Full spec in [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker; summary:
    1. Build the candidate options EXACTLY: `claude-opus-4-6`, `claude-opus-4-8`, and the latest released model by official ID — discovered fresh via the ladder in lane-delegation.md (`GET /v1/models` ~10s timeout → models-overview docs fetch → omit the option with a one-line notice; never fabricate an ID; never cache). Dedupe "latest" against the statics.
    2. ONE batched AskUserQuestion — "Creative lane model" / "Coding (everything-else) lane model" — with the current mapping pre-selected as the default on each (confirming is one click; AskUserQuestion's auto-"Other" preserves manual entry; blank-to-disable remains available).
    3. Unchanged → no write; continue to step 3. Changed → write the Lane→Model cells in `model-lanes.md` (same single-consented-write discipline as 4f-setup clause 4 — the picker answer IS the consent), then run the **Fleet Rewrite** per lane-delegation.md § Fleet Rewrite on Remap: TaskCreate one task per `lane-pinned:` agent of each remapped lane, rewrite the `model:` line only, verify by re-grep, report per file (Audit Agent Model-Assignment Gate clause 6).
    4. The picker never writes the `model-lane-setup` marker and never switches the session model.
 3. **Detect the active model.** Read the session system-context line "The exact model ID is …", strip any `[1m]`/`[200k]` suffix, lowercase → `ACTIVE_MODEL`. See [model-lanes.md](../model-lanes.md) § Active-Model Detection. This is a concrete read — no agent.
 4. **Resolve each skill's lane from a DECLARED source only.** For each audited skill (respecting self-exclusion from Step 1): `lane:` frontmatter → Skill→Lane table → **NO LANE**. A skill with no declared lane is **skipped for flagging** — never auto-classified. Optionally compute a non-blocking lane *suggestion* for undeclared skills per [model-lanes.md](../model-lanes.md) § Advisory Lane Suggestion (suggest-only; a suggestion never triggers a prompt).
-5. **Compare.** Look up the lane's Preferred Model. IF empty/absent → skip (flagging disabled by empty cell). IF non-empty AND `preferred_model != ACTIVE_MODEL` → record a **mismatch**. Apply the stale-ID self-check from [model-lanes.md](../model-lanes.md) § Comparison Rule: if a non-empty preferred model is not of `claude-<family>-<major>-<minor>` shape or names a clearly superseded family, downgrade to a "mapping may be stale" advisory instead of a switch prompt.
+5. **Compare.** Look up the lane's Preferred Model. IF empty/absent → skip (flagging disabled by empty cell). IF non-empty AND `preferred_model != ACTIVE_MODEL` → record a **mismatch**. Apply the stale-ID self-check from [model-lanes.md](../model-lanes.md) § Comparison Rule: if a non-empty preferred model is not of `claude-<family>-<major>-<minor>` shape or names a clearly superseded family, downgrade to a "mapping may be stale" advisory instead of a mismatch finding.
 5-bis. **Excursion coverage, legacy-switching, and agent-model scans (report-only).** Read [lane-delegation.md](../lane-delegation.md) once, then:
    - **Excursion coverage:** for each lane-declared skill, walk its workflow per § Excursion Signal Vocabulary + § NON-DELEGABLE Hard-Stop List (heuristic pass only — the classification agent panel is suppressed here per the agent-budget rule; it fires in `agents [skill]` standalone/`--execute`). Cross-lane steps with no covering `LANE-AGENT-EMBED` map entry → finding "excursion uncovered — run `agents [skill] --execute`".
    - **Legacy switching:** flag any non-managed mid-workflow model-switch instruction (`/model`, "switch model" outside any START/END markers) as "REVAMP: legacy mid-workflow switching — replace with lane-pinned delegation". Candidates inside `origin: user | immutable: true` blocks are FLAG-ONLY (directive-touch hard floor).
    - **Agents missing `model:` (sacred directive, 2026-06-06):** glob all agent forms (both skill forms + `.claude/agents/*.md`, deref symlinks, dedupe); any AGENT.md missing a `model:` field while lanes are configured → finding with a fix task (stamp per the Audit Agent Model-Assignment Gate on `--execute`). Lanes unconfigured → skip this scan silently.
    - **Fleet registration health (2-Brain Harness, 2026-06-06 — panel-measured failure: a live fleet had 104 agent files with 2 registrations, silently degrading every spawn):** every agent carrying `generated-by: skill-builder lane-excursion` MUST resolve through a `.claude/agents/<name>.md` registration (dereference symlinks; copy-fallback counts). Unregistered → finding "minion unregistered — spawns fall to the degraded path; re-register" with a fix task (recreate the symlink/copy on `--execute`). Also report CONTRACT-DRIFT and UNSTAMPED counts per route.md § Step 9c's vocabulary.
-   - **Orphan retirement (execute path — report-only-forever guarantees accumulation):** a `generated-by`-marked agent whose `excursion-skill` no longer exists, or whose map entry was REMOVEd, → consented deletion task in the Step 6 menu (display-first, one task per file; agents WITHOUT the `generated-by` marker are user property — never listed, never touched).
+   - **Orphan retirement (execute path — report-only-forever guarantees accumulation):** a `generated-by: skill-builder lane-excursion`-marked agent whose `excursion-skill` no longer exists, or whose map entry was REMOVEd, → **AUTO-tier deletion task** (one task per file; consent = Step 0 acceptance, eligibility = mechanical marker check, re-verified at delete time — marker absent or ambiguous → skip + Deferred; no VCS → DEFER per Step 0.5). Agents WITHOUT the `generated-by` marker are user property — never listed, never touched.
 6. **Report (always).** Emit the Model Lane section in the Step 5 aggregate report (table below). Report-only; never blocks.
-7. **Prompt to switch (interactive only; the user's "flag + prompt").** In an interactive session with mismatches present AND prompting not suppressed (see step 8): after the report, emit **one batched prompt per distinct preferred model** (group mismatched skills by their preferred model — never one prompt per skill) via **AskUserQuestion**, styled on the `update` command's CHECKPOINT. The prompt instructs the user to run `/model` to switch — a skill cannot change the session model itself. Offer options: **switched / skip / continue**. After acknowledgement, re-read the model line **once** to confirm; do not loop or re-prompt beyond that one confirmation.
-8. **Suppression ("or not").** SUPPRESS the prompt (report only) when ANY of: `--no-model-prompt` is set; the session is headless/non-interactive (the prompt would block or loop because the model never changes between re-invocations — keep `verify`-style runs safe); or this is `audit --quick` (section omitted entirely). `--model-prompt` forces the prompt even in display mode. Default interactive `audit` (no flag) prompts.
+7. **Report is the ceiling (No-Switch-Prompt Gate, sacred 2026-06-06).** The step-6 report section is this step's ENTIRE output for mismatches. NEVER emit a switch prompt, an AskUserQuestion about models, or any instruction to run `/model` — each mismatch is a one-line advisory ("Lane advisory: `<skill>` declares `<lane>` (preferred `<preferred>`); session is on `<active>`.") and the audit proceeds. The pre-2026-06-06 batched switch prompt is abolished. `--model-prompt` is retired; `--no-model-prompt` is accepted as a harmless no-op.
+8. **Quick-mode scope.** `audit --quick` omits the Model Lane section entirely. Headless/non-interactive runs still print the section when mismatches exist (it is report-only and cannot block).
 9. **Unreadable mapping with declared lanes → stop.** IF at least one skill declares a lane but `model-lanes.md` cannot be parsed → report "Model-lane mapping unreadable; cannot evaluate model routing. Fix references/model-lanes.md." and continue the rest of the audit.
 
 #### Step 4f-setup: Setup Onboarding Flow (one-time, interactive, opt-in)
 
-Fires only from step 2 when the feature is unconfigured, the marker is `unset`, and the run is a full interactive `audit` (never headless, never `--quick`, never `--no-model-prompt`, never when `declined`). This is the "fluid… with prompting, or not" onboarding the directive asks for: it offers to set up model lanes instead of staying silently no-op so the user discovers the capability per project.
+Fires only from step 2 when the feature is unconfigured, the marker is `unset`, and the run is a full interactive `audit` (never headless, never `--quick`, never when `declined`). This onboarding offers to set up model lanes instead of staying silently no-op so the user discovers the capability per project. It is a configuration question, not a switch request — no part of it asks the user to change the session model (No-Switch-Prompt Gate, 2026-06-06).
 
 1. **The single onboarding question (2-Brain Harness directive, 2026-06-06: "at the audit's single onboarding question, the user picks the creative model and the model for everything else").** Emit ONE batched **AskUserQuestion** call containing THREE questions — never three separate prompts:
-   - *(a) header "Model lanes":* *"Set up the 2-brain harness for this project? Creative work (image / content / design generation, plus communication, language translation, and text evaluation) runs on one model; everything else (including testing and research) runs on the other. Audit and your skills can then prompt you to `/model`-switch to the right brain."* Options — **Set it up now** / **Not now** / **Never ask in this project**.
+   - *(a) header "Model lanes":* *"Set up the 2-brain harness for this project? Creative work (image / content / design generation, plus communication, language translation, and text evaluation) runs on one model; everything else (including testing and research) runs on the other. Audit and your skills will then report when the active model doesn't match a skill's lane, and cross-lane steps delegate to model-pinned agents."* Options — **Set it up now** / **Not now** / **Never ask in this project**.
    - *(b) header "Creative brain":* the Lane→Model Picker option list (the two static IDs + the discovered latest release, per [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker).
    - *(c) header "Everything-else brain":* the same option list.
    Resolution: **Not now** → leave the marker `unset`, discard (b)/(c), omit the Model Lane section, stop this step. **Never ask in this project** → write `<!-- model-lane-setup: declined -->`, discard (b)/(c), stop this step (reversible by hand: set it back to `unset`). **Set it up now** → the (b)/(c) answers ARE the Lane→Model mapping — the picker ran inside the single question; do NOT re-prompt it in clause 3. Continue to clause 2.
@@ -268,9 +294,9 @@ Fires only from step 2 when the feature is unconfigured, the marker is `unset`, 
 4. **Write the config (the one consented write).** Edit `model-lanes.md`: insert the confirmed Skill→Lane rows into the table, apply any Lane→Model edits, and set the marker to `<!-- model-lane-setup: configured -->`. Do not touch any `origin: user | immutable: true` content; the Skill→Lane and Lane→Model blocks are `immutable: false` user-editable mapping. Re-read the file once to confirm it parses.
 5. **Continue.** Return to step 3 of the main flow and run the normal mismatch check against the just-written lanes (so a mismatch with the active model is surfaced immediately, including the route-embed wiring of the invocation-time gate at Step 4g/§ Step 8).
 
-**One write, no model-switch, no menu item.** The ONLY thing this step ever writes is `model-lanes.md` — the setup-state marker plus, on explicit "Set it up now" consent, the confirmed Skill→Lane and Lane→Model rows. It still has **no `--execute` action and no Step 6 / TaskCreate entry**, and it still cannot switch the session model (it only prompts the user to run `/model`). It must not wedge into the route terminal tasks (4g) or the execution menu. *(One scoped exception, 2026-06-06: when the step-2-bis picker REMAPS a lane, the consented Fleet Rewrite of `lane-pinned:` agents' `model:` lines runs as its own task list — see lane-delegation.md § Fleet Rewrite on Remap. That write is picker-consented, surfaced per file, and touches `model:` lines only.)*
+**One write, no model-switch, no menu item.** The ONLY thing this step ever writes is `model-lanes.md` — the setup-state marker plus, on explicit "Set it up now" consent, the confirmed Skill→Lane and Lane→Model rows. It still has **no `--execute` action and no Step 6 / TaskCreate entry**, and it never switches the session model and never asks the user to (No-Switch-Prompt Gate). It must not wedge into the route terminal tasks (4g) or the auto-execution task list. *(One scoped exception, 2026-06-06: when the step-2-bis picker REMAPS a lane, the consented Fleet Rewrite of `lane-pinned:` agents' `model:` lines runs as its own task list — see lane-delegation.md § Fleet Rewrite on Remap. That write is picker-consented, surfaced per file, and touches `model:` lines only.)*
 
-**Invocation-time complement.** This step is the *audit-time* half of the model-lane directive (it fires only when the user runs `audit`). The *invocation-time* half — a preflight gate embedded into each lane-declared skill's own workflow that prompts to `/model`-switch before generative work — is the `MODEL-LANE-GATE` managed-block family, wired/refreshed/removed by `route embed` (the **last** terminal task, Step 4g; see [route.md](route.md) § Step 8). So once the onboarding flow declares lanes, the same audit's `route embed` task wires the invocation-time gate into those skills — setup and enforcement complete in one audit run.
+**Invocation-time complement.** This step is the *audit-time* half of the model-lane directive (it fires only when the user runs `audit`). The *invocation-time* half — a preflight gate embedded into each lane-declared skill's own workflow that surfaces a one-line lane advisory before generative work (never a prompt) — is the `MODEL-LANE-GATE` managed-block family, wired/refreshed/removed by `route embed` (the **last** terminal task, Step 4g; see [route.md](route.md) § Step 8). So once the onboarding flow declares lanes, the same audit's `route embed` task wires the invocation-time gate into those skills — setup and enforcement complete in one audit run.
 
 **Grounding:** [model-lanes.md](../model-lanes.md), [lane-delegation.md](../lane-delegation.md) (picker spec, fleet rewrite, excursion + model-assignment scans), SKILL.md § Directives (Model-Lane Routing Gate, Bespoke Excursion-Agent Gate, Audit Agent Model-Assignment Gate), SKILL.md § The `update` Command (prompt-style precedent).
 
@@ -281,9 +307,9 @@ After all sub-commands and the priority ranking panel finish, the audit's execut
 - **Second-to-last task:** `route index` — refresh the `/route` skill's catalog. Skills that were renamed, added, or had their description/modes changed by earlier optimize/agents/hooks tasks need to be reflected in the index immediately. Also fires in **bootstrap mode** (Step 2.5) — `/route` bootstraps with an empty catalog so the dispatcher is ready as soon as the user creates their first skill.
 - **Last task:** `route embed` — refresh consultation gates across skills. Earlier tasks may have added or removed workflow steps that change which skills should carry the route gate; this step reconciles. It reconciles **all four managed-block families** in one pass — `ROUTE-EMBED`, `CODE-EVAL-EMBED`, the `MODEL-LANE-GATE` invocation-time model-lane preflight ([route.md](route.md) § Step 8), and the `LANE-AGENT-EMBED` Excursion Delegation Map ([route.md](route.md) § Step 9, reconcile-only) — so a skill that gained or lost a declared lane gets its preflight gate and delegation map wired or stripped as a terminal audit action. **Skipped in bootstrap mode** — no skills exist to embed into; the embed mode itself stops cleanly in that state ([route.md](route.md) § Mode: `embed` → Step 1 "Zero-candidate case").
 
-Both appear in Step 6's execution menu as discrete items the user can include or skip. They are appended to whatever combined task list TaskCreate produces — they do NOT replace any earlier task. Order matters: `route index` must run before `route embed` so that `embed`'s index-refresh chain (Step 6 of `route.md` § `embed` — Post-Embed Index Refresh) does not double-rebuild a stale catalog.
+Both are **auto-appended terminal tasks** (Audit Autonomy Gate — there is no menu to deselect them from; they appear in the Execution Plan block before running). They are appended to whatever combined task list TaskCreate produces — they do NOT replace any earlier task. Order matters: `route index` must run before `route embed` so that `embed`'s index-refresh chain (Step 6 of `route.md` § `embed` — Post-Embed Index Refresh) does not double-rebuild a stale catalog.
 
-**During audit display mode** (no `--execute` selected), surface these two as recommended terminal actions in the report's Priority Fixes section so the user knows they would run last. When the model-lane mapping is configured (at least one skill resolves to a lane with a non-empty preferred model), note in the same Priority Fixes entry that `route embed` will also wire/refresh/remove the `MODEL-LANE-GATE` preflight on lane-declared skills (Step 8), so the invocation-time prompt is surfaced as a pending action, not silently applied. In bootstrap mode, surface only `route index` (embed is N/A).
+**In `audit --review` mode** (zero writes), surface these two as recommended terminal actions in the report's Priority Fixes section so the user knows they would run last. When the model-lane mapping is configured (at least one skill resolves to a lane with a non-empty preferred model), note in the same entry that `route embed` will also wire/refresh/remove the `MODEL-LANE-GATE` preflight on lane-declared skills (Step 8), so the invocation-time advisory gate is surfaced as a pending action, not silently applied. In bootstrap mode, only `route index` runs (embed is N/A).
 
 **Grounding:** [route.md](route.md)
 
@@ -366,7 +392,7 @@ Lane→Model picker: [confirmed unchanged / remapped (`<lane>` → `<new id>`) �
 
 *Agents missing `model:` (2026-06-06 directive; only when lanes configured):* [agent path list with fix tasks, or "none"]
 
-If mismatches exist and prompting is not suppressed, the batched switch prompt (one per distinct preferred model) follows this report — see Step 4f.
+Mismatch advisories above are this section's entire output — no switch prompt ever follows the report (No-Switch-Prompt Gate, 2026-06-06; see Step 4f step 7).
 
 ## Validation Cascade
 [from Step 4d — per-skill cascade risk]
@@ -392,27 +418,66 @@ If mismatches exist and prompting is not suppressed, the batched switch prompt (
 1. [Most impactful optimization]
 2. [Second priority]
 3. [Third priority]
+
+## Execution Plan
+*(The exact TaskCreate list about to run, in Step 6 tail order. Printed BEFORE any write so a mid-run
+crash leaves the full findings + plan in hand. In `--review` mode and headless runs this is the
+would-be plan and nothing below it executes.)*
+1. [task — e.g. "optimize --execute /skill-1 (P5 strictness, description reflow — no truncation)"]
+2. [task]
+…
+N-1. route index
+N.   route embed
+
+## Deferred — needs your call
+*(DEFER tier only — never silently dropped. Omit the section when nothing deferred.)*
+| Item | Why deferred | Run it with |
+|------|--------------|-------------|
+| [e.g. Redundant skill /foo (R7)] | deletion — consent lives in strip | `/skill-builder strip foo` |
+| [e.g. /bar protective dead hook] | recover-vs-unwire is your policy call | `/skill-builder hooks bar --execute` |
+| [e.g. 2-Brain migration (/qux)] | ratification gates inside convert | `/skill-builder convert qux --execute` |
+
+## Execution Summary
+*(After the auto-execution phase: per-task ✓/✗, files touched, reverts performed, panels consulted.
+Informational prose — never ends with a question.)*
 ```
 
-### Step 6: Offer Execution
+### Step 6: Auto-Execution (Audit Autonomy Gate — the execution menu is abolished)
 
-After presenting the report, use **AskUserQuestion** (not plain text) to present execution choices:
+Per the 2026-06-06 sacred directive ("The audit command should be as automated and streamlined as possible. … Always do the work, instead of suggestion to skip work that will improve the system"), there is **no execution question**. After the Step 5 report (including its Execution Plan block) is printed, build the combined task list via TaskCreate and execute it sequentially under the Step 0 disclaimer consent, marking progress via TaskUpdate. **Scope discipline (Display/Execute rule 5) is the contract:** execute ONLY the printed plan; new opportunities discovered mid-run are noted in the Execution Summary, never acted on.
 
-> "Which actions should I execute?"
-> 1. `optimize --execute` for [skill(s)]
-> 2. `agents --execute` for [skill(s)]
-> 3. `hooks --execute` for [skill(s)]
-> 4. All of the above for [skill]
-> 5. `ledger --execute` — create Awareness Ledger *(only if ledger does not exist)*
-> 6. `hooks --execute` for temporal validation — generate temporal hooks for high-risk skills *(only if high-risk skills lack temporal hooks)*
-> 7. `hooks --execute` for dead wiring — auto-recover load-bearing + recoverable findings, auto-unwire advisory findings, stop on each protective / not-recoverable finding for user decision *(only if Step 2.5 surfaced dead wiring)*
-> 8. `code-eval create` / `code-eval sync` — create the `code-evaluator` skill if absent, or refresh its references if stale (auto-appended; runs before the route tasks, per § Step 4a-bis) *(only if code-evaluator is missing or its references are behind)*
-> 9. `reconcile --execute` — apply the mechanical-safe cross-skill fixes (collapse duplicate embed blocks, drop byte-identical hook dupes) and route any confirmed redundant skill through `strip` *(only if Step 4d-bis surfaced auto-fixable or strip-bound conflicts; directive/description/persona/conflicting-hook findings remain flag-only and are never offered for auto-fix)*
-> 10. `agents [skill] --execute` for lane excursions — design lane-pinned excursion agents and weave delegation maps for skills flagged in Step 4f.5-bis (UNCOVERED excursions / legacy REVAMP / agents missing `model:`) *(only if Step 4f.5-bis surfaced findings; runs before the route tasks so `route embed` reconciles the fresh LANE-AGENT-EMBED blocks last)*
-> 11. `route index --execute` + `route embed --execute` — refresh the `/route` index and reconcile consultation gates (auto-appended; final two tasks per § Step 4g)
-> 12. **Migrate to 2-Brain Harness** — chain `convert`'s migration machinery for every skill the scans flagged: hand-written skill intake (wrap-time SACRED/MACHINERY classification with your ratification, per convert.md § Hand-Written Skill Intake), legacy-artifact translation (convert.md § Legacy-Artifact Recognizer Table — including foreign `MODEL-SWITCH-GATE` harvest), and per-skill make-before-break lane-gate transactions (convert.md § Lane-Gate Migration). *(Only appears when Step 4f.5-bis flagged legacy switching, Step 2.7 quarantined skills, or any audited skill has unmarked hand-written content. Every consent gate inside convert — classification ratification, harvested-lane confirmation, sacred-directive rehoming — fires inline; audit never bypasses them.)*
-> 13. Skip — just review for now
+**Suppression:** in `audit --review` (alias `--dry-run`) and in headless runs, STOP after the report — the Execution Plan is the would-be plan; nothing executes. `--execute` is accepted as a harmless no-op (execution is the default).
 
-When the user selects execution targets, generate a **combined task list** via TaskCreate before any files are modified — one task per discrete action across all selected sub-commands. Then execute sequentially, marking progress. Append tasks in this tail order so each prerequisite runs first: **(1)** per § Step 4a-bis, `code-eval create` (if code-evaluator is missing) and/or `code-eval sync` (if its references are stale) — auto-appended by default whenever any execute option is selected, so the evaluator exists and is current before routing; then **(2)** per § Step 4d-bis, any selected `reconcile --execute` mechanical fixes and `strip` hand-offs — run before the route tasks so a renamed verb or stripped skill is reflected in the catalog; then **(2-bis)** any selected option-10 lane-excursion `agents --execute` tasks — before the route tasks so `route embed`'s Step 9 reconciles the freshly-woven `LANE-AGENT-EMBED` blocks; then **(2-ter)** any selected option-12 migration tasks — one task per affected skill (the batch-thin pattern from convert.md § Batch Execute Mode; each task runs that skill's intake/translation/transaction with its consent gates), placed before the route tasks so the terminal `route embed` reconciles the MIGRATED state; then **(3)** per § Step 4g, `route index` (second-to-last) and `route embed` (last) — auto-appended whenever option 11 is selected OR by default whenever any other execute option (1–4, 6, 7, 8, 9, 10, 12) is selected, so `route embed` wires the (possibly newly-created) `code-evaluator` gates into code-touching skills. Option 5 (ledger creation) does not auto-trigger route refresh. Reconcile (option 9) is **never auto-appended** — it is only included when the user explicitly selects it, because its actions touch other skills' files. Lane-excursion agents (option 10) are likewise never auto-appended — delegation placement is judgment-gated and only runs on explicit selection. Migration (option 12) is likewise **never auto-appended** — it rewrites other skills' files and rehomes directives, so it runs only on explicit selection; `convert` remains independently invocable for single skills and standalone batches (audit orchestrates the method; it never replaces it).
+**AUTO tier — runs automatically (improvement work is done, never offered as skippable):**
+
+| Work | Notes |
+|------|-------|
+| Mechanical fixes | frontmatter single-line reflow (**never truncate or shorten a description — reflow preserving every word**), `strictness:` fields, annotation generation, P-ranked structural fixes |
+| `optimize --execute` per flagged skill | VCS-gated (Step 0.5). Its immutable-block precheck + optimize-diff-auditor verification fire as written; a FAIL verdict auto-reverts via `git checkout` and lands in Deferred — never a mid-run question |
+| `agents --execute` incl. lane-excursion design (4f.5-bis UNCOVERED/REVAMP) and `model:` stamps | additive files + managed blocks; persona/panel gates fire as written; panel disagreement → NO-DELEGATE |
+| `hooks --execute` new hooks, temporal hooks, dead-wiring auto classes | load-bearing+recoverable auto-recover; advisory auto-unwire |
+| `ledger --execute` (if absent) | additive companion scaffold |
+| `code-eval create` / `code-eval sync` | per § Step 4a-bis, before the route tasks |
+| `reconcile` mechanical auto-fixes | duplicate machine-generated embed collapse; byte-identical hook dedupe — machine-owned bytes only |
+| Orphan minion retirement | marker-gated per 4f.5-bis; VCS-gated |
+| Bootstrap CLAUDE.md extraction | HIGH-confidence candidates only (Step 2.5) |
+| `route index` → `route embed` | always the final two tasks (§ Step 4g) |
+
+**DEFER tier — lands in the Deferred Items table with an exact command, never silently dropped, never asked about:**
+
+| Work | Why |
+|------|-----|
+| `strip` hand-offs (redundant skills) | deletion — consent lives in strip's own `--execute`/`--confirm-breaking` gates |
+| 2-Brain migration via `convert` | its inline sacred ratification gates (classification, harvested-lane confirmation, directive rehoming) cannot fire in a no-questions run |
+| Quarantine repairs (Step 2.7) | hand-authored files parsing can't judge |
+| Protective / not-recoverable dead wiring | recover-vs-unwire is a policy call |
+| AMBIGUOUS bootstrap extraction candidates | judgment about scope — never guessed |
+| Git-dependent items in no-VCS projects | no recovery path (Step 0.5) |
+
+**Tail order (unchanged):** (1) `code-eval create`/`sync` first, so the evaluator exists before routing; (2) reconcile mechanical fixes — before the route tasks so the catalog reflects them; (2-bis) lane-excursion `agents --execute` tasks — before the route tasks so `route embed`'s Step 9 reconciles fresh `LANE-AGENT-EMBED` blocks; (3) `route index` (second-to-last) and `route embed` (last).
+
+**Failure containment:** a failed task → mark ✗, continue independent tasks, skip dependents (`route embed` depends on `route index`), surface in the Execution Summary. Never silently retry a write. Ambiguity mid-run resolves per the Audit Autonomy Gate clause 5 (panel → conservative → DEFER), never via a user question.
+
+**Close with the Execution Summary + Deferred Items** (Step 5 template) — informational prose; never end the audit with a question.
 
 **Follow § Output Discipline** (in SKILL.md) for cascade execution and cross-skill separation.

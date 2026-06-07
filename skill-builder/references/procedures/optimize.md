@@ -237,7 +237,7 @@ When running `/skill-builder optimize [skill] --execute`:
        - No content was both moved AND modified in the same operation.
     2. IF all precheck conditions pass, mark PASS and skip the agent spawn. Proceed to step 5c.
     3. IF any precheck condition fails, spawn the optimize-diff-auditor agent (`context: none`, see `.claude/skills/skill-builder/agents/optimize-diff-auditor/AGENT.md`). Provide the agent with the specific precheck condition that failed so it can focus its analysis.
-    4. If the agent returns FAIL, present violations to user with revert option (`git checkout`). If PASS, proceed to step 5c.
+    4. If the agent returns FAIL, present violations to user with revert option (`git checkout`). **Under audit (Audit Autonomy Gate, 2026-06-06): auto-revert via `git checkout` immediately and record the skill in the audit's Deferred Items table ("optimize verification FAILED — reverted; run `/skill-builder optimize [skill] --execute` standalone") — never a mid-run question.** If PASS, proceed to step 5c.
 5c. **Post-optimize: Regenerate directive checksums**
     Regenerate the `.directives.sha` sidecar following the spec in `references/procedures/checksums.md` § "Execute Mode" step 2.
     This confirms directives survived intact and updates the sidecar for continued protection.

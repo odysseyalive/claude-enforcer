@@ -104,7 +104,7 @@ For each agent carrying `generated-by: skill-builder lane-excursion` (from the S
 - **Registered?** A `.claude/agents/<name>.md` registration must resolve to it (dereference symlinks; a copy-fallback counts). Unregistered → **FAIL** — "minion unregistered: spawns fall to the degraded path (wrong-lane main-session execution). Re-register via `agents [skill] --execute`." *(Panel-measured precedent: a live fleet had 104 agent files with 2 registrations — the whole fleet was silently degraded.)*
 - **Model pinned?** `model:` present while lanes are configured (per `references/model-lanes.md`). Missing → WARN with the Audit Agent Model-Assignment Gate fix path.
 - **Contract stamped?** `contract-stamp:` present → recompute against the current skill workflow; mismatch → WARN `CONTRACT-DRIFT` ("skill changed under the minion — run `agents [skill]`"). Absent → WARN `UNSTAMPED`.
-- **Orphaned?** `excursion-skill:` names a directory that no longer exists → WARN with the consented-retirement path (audit Step 6 menu).
+- **Orphaned?** `excursion-skill:` names a directory that no longer exists → WARN with the retirement path (marker-gated AUTO task in audit's execution phase; DEFER in no-VCS projects — audit.md § Step 4f.5-bis).
 
 ### Step 5: Summary Output
 
