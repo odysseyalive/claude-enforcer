@@ -61,6 +61,7 @@ skill-builder/references/procedures/shell-safety.md
 skill-builder/references/procedures/intent-router.md
 skill-builder/references/procedures/route.md
 skill-builder/references/procedures/code-eval.md
+skill-builder/references/procedures/model-map.md
 
 # Shell-safety rule set
 skill-builder/references/shell-safety/rules.md

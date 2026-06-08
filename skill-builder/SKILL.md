@@ -372,6 +372,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `shell-safety [mode] [path]` | [shell-safety.md](references/procedures/shell-safety.md) | Write / audit / lint shell code and JSON-embedded shell for pitfalls |
 | `route [mode]` | [route.md](references/procedures/route.md) | Maintain `/route` skill index and embed route-consultation hooks into other skills |
 | `code-eval [mode]` | [code-eval.md](references/procedures/code-eval.md) | Scaffold/maintain the `code-evaluator` skill (create / review / sweep / sync) |
+| `model-map` | [model-map.md](references/procedures/model-map.md) | Choose the creative + coding/everything-else model (Lane→Model picker + fleet rewrite), no audit |
 | `update` | *(inline below)* | Update to latest version |
 <!-- /origin -->
 
@@ -468,6 +469,24 @@ Subcommands of `code-eval`:
 ---
 
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `model-map` Command
+
+Choose which model runs the **creative** lane and which runs the **coding / everything-else** lane (the 2-brain harness Lane→Model mapping), apply the change, and stop — without running a full `audit`. This is the standalone door to the same Lane→Model Picker + Fleet Rewrite machinery audit reaches at Step 4f step 2-bis; it is purely a mapping refresh, never a scan.
+
+- `/skill-builder model-map` — run the Lane→Model picker (one batched AskUserQuestion: creative model / coding model), write only the changed cells in `references/model-lanes.md`, then fan the new IDs out to every generated `lane-pinned:` excursion agent (Fleet Rewrite). Executes immediately — the picker answer IS the consent (Display/Execute Rule 1).
+
+**Scope (deliberately narrow).** This command ONLY chooses lane→model and rewrites generated agents' `model:` lines. It NEVER assigns skills to lanes — Skill→Lane assignment stays declared-never-inferred (use `audit` onboarding or edit `model-lanes.md` by hand) — and NEVER runs an audit scan. On a project with no lanes configured it writes the Lane→Model mapping and marks lanes `configured` (Skill→Lane left empty); on a `declined` project it asks for an explicit opt-in before flipping the marker.
+
+**Configuration, not a switch.** The two model questions configure the mapping — they never ask the user to run `/model` and the command never switches the session model (No-Switch-Prompt directive; the Lane→Model picker is the sanctioned configuration carve-out). Suppressed in headless / non-interactive sessions: an interactive picker cannot run with no user, so it refuses cleanly and writes nothing.
+
+**Relationship to audit.** `audit` still runs this exact picker on every full interactive run (Step 4f step 2-bis); `model-map` is the lightweight path when you only want to change models and skip the scan. Blanking a lane's preferred-model cell disables that lane, and `model-map` then chains `route embed` to strip the now-orphaned gates and excursion maps.
+
+**Grounding:** Read [references/procedures/model-map.md](references/procedures/model-map.md) for the full procedure, which grounds against [references/lane-delegation.md](references/lane-delegation.md) § Lane→Model Picker + § Fleet Rewrite on Remap and [references/model-lanes.md](references/model-lanes.md) § Setup State.
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
 ## The `reconcile` Command
 
 Detect redundancies and collisions **across** skills and remediate only the ones that are mechanically safe. Where `cascade` looks inside one skill for over-suppression, `reconcile` looks across the whole installed set for the colliding-task failure mode: as a project grows and skills accumulate, two skills can fight over the same trigger, hook matcher, command name, dispatch step, or file region — so a skill "seems to fail to run" when it was really shadowed, bypassed, suppressed, or overwritten.
@@ -538,7 +557,7 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
    - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
    - NO  → `dev_mode = false`.
 2. Extract the first remaining positional argument as `first_arg`.
-3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, update }`.
+3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, model-map, update }`.
 4. IF `first_arg` is empty (no arguments remaining) → dispatch to the default full-audit flow per § Quick Commands. Do NOT invoke the intent router. STOP this CHECKPOINT.
 5. IF `first_arg` is in the known-command set → treat it as the command name. Determine whether a skill target was specified in the remaining arguments. CONTINUE to step 7.
 6. IF `first_arg` is NOT in the known-command set AND the remaining argument string is non-empty →
@@ -572,7 +591,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 
 | Risk | Commands | Default Mode |
 |------|----------|-------------|
-| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync` | **Execute directly** |
+| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync`, `model-map` | **Execute directly** |
 | **Single-consent auto** (2026-06-06 Audit Autonomy Gate) | `audit`, `audit --quick` | **Scan + report, then auto-execute** under the Step 0 disclaimer consent; `--review`/`--dry-run` = report-only; `--execute` = harmless no-op |
 | **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep` | **Display mode** (requires `--execute`) *when invoked standalone; under audit they run in the auto-execution phase* |
 | **Destructive** (deletes files irreversibly) | `strip` | **Display mode** (requires `--execute`; `--confirm-breaking` if dependents exist) — NEVER auto-fired by audit (DEFER tier) |
@@ -584,7 +603,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 
 ### Rules
 
-1. **Low-risk commands execute immediately.** `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, and `route index` do their work directly without requiring `--execute`. They are additive or read-only — there is nothing to preview. (`route index` is auto-generated content inside the `/route` skill only — idempotent regeneration.)
+1. **Low-risk commands execute immediately.** `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, and `route index` do their work directly without requiring `--execute`. They are additive or read-only — there is nothing to preview. (`route index` is auto-generated content inside the `/route` skill only — idempotent regeneration.) `model-map` is the one low-risk command that mutates files (Lane→Model cells + generated agents' `model:` lines): it is low-risk because its core action is an interactive picker whose answer IS the consent — there is no meaningful display mode for an AskUserQuestion — exactly the single-consent pattern audit's 4f-setup already uses.
 2. **High-risk commands default to display mode.** Running `/skill-builder optimize my-skill` shows what *would* change without modifying anything. Add `--execute` to apply.
 3. **Audit calls sub-commands in display mode for the scan, then auto-executes** (2026-06-06 Audit Autonomy Gate — the Step 6 execution menu is abolished): after the report and its Execution Plan block, audit runs the AUTO-tier task list under the Step 0 disclaimer consent; DEFER-tier items appear in the Deferred Items table with their exact commands, never as a menu. `audit --review` is the zero-write opt-out.
 4. **Execution requires a task plan.** When a high-risk command runs with `--execute`, the command MUST:
@@ -635,6 +654,7 @@ Reference files:
 - [references/procedures/shell-safety.md](references/procedures/shell-safety.md) — Shell-safety subcommand procedure (write / audit / lint)
 - [references/procedures/route.md](references/procedures/route.md) — Route subcommand procedure (index + embed) with `/route` skill bootstrap template
 - [references/procedures/code-eval.md](references/procedures/code-eval.md) — Code-eval subcommand procedure (create / review / sweep / sync) for the `code-evaluator` skill
+- [references/procedures/model-map.md](references/procedures/model-map.md) — Standalone Lane→Model picker + fleet rewrite (choose creative + coding models without an audit)
 - [references/procedures/reconcile.md](references/procedures/reconcile.md) — Reconcile subcommand procedure (cross-skill collision detection, conflicts-only scope, integrity-preserving remediation ladder, strip hand-off)
 - [references/code-evaluator/](references/code-evaluator/) — Shipped intel for the generated `code-evaluator` skill: version.md (drift anchor), cross-file-detection.md, guards.md, mistake-taxonomy.md, native-tool-map.md, gotchas.md, skill-template.md
 - [references/shell-safety/](references/shell-safety/) — Shell-safety rule set (rules.md, templates.md, audit-patterns.md) — the canonical pitfall catalog used by hooks, verify, and shell-safety
