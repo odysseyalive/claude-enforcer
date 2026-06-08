@@ -4,6 +4,8 @@
 
 > **NEW:** Meet `/route`. You no longer have to remember which skill does what. Describe the task in plain language and the router finds the right skill, picks the right function, and runs it for you. [Learn how routing works →](#routing-instead-of-freelancing)
 
+> **PAIRS WELL WITH:** playwright-mcp. Replaces WebSearch/WebFetch and Chrome Browser tools in Claude with a headless more stealthier version of Playwright. Drives local dev servers and live sites, takes screenshots, and provides tools for a complete local test kit for Web development. [Learn more at →](https://github.com/odysseyalive/playwright-mcp)
+
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's command-line AI assistant for software development. When you run it in a project directory, it reads a `CLAUDE.md` file at the start of every conversation. This file is where you write the rules. Your project's architecture, coding conventions, API keys to avoid, workflows to follow. Everything Claude needs to know before it touches your code.
