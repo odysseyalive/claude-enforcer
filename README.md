@@ -2,7 +2,7 @@
 
 > **This repo might not change, but model capabilities do.** It's a good habit to run `/skill-builder audit` after any major changes to Claude Code or available models. [Keep your skills current →](#keep-your-skills-current)
 
-> **NEW. Meet `/route`.** You no longer have to remember which skill does what. Describe the task in plain language and the router finds the right skill, picks the right function, and runs it for you. [Learn how routing works →](#routing-instead-of-freelancing)
+> **NEW:** Meet `/route`. You no longer have to remember which skill does what. Describe the task in plain language and the router finds the right skill, picks the right function, and runs it for you. [Learn how routing works →](#routing-instead-of-freelancing)
 
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
