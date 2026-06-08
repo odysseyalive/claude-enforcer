@@ -33,7 +33,7 @@ Run `git rev-parse --is-inside-work-tree` and, if in a repo, `git status --porce
 - Invoked as `/skill-builder dev audit …` → include `skill-builder` in the skill set
 - Otherwise → exclude `skill-builder` from any `.claude/skills/*/SKILL.md` glob
 
-Apply this filter to every step below that iterates skills (Steps 2.5, 3, 4, 4b, 4d, Step 5 Skills Summary, Step 5 Directives Inventory). See SKILL.md § Self-Exclusion Rule.
+Apply this filter to every step below that iterates skills (Steps 2.5, 3, 4, 4b, 4b-bis, 4d, Step 5 Skills Summary, Step 5 Directives Inventory). See SKILL.md § Self-Exclusion Rule.
 
 ```
 Files to scan:
@@ -197,6 +197,23 @@ Skip silently for LOW-risk skills or skills with temporal hooks already in place
 
 **Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) for risk classification criteria.
 
+### Step 4b-bis: Directive Protection Check (report-only scan)
+
+Surface skills whose `origin: user | immutable: true` directive blocks lack checksum protection — closing the gap where only `verify` (Step 2b) reported this and `audit` ignored it entirely. **Report-only: this step never generates a `.directives.sha` sidecar and never wires a hook.** SKIP in `audit --quick` (structural/file scan, like Steps 4a-bis and 4d-bis). Honors the Step 1 self-exclusion filter (skill-builder excluded unless `dev`).
+
+For each audited skill, resolve its directive-protection state (same logic as [verify.md](verify.md) § Step 2b):
+
+1. Extract the skill's `<!-- origin: user … immutable: true -->` blocks. **No immutable blocks → N/A** (nothing to protect — not a finding).
+2. **No `.directives.sha` sidecar → MISSING.**
+3. **Sidecar present → recompute** each block's SHA-256 with the canonical normalization (strip markers, trim trailing whitespace per line, collapse 3+ blank lines to 2 — byte-identical to `protect-directives.sh`) and compare. All match → PROTECTED; any differ → MISMATCH.
+
+**Tiering — both findings DEFER; nothing here auto-executes (Audit Autonomy Gate, DEFER tier):**
+
+- **MISSING → DEFER** with `/skill-builder checksums <skill> --execute`. That command generates the sidecar **and** wires the validating `protect-directives` / `unique-persona` hooks in one deliberate host action — complete, armed protection that audit must NOT perform silently: wiring a blocking PreToolUse hook under blanket Step-0 consent is a host-local act reserved for an explicit `checksums` / `hooks` run (SKILL.md § Directives → No-Distribute-Hooks Gate; a sidecar is inert without its validating hook, so generating sidecars alone would be a half-armed non-improvement).
+- **MISMATCH → DEFER, FLAG-ONLY** — never a runnable command in the Execution Plan. A mismatch means a protected directive block changed since its fingerprint: an intentional edit or tampering. **Never auto-regenerate** — that silently blesses the change and destroys the tamper signal (checksums.md § Override Path). The Deferred row reads: "investigate; if intentional, delete the sidecar and regenerate via `/skill-builder checksums <skill> --execute`."
+
+Feed findings to the Step 5 **Directive Protection** subsection and the Deferred Items table. Headless runs report identically — this step writes nothing in any mode.
+
 ### Step 4c: Per-Skill Integration Checks
 
 These checks run only for skills **explicitly targeted** by the user (e.g., `/skill-builder optimize [skill]`, `/skill-builder agents [skill]`). During a full audit, skip per-skill integration checks — companion skill status is reported in Step 4a.
@@ -358,6 +375,17 @@ Surface the full Dead Wiring table from the hooks sub-report (Skill | Hook | Eve
 
 **Priority Fixes elevation rule:** Every **Load-bearing** dead-wiring finding MUST appear in the Priority Fixes list at or above any optimization or agent-opportunity finding. Rationale: load-bearing hooks enforce sacred directives or content-quality rules whose silent absence is a larger regression than most structural improvements. Protective findings enter Priority Fixes at medium priority; advisory findings do not unless there are enough of them (3+) that the log noise itself is the problem.
 
+## Directive Protection
+*(from Step 4b-bis; omit entirely when no audited skill has `immutable: true` directive blocks — absence is not a gap. Always omitted in `audit --quick`.)*
+
+| Skill | Immutable blocks | Sidecar | Status |
+|-------|------------------|---------|--------|
+| /skill-1 | 2 | present | PROTECTED |
+| /skill-2 | 1 | MISSING | unprotected → Deferred |
+| /skill-3 | 3 | present | MISMATCH → Deferred (investigate) |
+
+Report-only. MISSING and MISMATCH both land in the Deferred Items table; this audit never generates a sidecar or wires a hook (deliberate host act — see Step 4b-bis).
+
 ## Teams Status
 *(Include this section only if agent teams are actively configured — i.e., `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set AND at least one skill uses team routing. If no skills use teams, omit this section entirely. Team routing is evaluated per-skill during Step 4 via the agents sub-command, which applies the routing decision framework from `references/agents-teams.md`. Absence of teams is not a gap — it means individual agent routing is correct for the current workloads.)*
 
@@ -475,6 +503,7 @@ Per the 2026-06-06 sacred directive ("The audit command should be as automated a
 | Protective / not-recoverable dead wiring | recover-vs-unwire is a policy call |
 | AMBIGUOUS bootstrap extraction candidates | judgment about scope — never guessed |
 | Git-dependent items in no-VCS projects | no recovery path (Step 0.5) |
+| Directive protection — MISSING or MISMATCH `.directives.sha` (Step 4b-bis) | sidecar+hook wiring is a deliberate host act (checksums.md § Override Path); MISMATCH never auto-regenerated — would bless tampering |
 
 **Tail order (unchanged):** (1) `code-eval create`/`sync` first, so the evaluator exists before routing; (2) reconcile mechanical fixes — before the route tasks so the catalog reflects them; (2-bis) lane-excursion `agents --execute` tasks — before the route tasks so `route embed`'s Step 9 reconciles fresh `LANE-AGENT-EMBED` blocks; (3) `route index` (second-to-last) and `route embed` (last).
 
