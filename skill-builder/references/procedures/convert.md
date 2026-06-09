@@ -100,7 +100,7 @@ When running `/skill-builder convert [skill] --execute`:
 10. **Report before/after line counts and token estimates** once all tasks complete.
 11. **Post-convert: Semantic equivalence verification (precheck first).**
     1. **Mechanical precheck.** Compare the pre-convert SKILL.md (`git show HEAD:<path>`) against the current file. Verify every one of these deterministic conditions:
-       - Every `<!-- origin: user[^>]* immutable: true -->` ... `<!-- /origin -->` block is byte-identical between the two versions (sacred blocks unchanged).
+       - Every `<!-- origin: user[^>]*immutable: true[^>]*-->` ... `<!-- /origin -->` block is byte-identical between the two versions (sacred blocks unchanged). The trailing `[^>]*` keeps the match order-insensitive — `immutable: true` may sit in any token position within the marker.
        - No lines were removed between HEAD and current (only additions plus one-for-one in-place line rewrites are permitted).
        - The set of numbered workflow step headers (`^\d+\. `, `^N\+\d\. `, etc.) appears in the same relative order.
        - The count of top-level `## ` headers in the file did not shrink.

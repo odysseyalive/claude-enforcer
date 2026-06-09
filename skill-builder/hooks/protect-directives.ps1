@@ -43,7 +43,7 @@ try {
 
     # Extract sacred blocks in order
     $blockMatches = [regex]::Matches($stripped,
-        '<!-- origin: user[^>]*immutable: true -->\n(.*?)\n<!-- /origin -->',
+        '<!-- origin: user[^>]*immutable: true[^>]*-->\n(.*?)\n<!-- /origin -->',
         'Singleline')
 
     function Get-NormalizedHash([string]$text) {

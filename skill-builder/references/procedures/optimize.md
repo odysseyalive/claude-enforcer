@@ -231,7 +231,7 @@ When running `/skill-builder optimize [skill] --execute`:
 5. Report before/after line counts
 5b. **Post-optimize: Semantic equivalence verification (precheck first)**
     1. **Mechanical precheck.** Compare pre-optimize SKILL.md (`git show HEAD:.claude/skills/[skill]/SKILL.md`) against the current file. Verify all of:
-       - Every `<!-- origin: user[^>]* immutable: true -->` ... `<!-- /origin -->` block is byte-identical pre vs. post.
+       - Every `<!-- origin: user[^>]*immutable: true[^>]*-->` ... `<!-- /origin -->` block is byte-identical pre vs. post (trailing `[^>]*` keeps the match order-insensitive — `immutable: true` may sit in any token position).
        - The set of numbered workflow step headers appears in the same relative order.
        - Every section moved OUT of SKILL.md appears verbatim in a reference file under `references/`.
        - No content was both moved AND modified in the same operation.

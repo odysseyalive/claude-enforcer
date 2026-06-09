@@ -71,7 +71,7 @@ Also check for enforcement hooks:
 2. **Generate sidecar files** — For each skill with directives and no sidecar (or mismatched checksums), generate `.directives.sha` inline:
    - Read the SKILL.md
    - Strip YAML frontmatter (everything between the first two `---` lines) before scanning — this prevents matching marker references inside hook prompt strings
-   - Extract all `<!-- origin: user | ... immutable: true -->` ... `<!-- /origin -->` blocks
+   - Extract all `<!-- origin: user | ... immutable: true -->` ... `<!-- /origin -->` blocks. **Canonical extraction regex (order-insensitive, must match the shipped hook exactly):** `<!-- origin: user[^>]*immutable: true[^>]*-->\n(.*?)\n<!-- /origin -->` with DOTALL. The trailing `[^>]*` before `-->` is load-bearing: `immutable: true` may appear in any token position within the marker (`added: … | immutable: true` OR `immutable: true | added: …`), and the generator and the `protect-directives` hook MUST use the identical regex or position-based (`directive:N`) comparison drifts. Still requires literal `origin: user` and literal `immutable: true` (excludes `immutable: false`)
    - For each block: normalize (strip markers, trim trailing whitespace per line, collapse 3+ blank lines to 2), compute SHA-256
    - Write sidecar in the format specified below
 3. **Generate `protect-directives` hook** (if not present) — Create `.claude/skills/skill-builder/hooks/protect-directives.sh` following the spec below. Make executable. Wire in `settings.local.json` under PreToolUse for Edit and Write.
@@ -109,7 +109,7 @@ The specs below describe the bash variants. The shipped PowerShell companions (`
    - For Edit tool: read current file, apply `old_string` → `new_string` replacement
    - For Write tool: use the `content` field directly
 5. Strip YAML frontmatter from the reconstructed content (regex: `^---\n.*?\n---\n` with DOTALL)
-6. Extract all `<!-- origin: user | ... immutable: true -->` blocks from the body
+6. Extract all `<!-- origin: user | ... immutable: true -->` blocks from the body — order-insensitive, using the canonical regex `<!-- origin: user[^>]*immutable: true[^>]*-->\n(.*?)\n<!-- /origin -->` (DOTALL); identical to the sidecar generator above so position-based comparison aligns
 7. Normalize each block (same as sidecar generation: trim, collapse blank lines)
 8. Compute SHA-256 of each block
 9. Compare computed checksums against sidecar checksums (hash column only)

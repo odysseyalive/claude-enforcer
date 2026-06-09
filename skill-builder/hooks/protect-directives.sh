@@ -64,7 +64,7 @@ stripped = re.sub(r'^---\n.*?\n---\n', '', content, count=1, flags=re.DOTALL)
 
 # Extract sacred blocks in order
 blocks = re.findall(
-    r'<!-- origin: user[^>]*immutable: true -->\n(.*?)\n<!-- /origin -->',
+    r'<!-- origin: user[^>]*immutable: true[^>]*-->\n(.*?)\n<!-- /origin -->',
     stripped, flags=re.DOTALL
 )
 
