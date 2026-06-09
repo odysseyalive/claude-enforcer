@@ -4,7 +4,7 @@
 
 > **NEW:** Meet `/route`. You no longer have to remember which skill does what. Describe the task in plain language and the router finds the right skill, picks the right function, and runs it for you. [Learn how routing works →](#routing-instead-of-freelancing)
 
-> **PAIRS WELL WITH:** Replaces WebFetch and Chrome Browser tools in Claude with a headless stealth Playwright browser that adds CSL-JSON citations and page-health data to every page fetch. Drives local dev servers and live sites, takes screenshots, and provides authenticated session tools for debugging across projects. [Visit the repo →](https://github.com/odysseyalive/playwright-mcp)
+> **PAIRS WELL WITH:** playwright-mcp. Replaces WebFetch and Chrome Browser tools in Claude with a headless stealth Playwright browser that adds CSL-JSON citations and page-health data to every page fetch. Drives local dev servers and live sites, takes screenshots, and provides authenticated session tools for debugging across projects. [Visit the repo →](https://github.com/odysseyalive/playwright-mcp)
 
 Most people focus on what to *say* to AI. The real leverage is in what you *show* it before you speak.
 
