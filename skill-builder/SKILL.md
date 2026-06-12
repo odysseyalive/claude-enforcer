@@ -408,6 +408,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `route [mode]` | [route.md](references/procedures/route.md) | Maintain `/route` skill index and embed route-consultation hooks into other skills |
 | `code-eval [mode]` | [code-eval.md](references/procedures/code-eval.md) | Scaffold/maintain the `code-evaluator` skill (create / review / sweep / sync) |
 | `model-map` | [model-map.md](references/procedures/model-map.md) | Choose the creative + coding/everything-else model (Lane→Model picker + fleet rewrite), no audit |
+| `local-mode [--execute]` | [local-mode.md](references/procedures/local-mode.md) | Audit project for local LLM compatibility (classify skills, trim, install local infrastructure) |
 | `update` | *(inline below)* | Update to latest version |
 <!-- /origin -->
 
@@ -592,7 +593,7 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
    - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
    - NO  → `dev_mode = false`.
 2. Extract the first remaining positional argument as `first_arg`.
-3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, model-map, update }`.
+3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, model-map, local-mode, update }`.
 4. IF `first_arg` is empty (no arguments remaining) → dispatch to the default full-audit flow per § Quick Commands. Do NOT invoke the intent router. STOP this CHECKPOINT.
 5. IF `first_arg` is in the known-command set → treat it as the command name. Determine whether a skill target was specified in the remaining arguments. CONTINUE to step 7.
 6. IF `first_arg` is NOT in the known-command set AND the remaining argument string is non-empty →
@@ -628,7 +629,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 |------|----------|-------------|
 | **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync`, `model-map` | **Execute directly** |
 | **Single-consent auto** (2026-06-06 Audit Autonomy Gate) | `audit`, `audit --quick` | **Scan + report, then auto-execute** under the Step 0 disclaimer consent; `--review`/`--dry-run` = report-only; `--execute` = harmless no-op |
-| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep` | **Display mode** (requires `--execute`) *when invoked standalone; under audit they run in the auto-execution phase* |
+| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep`, `local-mode` | **Display mode** (requires `--execute`) *when invoked standalone; under audit they run in the auto-execution phase* |
 | **Destructive** (deletes files irreversibly) | `strip` | **Display mode** (requires `--execute`; `--confirm-breaking` if dependents exist) — NEVER auto-fired by audit (DEFER tier) |
 
 | Mode | Behavior | Flag |

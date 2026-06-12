@@ -294,6 +294,27 @@ Generate or refresh the sidecar.
 
 ---
 
+### `/skill-builder local-mode`
+
+**What it does.** Audits the project for local LLM compatibility. Classifies every skill as Ready (under 100 lines, no agent spawning), Needs Trimming (over 100 lines), or Incompatible (spawns agents or depends on subprocesses, so disabled in local mode), checks CLAUDE.md against a 100-line limit, and reports whether the local-mode infrastructure (`.claude/skills/local/` plus the `detect-local-mode.sh` SessionStart hook) is installed. With `--execute`, builds a task list to optimize oversized skills (each optimization still presented for approval), flag CLAUDE.md for manual trimming, and install the missing local infrastructure.
+
+**When to use.** Before pointing a project at a local model (Ollama or similar) with a small context window, or any time you want to know how much of your skill system would survive off the frontier models.
+
+**Example.**
+```
+/skill-builder local-mode
+```
+
+Apply the setup.
+
+```
+/skill-builder local-mode --execute
+```
+
+**Under the hood.** `.claude/skills/skill-builder/references/procedures/local-mode.md`
+
+---
+
 ## Upgrading to Opus 4.7
 
 Commands specific to the 4.6 to 4.7 migration. These recalibrate skills for Opus 4.7's literal execution style. Display mode by default for all three.
