@@ -3,8 +3,9 @@
 
 This file is the canonical standard for **any skill that manages the detect / evaluate / revise
 workflow for creative output** (text or images): AI-tell detection, voice validation, scrub loops,
-and evaluator-driven regeneration. Audit checks qualifying skills against it **by equivalence and
-report-only** (§ Audit Policy below); it is never a license to rewrite hand-authored skills.
+and evaluator-driven regeneration. Audit checks qualifying skills against it **by equivalence**
+and builds missing machinery **additively** (§ Audit Policy below); it is never a license to
+rewrite hand-authored skills.
 
 It exists because of the 2026-06-11 user directive (SKILL.md § Directives): *"build that scrub
 loop for text and images.. and make sure we do research around these topics an explicitely update,
@@ -159,7 +160,10 @@ measurably degrades quality (§ Research Digest). The loop's target is the human
 Per the 2026-06-11 second clause ("build new skills or funciton within existing skills of the
 project to facilitate all these points"), audit BUILDS missing scrub machinery instead of only
 deferring it. The build tier is premortem-hardened: every build is strictly additive, and
-everything inferential, behavioral, or uncertain stays DEFER.
+everything inferential, behavioral, or uncertain stays DEFER. Amended by the 2026-06-12
+install-on-absence directive (SKILL.md § Directives): the new-skill scaffold fires on absence
+alone (tier 2 below), and pattern-library gap appends are APPLIED rather than deferred
+(§ Pattern-Library Gap Check tier 4).
 
 **Hard floors (unchanged by the build tier):**
 
@@ -182,13 +186,18 @@ everything inferential, behavioral, or uncertain stays DEFER.
    chain). The build writes: a scrub-chain reference file adapted per skill from § Build
    Scaffolds, plus ONE `CREATIVE-SCRUB-EMBED` pointer region (format below) — a grounding link,
    behaviorally inert until the user or dispatcher invokes the scrub function.
-2. **New-skill scaffold.** Eligible only on **declared evidence**: the project has at least one
-   skill with a DECLARED creative lane (frontmatter `lane:` or Skill→Lane table — declared,
-   never inferred, per the Creative-Scope Classification Gate) that produces content, and no
-   evaluator skill exists to chain to. Audit then scaffolds the evaluator from § Build Scaffolds
-   (Persona Assignment Gate and Audit Agent Model-Assignment Gate apply in full; the terminal
-   `route index`/`route embed` tasks register it). A project whose "creative" classification is
-   only inferred → DEFER row with the exact `/skill-builder new` command, never an auto-build.
+2. **New-skill scaffold (install-on-absence — 2026-06-12 directive, superseding newest-wins
+   the 2026-06-11 declared-evidence precondition).** Eligible on **absence alone**: the
+   signal-based existence test (§ Build Scaffolds pre-build guards) finds NO skill performing
+   the evaluator function, no `text-eval` skill directory exists, and `model-lanes.md` carries
+   no `<!-- creative-scrub-build: off -->` marker. Lane declarations do not gate the build —
+   an all-coding project receives the evaluator too (the code-evaluator ensure-exists
+   precedent, audit.md § Step 4a-bis). The scaffold authors its own `lane: creative`
+   frontmatter and never touches the project's Skill→Lane table — declared-never-inferred
+   governs classifying EXISTING skills and is untouched. Audit scaffolds the evaluator from
+   § Build Scaffolds (Persona Assignment Gate and Audit Agent Model-Assignment Gate apply in
+   full; lanes unconfigured → the evaluator agent ships with `model:` absent + flagged, never
+   an invented ID; the terminal `route index`/`route embed` tasks register it).
 3. **Voice-dependent gates in built scaffolds are advisory-only** when the project has no
    documented voice profile: the humanity floor reports human-presence evidence but never blocks,
    aborts, or reverts on its own (generic English-prose markers misjudge non-English and
@@ -204,8 +213,9 @@ everything inferential, behavioral, or uncertain stays DEFER.
 **Still AUTO (machine-owned bytes):** grounding-link insertion, enforcement-annotation generation
 beneath existing directives, and reference-sync of this file itself.
 
-**Still DEFER:** equivalence-uncertain legs; inferred-only creative projects; anything requiring
-the user's wording; behavioral changes to hand-authored workflows; incomplete builds.
+**Still DEFER:** equivalence-uncertain legs; anything requiring the user's wording; behavioral
+changes to hand-authored workflows; incomplete builds; gap appends whose structural-fit or
+live-grounding guard fails (§ Pattern-Library Gap Check tier 4).
 
 **Research precedence:** pattern-library growth driven by research is coding-lane work
 (research-precedence directive, 2026-06-06); drafting replacement prose stays creative-lane.
@@ -234,15 +244,29 @@ the missing pieces — additively, legibly, and once.
    → **silently skipped** — never a row, never an append (skipping a maybe-gap costs nothing;
    a false gap costs double-counting and over-correction, the exact harm principles 1 and 5
    guard against).
-4. **Tiering:**
-   - **AUTO append** only into the machine-owned (`origin: skill-builder | modifiable: true`)
-     region of a scaffold-generated library — never into a user-edited seam, never into a
-     hand-authored file. Appended rows carry the shipped example + falsifiable test and are
-     re-deduped against the full library immediately before the write.
-   - **Hand-authored libraries → DEFER**, one row per skill (not per pattern), quoting the
-     exact proposed additions ready to paste — a complete, applyable change, never an
-     auto-written supplement file no evaluator grounds against (the inert-sidecar lesson,
-     DEC-2026-06-08).
+4. **Tiering (2026-06-12 install-on-absence directive, second clause: updates are APPLIED,
+   never offered):**
+   - **AUTO append** into the machine-owned (`origin: skill-builder | modifiable: true`)
+     region of a scaffold-generated library — never into a user-edited seam. Appended rows
+     carry the shipped example + falsifiable test and are re-deduped against the full library
+     immediately before the write.
+   - **Hand-authored libraries → AUTO append** into ONE machine-owned
+     (`origin: skill-builder | modifiable: true`) appendix region at the END of the library
+     file — existing bytes never modified, never reworded, never re-tiered; the hand-authored
+     rows remain the authority and the appendix is additive candidates only. Three guards,
+     each degrading to a paste-ready DEFER row (one per skill, quoting the exact proposed
+     additions) — never a question, never a silent skip:
+     - **(a) structural fit:** the appendix must match the library's own structure (same
+       table shape, or a clearly delimited section in a prose library); no parseable fit →
+       DEFER (atomic-or-absent applies to appends too).
+     - **(b) live grounding:** the skill's evaluator must demonstrably ground against the
+       full library file, so the appendix is read rather than an inert supplement (the
+       inert-sidecar lesson, DEC-2026-06-08); an evaluator grounding against a fixed
+       structure that excludes the appendix → DEFER.
+     - **(c) sole dedup authority:** `.scrub-gaps.acked` governs — an acked slug is never
+       re-appended, even when mechanism-equivalence misses a user-moved or user-renamed row
+       (re-append loops would inflate cluster density, the exact harm principle 1 guards
+       against).
 5. **Report-once semantics (ack sidecar).** After surfacing a skill's gap findings once, write
    or refresh a machine-owned `.scrub-gaps.acked` sidecar in that skill's directory listing the
    surfaced pattern slugs and the shipped version they were surfaced at. Subsequent audits
@@ -257,6 +281,20 @@ the missing pieces — additively, legibly, and once.
 7. **Reverse flow is intake, not sync.** Patterns a project adds locally (principle 9) are the
    project's own. Promoting one INTO the shipped catalog is maintainer work in this repo (a
    `dev` edit + version bump), never an audit action in a user project.
+8. **Forced upgrade on catalog growth (2026-06-12 directive, third clause: "we may be adding
+   more 'signs' to flag in the future, so everything will need to be forceably upgraded").**
+   The shipped catalog is a living, growing rule set, and growth propagates forcibly: whenever
+   the shipped version anchor is newer than the version a qualifying skill's library was last
+   checked against (the version recorded in its `.scrub-gaps.acked` sidecar, or the
+   `creative_scrub_ref_version:` stamp of a scaffold-generated skill), audit MUST run the gap
+   comparison and apply its AUTO tiers in that same run — never skipped, never offered as
+   optional work, never a question. Scaffold-generated libraries' machine-owned regions are
+   additionally version-synced to the current catalog (the code-eval `sync` discipline:
+   machine bytes refresh, user-edited seams preserved). The ack sidecar suppresses ONLY slugs
+   whose shipped entry is unchanged — a new sign is never acked, so it always lands; a
+   materially-changed acked entry re-surfaces per tier 5. The three guards of tier 4 still
+   apply per append; a guard failure still degrades to a paste-ready DEFER row, refreshed with
+   the new catalog content.
 
 ## Build Scaffolds (used by the BUILD tier; panel-adapted per skill, never copied blind)
 
@@ -296,7 +334,9 @@ evaluator with: frontmatter (`lane: creative`, read-only tools + Task, and a
 [creative-integrity/version.md](creative-integrity/version.md)), a directives section seeded as
 `origin: skill-builder | modifiable: true` (NEVER seeded as `origin: user` — audit does not
 author user directives; the user may ratify/inline their own later), one context-isolated
-evaluator agent (unique persona; `model:` stamped from the configured creative lane), a pattern
+evaluator agent (unique persona; `model:` stamped from the configured creative lane — lanes
+unconfigured → `model:` absent + flagged, never an invented ID, per the Audit Agent
+Model-Assignment Gate), a pattern
 library seeded from the shipped portable catalog
 [creative-integrity/text-tells.md](creative-integrity/text-tells.md) (the catalog's `[hard]`
 rows keep their blocking defaults — mechanical defects and factual-integrity failures; every
@@ -305,13 +345,17 @@ Policy 3 to the whole seeded library), the three-tier severity architecture, clu
 severity with dedupe-by-mechanism, and the human-presence check in advisory mode. The scaffold
 ships working but conservative; tightening it into a blocking gate is a deliberate user act.
 
-**Pre-build guards (both mandatory; atomic-or-absent applies):** (a) the "no evaluator skill
+**Pre-build guards (all mandatory; atomic-or-absent applies):** (a) the "no evaluator skill
 exists" eligibility test is **signal-based, never name-based** — any skill tripping a § Scope
 signal (evaluator agents, AI-tells pattern library, scrub/finishing-chain machinery) counts as
 the project's evaluator regardless of its name, and suppresses the build; (b) **name-collision
 guard** — if a skill directory named `text-eval` already exists, never build; the project
 already has one, so the finding degrades to a DEFER row, never a second skill (duplicate skill
-names are a completion-breaking conflict per reconcile's collision table).
+names are a completion-breaking conflict per reconcile's collision table); (c) **project
+opt-out** — a `<!-- creative-scrub-build: off -->` marker in `references/model-lanes.md` (the
+same update-preserved, per-project mechanism as the setup-state markers) silently suppresses
+the new-skill build: a declarative opt-out, never a question (2026-06-12 directive's
+panel-adopted guard).
 
 ## Research Digest (2026-06-11 — coding-lane research waves)
 
