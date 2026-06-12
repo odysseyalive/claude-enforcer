@@ -18,6 +18,7 @@ skill-builder/SKILL.md
 skill-builder/references/agents.md
 skill-builder/references/agents-personas.md
 skill-builder/references/agents-teams.md
+skill-builder/references/creative-integrity.md
 skill-builder/references/enforcement.md
 skill-builder/references/eval-history-format.md
 skill-builder/references/eval-rubrics.md

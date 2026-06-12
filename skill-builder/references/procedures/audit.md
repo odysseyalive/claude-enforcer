@@ -227,6 +227,26 @@ When running for a targeted skill:
 
 **Capture Integration gap** — If the awareness-ledger exists, check whether the targeted skill produces institutional knowledge but lacks a capture mechanism. If gap found, include in report with recommended mechanism per hierarchy: workflow step > agent > hook.
 
+### Step 4c-bis: Creative-Workflow Integrity Check (scan + additive build)
+
+Per the 2026-06-11 scrub-loop directive and its same-day build clause (SKILL.md § Directives → Creative-Integrity Gate), check every skill that manages a detect/evaluate/revise creative workflow against the Nine Scrub Principles — and BUILD the missing machinery where eligible, instead of only deferring it. Unlike Step 4c, this step runs during the FULL audit (not only for targeted skills).
+
+**SKIP this step entirely in `audit --quick`** — it is structural/narrative scanning (same exclusion as 4a-bis, 4d-bis, and 4f).
+
+1. **Identify qualifying skills** per [creative-integrity.md](../creative-integrity.md) § Scope: declared creative lane plus evaluator agents, AI-tells pattern libraries, scrub/finishing-chain machinery, eval-chained generators, or voice-profile enforcement. Not overtly obvious → Non-Obvious Decision Gate (but per the Step 4 agent budget, defer ambiguous classification to the report as "needs classification" rather than spawning panels mid-audit).
+2. **Check by equivalence** against the Compliance Checklist (creative-integrity.md § Compliance Checklist). A principle present in the skill's own wording — including inside its own immutable directive blocks — is SATISFIED. A criterion outside the skill's role (e.g., a regeneration loop in an evaluator-only skill) is N/A, never a gap.
+3. **Scrub-loop non-negotiables:** where a qualifying skill carries a scrub loop, verify the ◆ items of the Canonical Scrub-Loop Spec (entry provenance guard; MUST FIX + hard-directive auto-fix tier only; atomic fix + whole-document echo re-scan; cycle cap 2; best-so-far + divergence abort; humanity floor for text; fixability classifier + palette lock for images; evaluator never triggers regeneration; never detector-score-driven). A missing ◆ item is a finding naming the exact missing safeguard — built in step 4 when eligible, deferred otherwise.
+4. **Tiering (Audit Autonomy Gate + 2026-06-11 build clause; full policy in creative-integrity.md § Audit Policy):**
+   - FLAG-NEVER-TOUCH: any finding whose remediation would intersect an `origin: user | immutable: true` block — quote it verbatim for the human. A build NEVER rewords, reorders, or deletes hand-authored text anywhere.
+   - **BUILD-into-existing (AUTO):** a loop leg that is DEMONSTRABLY ABSENT (true absence confirmed by a design panel that read the FULL skill — never a mere equivalence-negative) → write a panel-adapted scrub-chain reference file (creative-integrity.md § Build Scaffolds) plus ONE machine-owned `CREATIVE-SCRUB-EMBED` pointer region (grounding link only, behaviorally inert; never gating logic in the workflow body). **Equivalence-uncertain → DEFER, never BUILD** — a missed equivalence must cost one ignorable row, never a competing chain. `creative-scrub: off` frontmatter opts a skill out.
+   - **BUILD new evaluator skill (AUTO on declared evidence only):** ≥1 skill with a DECLARED creative lane (frontmatter/table — declared, never inferred) produces content AND no evaluator skill exists → scaffold it per § Build Scaffolds (persona + model gates apply; the terminal route tasks register it). Inferred-only creative classification → DEFER with the exact command.
+   - **Atomic-or-absent:** a build that cannot complete its panel/anchor checks writes nothing and becomes a DEFER row. Built voice-dependent gates (humanity floor) are advisory-only when no voice profile exists.
+   - DEFER: equivalence-uncertain legs; inferred-only projects; anything needing the user's wording; behavioral changes to hand-authored workflows — Deferred Items row with an exact follow-up command.
+   - AUTO (machine-owned bytes): grounding-link insertion, enforcement-annotation generation beneath existing directives, reference sync of creative-integrity.md, reconciliation of this step's own `modifiable: true` regions (never a user-edited seam, never a whole scaffolded skill file).
+5. Build tasks land in the Execution Plan like any other AUTO work (Step 6 tail order: before the route terminal tasks, so `route index`/`route embed` register new scaffolds and pointer regions). Findings feed the aggregate report's **Creative Integrity** section (Step 5). Apply absence-vs-gap: omit the section entirely when no skill qualifies.
+
+**Grounding:** Read [creative-integrity.md](../creative-integrity.md) — the Nine Scrub Principles (verbatim), § Scope, § Compliance Checklist, § Canonical Scrub-Loop Spec, § Audit Policy.
+
 ### Step 4d: Validation Cascade Analysis
 
 For each skill with 2+ validators or evaluation agents:
@@ -386,6 +406,18 @@ Surface the full Dead Wiring table from the hooks sub-report (Skill | Hook | Eve
 
 Report-only. MISSING and MISMATCH both land in the Deferred Items table; this audit never generates a sidecar or wires a hook (deliberate host act — see Step 4b-bis).
 
+## Creative Integrity
+*(from Step 4c-bis; include only when at least one skill qualifies as a creative-workflow skill per creative-integrity.md § Scope. Omit entirely otherwise — absence is not a gap. Always omitted in `audit --quick`.)*
+
+| Skill | Role | Principles | Scrub loop | Action |
+|-------|------|------------|------------|--------|
+| /text-eval-class | evaluator | 9/9 SATISFIED (equivalence) | ◆ complete | none |
+| /image-class | generator | 7/7 applicable | ◆ leg demonstrably absent | BUILD: scrub-chain reference + CREATIVE-SCRUB-EMBED pointer |
+| /content-class | producer | equivalence uncertain on principle 4 | — | DEFER → `[exact command]` (uncertain never builds) |
+| *(no evaluator in project, declared creative lane present)* | — | — | — | BUILD: evaluator scaffold per § Build Scaffolds |
+
+Equivalence is the bar (a principle in the skill's own wording is SATISFIED); builds are strictly additive (a build never rewords hand-authored text); immutable-block findings are FLAG-NEVER-TOUCH and quoted verbatim; equivalence-uncertain and inferred-only cases land in Deferred Items with exact commands (Step 4c-bis tiering).
+
 ## Teams Status
 *(Include this section only if agent teams are actively configured — i.e., `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set AND at least one skill uses team routing. If no skills use teams, omit this section entirely. Team routing is evaluated per-skill during Step 4 via the agents sub-command, which applies the routing decision framework from `references/agents-teams.md`. Absence of teams is not a gap — it means individual agent routing is correct for the current workloads.)*
 
@@ -489,6 +521,8 @@ Per the 2026-06-06 sacred directive ("The audit command should be as automated a
 | `ledger --execute` (if absent) | additive companion scaffold |
 | `code-eval create` / `code-eval sync` | per § Step 4a-bis, before the route tasks |
 | `reconcile` mechanical auto-fixes | duplicate machine-generated embed collapse; byte-identical hook dedupe — machine-owned bytes only |
+| Creative-integrity machine-owned fixes | per § Step 4c-bis: grounding-link insertion, enforcement-annotation generation beneath existing directives, creative-integrity.md reference sync — hand-authored loop mechanics and immutable blocks are never auto-edited |
+| Creative-integrity BUILDS (2026-06-11 build clause) | per § Step 4c-bis step 4: scrub-chain references + `CREATIVE-SCRUB-EMBED` pointer regions into skills whose loop leg is demonstrably absent (panel-confirmed); evaluator-skill scaffolds on declared-lane evidence only; atomic-or-absent; before the route terminal tasks |
 | Orphan minion retirement | marker-gated per 4f.5-bis; VCS-gated |
 | Bootstrap CLAUDE.md extraction | HIGH-confidence candidates only (Step 2.5) |
 | `route index` → `route embed` | always the final two tasks (§ Step 4g) |
@@ -504,8 +538,9 @@ Per the 2026-06-06 sacred directive ("The audit command should be as automated a
 | AMBIGUOUS bootstrap extraction candidates | judgment about scope — never guessed |
 | Git-dependent items in no-VCS projects | no recovery path (Step 0.5) |
 | Directive protection — MISSING or MISMATCH `.directives.sha` (Step 4b-bis) | sidecar+hook wiring is a deliberate host act (checksums.md § Override Path); MISMATCH never auto-regenerated — would bless tampering |
+| Creative-integrity non-buildable findings (Step 4c-bis) | equivalence-UNCERTAIN legs (uncertain never builds — competing-chain risk); inferred-only creative projects (lane is declared-never-inferred); anything needing the user's wording or a behavioral change to a hand-authored workflow; incomplete builds (atomic-or-absent); immutable-block findings are FLAG-NEVER-TOUCH |
 
-**Tail order (unchanged):** (1) `code-eval create`/`sync` first, so the evaluator exists before routing; (2) reconcile mechanical fixes — before the route tasks so the catalog reflects them; (2-bis) lane-excursion `agents --execute` tasks — before the route tasks so `route embed`'s Step 9 reconciles fresh `LANE-AGENT-EMBED` blocks; (3) `route index` (second-to-last) and `route embed` (last).
+**Tail order:** (1) `code-eval create`/`sync` first, so the evaluator exists before routing; (2) reconcile mechanical fixes — before the route tasks so the catalog reflects them; (2-bis) lane-excursion `agents --execute` tasks — before the route tasks so `route embed`'s Step 9 reconciles fresh `LANE-AGENT-EMBED` blocks; (2-ter) creative-integrity builds (Step 4c-bis: scrub-chain references, `CREATIVE-SCRUB-EMBED` pointer regions, evaluator scaffolds) — before the route tasks so new scaffolds and scrub functions are indexed and gated the moment they exist; (3) `route index` (second-to-last) and `route embed` (last).
 
 **Failure containment:** a failed task → mark ✗, continue independent tasks, skip dependents (`route embed` depends on `route index`), surface in the Execution Summary. Never silently retry a write. Ambiguity mid-run resolves per the Audit Autonomy Gate clause 5 (panel → conservative → DEFER), never via a user question.
 
