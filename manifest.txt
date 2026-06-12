@@ -70,6 +70,12 @@ skill-builder/references/shell-safety/rules.md
 skill-builder/references/shell-safety/templates.md
 skill-builder/references/shell-safety/audit-patterns.md
 
+# creative-integrity reference set: drift anchor + the portable AI-text-signature
+# catalog (seed source for audit-built `text-eval` evaluator scaffolds; baseline
+# for the Step 4c-bis pattern-library gap check).
+skill-builder/references/creative-integrity/version.md
+skill-builder/references/creative-integrity/text-tells.md
+
 # code-evaluator intel set: shipped to skill-builder AND copied into a user's
 # generated code-evaluator skill by `/skill-builder code-eval create`.
 skill-builder/references/code-evaluator/version.md

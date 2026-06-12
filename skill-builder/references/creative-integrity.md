@@ -210,6 +210,54 @@ the user's wording; behavioral changes to hand-authored workflows; incomplete bu
 **Research precedence:** pattern-library growth driven by research is coding-lane work
 (research-precedence directive, 2026-06-06); drafting replacement prose stays creative-lane.
 
+## Pattern-Library Gap Check (Step 4c-bis; portable-rules transfer, 2026-06-12)
+
+Per the user's portable-text-evaluation request (2026-06-12): the rules for identifying
+AI-generated content and overbuilt prose ship in
+[creative-integrity/text-tells.md](creative-integrity/text-tells.md) so the same text
+evaluation transfers across every project skill-builder is installed in. Audit Step 4c-bis
+compares each qualifying skill's text pattern library against that shipped catalog and proposes
+the missing pieces — additively, legibly, and once.
+
+1. **Scope.** Fires only for qualifying skills (§ Scope) that carry a text AI-tells pattern
+   library. Skills with `creative-scrub: off` frontmatter are excluded entirely. Image
+   evaluators are out of scope (no shipped image catalog).
+2. **Baseline & version.** Read the shipped anchor
+   [creative-integrity/version.md](creative-integrity/version.md) (cheap integer read), then
+   the catalog itself only when a comparison will actually run.
+3. **Equivalence both directions, mechanism-keyed.** A shipped pattern counts as COVERED when
+   ANY pattern already in the skill's library shares its underlying mechanism — different
+   naming, wording, or grouping is still covered (catalog granularity must never manufacture
+   gaps: e.g., a library carrying "contrastive negation" covers the shipped row even if it
+   lacks the separate "contrastive inversion" name, unless the mechanisms demonstrably
+   differ). Only a **demonstrably absent** mechanism produces a finding. Equivalence-uncertain
+   → **silently skipped** — never a row, never an append (skipping a maybe-gap costs nothing;
+   a false gap costs double-counting and over-correction, the exact harm principles 1 and 5
+   guard against).
+4. **Tiering:**
+   - **AUTO append** only into the machine-owned (`origin: skill-builder | modifiable: true`)
+     region of a scaffold-generated library — never into a user-edited seam, never into a
+     hand-authored file. Appended rows carry the shipped example + falsifiable test and are
+     re-deduped against the full library immediately before the write.
+   - **Hand-authored libraries → DEFER**, one row per skill (not per pattern), quoting the
+     exact proposed additions ready to paste — a complete, applyable change, never an
+     auto-written supplement file no evaluator grounds against (the inert-sidecar lesson,
+     DEC-2026-06-08).
+5. **Report-once semantics (ack sidecar).** After surfacing a skill's gap findings once, write
+   or refresh a machine-owned `.scrub-gaps.acked` sidecar in that skill's directory listing the
+   surfaced pattern slugs and the shipped version they were surfaced at. Subsequent audits
+   suppress every acked slug until the shipped catalog's entry for it materially changes in a
+   newer version. The gap check must never become a permanent row the user trains themselves
+   to skip.
+6. **Additive only, defaults never override directives.** The check proposes additions FROM
+   the shipped catalog only. It never proposes removals, rewording, re-tiering, or demotions of
+   a project's patterns — in particular it never suggests relaxing a project's hard-directive
+   elevations (em-dashes, rhetorical colons, client language) toward the catalog's
+   cluster-density defaults.
+7. **Reverse flow is intake, not sync.** Patterns a project adds locally (principle 9) are the
+   project's own. Promoting one INTO the shipped catalog is maintainer work in this repo (a
+   `dev` edit + version bump), never an audit action in a user project.
+
 ## Build Scaffolds (used by the BUILD tier; panel-adapted per skill, never copied blind)
 
 **1. CREATIVE-SCRUB-EMBED pointer region** — the ONLY thing a build inserts into an existing
@@ -242,16 +290,28 @@ implementation to adapt is this repo's `text-eval/references/finishing-chain.md`
 NON-FIXABLE, surfaced never looped) → targeted feedback folding (strengths preserved verbatim,
 short specific negatives, palette/set lock) → regenerate → re-eval → best-so-far keeper → cap 2.
 
-**4. Minimal evaluator-skill scaffold** (new-skill path) — a lean evaluator with: frontmatter
-(`lane: creative`, read-only tools + Task), a directives section seeded as
+**4. Evaluator-skill scaffold** (new-skill path; default name **`text-eval`**) — a lean
+evaluator with: frontmatter (`lane: creative`, read-only tools + Task, and a
+`creative_scrub_ref_version:` stamp matching the shipped anchor in
+[creative-integrity/version.md](creative-integrity/version.md)), a directives section seeded as
 `origin: skill-builder | modifiable: true` (NEVER seeded as `origin: user` — audit does not
 author user directives; the user may ratify/inline their own later), one context-isolated
-evaluator agent (unique persona; `model:` stamped from the configured creative lane), a starter
-pattern library drawn from the generic entries of § Research Digest's candidate lists plus the
-universal patterns (each with example + falsifiable test; voice-specific tests omitted until a
-voice profile exists), the three-tier severity architecture, cluster-density severity, and the
-human-presence check in advisory mode. The scaffold ships working but conservative; tightening
-it into a blocking gate is a deliberate user act.
+evaluator agent (unique persona; `model:` stamped from the configured creative lane), a pattern
+library seeded from the shipped portable catalog
+[creative-integrity/text-tells.md](creative-integrity/text-tells.md) (the catalog's `[hard]`
+rows keep their blocking defaults — mechanical defects and factual-integrity failures; every
+other seeded severity is advisory until a documented voice profile exists, extending Build
+Policy 3 to the whole seeded library), the three-tier severity architecture, cluster-density
+severity with dedupe-by-mechanism, and the human-presence check in advisory mode. The scaffold
+ships working but conservative; tightening it into a blocking gate is a deliberate user act.
+
+**Pre-build guards (both mandatory; atomic-or-absent applies):** (a) the "no evaluator skill
+exists" eligibility test is **signal-based, never name-based** — any skill tripping a § Scope
+signal (evaluator agents, AI-tells pattern library, scrub/finishing-chain machinery) counts as
+the project's evaluator regardless of its name, and suppresses the build; (b) **name-collision
+guard** — if a skill directory named `text-eval` already exists, never build; the project
+already has one, so the finding degrades to a DEFER row, never a second skill (duplicate skill
+names are a completion-breaking conflict per reconcile's collision table).
 
 ## Research Digest (2026-06-11 — coding-lane research waves)
 
@@ -275,13 +335,16 @@ elaboration, Liang et al.) — burstiness/hedging are evidence, not proof, in BO
 Detector-guided paraphrasing evades detection (~88%) at measured quality cost (NeurIPS 2025,
 arXiv 2506.07001) — never tune toward a detector score.
 
-**Candidate text patterns** (intake per principle 9 — each needs example + falsifiable test when
-added to a library): theme over-explanation; single-track tidy plotting; moral-ambiguity
-flattening; negative parallelism (false-misconception framing); legacy/undue-emphasis framing;
-listicle-in-disguise (uniform bold-header-colon rhythm); sentence-frame openers; knowledge-cutoff
-disclaimers; **cross-document uniformity** (corpus-level: successive outputs converging to one
-structural shape — single-document validators cannot see it; a sibling-comparison pass can).
-Sources: StoryScope arXiv 2604.03136; Wikipedia WP:AI signs; UCC/Nature HSSC.
+**Text patterns: graduated to the shipped catalog** (2026-06-12). The candidate text-pattern
+list that previously lived here — and the 2026-06-12 research wave's additions (markdown/heading
+tells, pipeline-artifact residue, chat-frame/sycophancy leakage, corpus-level tells such as
+elegant variation, generic-name default, source-count inflation, intra-author style shift) — is
+curated, each entry with example + falsifiable test, in
+[creative-integrity/text-tells.md](creative-integrity/text-tells.md). That catalog is the single
+seed source for evaluator scaffolds and the baseline for § Pattern-Library Gap Check; this
+digest holds research findings, not the library. Sources: StoryScope arXiv 2604.03136; Wikipedia
+WP:AISIGNS (fetched 2026-06-12); Pangram "Spotting AI Writing Patterns" (fetched 2026-06-12);
+UCC/Nature HSSC; IEEE Spectrum / Nature on sycophancy (2025).
 
 **Candidate image tells:** waxy/plastic surface sheen; object-boundary bleed at semantic
 boundaries (never within a wash — watercolor wet-in-wet is authentic); reflection/mirror
@@ -303,6 +366,11 @@ When a human flags a miss:
 ## Grounding
 
 - SKILL.md § Directives → the 2026-06-11 scrub-loop directive and Creative-Integrity Gate
+- [creative-integrity/text-tells.md](creative-integrity/text-tells.md) — the shipped portable
+  AI-text-signature catalog (seed source for evaluator scaffolds; baseline for § Pattern-Library
+  Gap Check)
+- [creative-integrity/version.md](creative-integrity/version.md) — drift anchor for the shipped
+  creative-integrity reference set
 - [model-lanes.md](model-lanes.md) — lane declarations that feed § Scope signal 1
 - [lane-delegation.md](lane-delegation.md) — research-precedence delegation for library growth
 - [procedures/audit.md](procedures/audit.md) § Step 4c-bis — the audit consumer of this file

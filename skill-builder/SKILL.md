@@ -673,7 +673,8 @@ Reference files:
 - [references/principles.md](references/principles.md) — Core Principles, Sacred Directive Pattern, Output Discipline, Grounding Protocol (READ FIRST for high-risk commands)
 - [references/enforcement.md](references/enforcement.md) — Hook JSON, permissions, context mutability, provenance permission model
 - [references/model-lanes.md](references/model-lanes.md) — Lane→Model routing map (user-editable), active-model detection, advisory lane classification (read by audit Step 4f)
-- [references/creative-integrity.md](references/creative-integrity.md) — The Nine Scrub Principles (verbatim), creative-workflow scope heuristic, equivalence-aware compliance checklist, canonical scrub-loop spec, research digest (read by audit Step 4c-bis)
+- [references/creative-integrity.md](references/creative-integrity.md) — The Nine Scrub Principles (verbatim), creative-workflow scope heuristic, equivalence-aware compliance checklist, canonical scrub-loop spec, pattern-library gap check, research digest (read by audit Step 4c-bis)
+- [references/creative-integrity/](references/creative-integrity/) — Shipped portable text-evaluation intel: version.md (drift anchor), text-tells.md (the project-agnostic AI-text-signature catalog seeding audit-built `text-eval` scaffolds and baselining the Step 4c-bis gap check)
 - [references/lane-delegation.md](references/lane-delegation.md) — Lane-pinned excursion delegation: per-step classification, NON-DELEGABLE list, Context Contract, agent template, Delegation Map block, Lane→Model picker + fleet rewrite (read by agents § Step 4d, route § Step 9, audit § Step 4f)
 - [references/agents.md](references/agents.md) — Agent templates, opportunity detection, creation workflow
 - [references/agents-personas.md](references/agents-personas.md) — Persona assignment rules, selection heuristic, research backing
