@@ -333,17 +333,36 @@ evaluator with: frontmatter (`lane: creative`, read-only tools + Task, and a
 `creative_scrub_ref_version:` stamp matching the shipped anchor in
 [creative-integrity/version.md](creative-integrity/version.md)), a directives section seeded as
 `origin: skill-builder | modifiable: true` (NEVER seeded as `origin: user` — audit does not
-author user directives; the user may ratify/inline their own later), one context-isolated
-evaluator agent (unique persona; `model:` stamped from the configured creative lane — lanes
-unconfigured → `model:` absent + flagged, never an invented ID, per the Audit Agent
-Model-Assignment Gate), a pattern
-library seeded from the shipped portable catalog
+author user directives; the user may ratify/inline their own later), **TWO agents (both unique
+personas, Persona Assignment Gate applies in full):**
+
+  - **(i) a mechanical character-scanner** (`context: none`, read-only `Read`+`Grep` only;
+    `model:` stamped from the configured coding/everything-else lane — this is a mechanical
+    pass, not creative work) — an **uncapped literal grep** for `—`/`–` and rhetorical colons
+    with **NO severity-reasoning or demotion step**: it reports every occurrence, period. It
+    has no vocabulary for "house style", "baseline", or "voice", so it cannot rationalize a
+    [hard] character tell away. It emits a **Verification Preamble** (per-character counts) at
+    the top of its output.
+  - **(ii) a context-isolated reasoning evaluator** (unique persona; `model:` stamped from the
+    configured creative lane — lanes unconfigured → `model:` absent + flagged, never an
+    invented ID, per the Audit Agent Model-Assignment Gate) for the judgment-class tiers.
+
+  **Invocation contract (invocation-independent — this closes the single-generic-agent
+  bypass):** the mechanical character-scanner runs **FIRST**, on every invocation. Any
+  evaluation — single-agent, multi-agent, scrub-loop, or improvised — whose output **lacks the
+  character-scan Verification Preamble is invalid and discarded**. A "context-isolated single
+  evaluator" is NEVER an exemption from the mechanical pass; the scaffold's How-to-Invoke MUST
+  forbid running the reasoning evaluator alone without the character-scanner.
+
+The pattern library is seeded from the shipped portable catalog
 [creative-integrity/text-tells.md](creative-integrity/text-tells.md) (the catalog's `[hard]`
-rows keep their blocking defaults — mechanical defects and factual-integrity failures; every
-other seeded severity is advisory until a documented voice profile exists, extending Build
-Policy 3 to the whole seeded library), the three-tier severity architecture, cluster-density
-severity with dedupe-by-mechanism, and the human-presence check in advisory mode. The scaffold
-ships working but conservative; tightening it into a blocking gate is a deliberate user act.
+rows keep their blocking defaults — mechanical defects, factual-integrity failures, **and
+em-dash overuse as of catalog v2**; every other seeded severity is advisory until a documented
+voice profile exists, extending Build Policy 3 to the whole seeded library), the three-tier
+severity architecture, cluster-density severity with dedupe-by-mechanism, and the
+human-presence check in advisory mode. The scaffold ships working but conservative on the
+judgment-class tiers; the `[hard]` rows (em-dash overuse, rhetorical-colon, pipeline artifacts,
+invisible Unicode) block by default and are not softened by the human-presence/voice gates.
 
 **Pre-build guards (all mandatory; atomic-or-absent applies):** (a) the "no evaluator skill
 exists" eligibility test is **signal-based, never name-based** — any skill tripping a § Scope

@@ -1,4 +1,4 @@
-<!-- creative-scrub-ref-version: 1 -->
+<!-- creative-scrub-ref-version: 2 -->
 <!-- origin: skill-builder | modifiable: true -->
 # creative-integrity reference version
 
@@ -12,7 +12,7 @@ against the new shipped content; previously acknowledged gap rows stay suppresse
 unless their shipped entry materially changed since the acked version.
 
 ```
-creative-scrub-ref-version: 1
+creative-scrub-ref-version: 2
 ```
 
 Bump this integer whenever ANY file under `references/creative-integrity/` changes in
@@ -22,6 +22,15 @@ with this number so a per-file check is possible.
 
 ## Changelog
 
+- **v2** (2026-06-17) — Em-dash hardening. The em-/en-dash row in `text-tells.md` moves
+  from a Tier-1 soft "per-1,000-words baseline" test to a **[hard] near-restriction**
+  (target ≤1 per ~5,000 words; em-dash-as-crutch; every occurrence flagged) per user
+  directive — em-dashes are not a default punctuation tool. The `[hard]` rule is
+  clarified to be immune to voice-protection / cluster-density / human-presence demotion
+  (closes the character-flag carve-out gap). The evaluator-skill scaffold
+  (`creative-integrity.md` § Build Scaffolds) now seeds a **mechanical character-scanner
+  agent + reasoning evaluator** with an invocation-independent character pass, so a
+  single context-isolated run can no longer bypass the mechanical gate.
 - **v1** (2026-06-12) — Initial release. Portable AI-text-signature library
   (`text-tells.md`): the odyssey-alive text-eval pattern set (64 patterns merged
   2026-06-11 + wit-shaped noise 2026-06-12), generalized to project-agnostic wording,

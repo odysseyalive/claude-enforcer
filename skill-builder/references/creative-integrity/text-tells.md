@@ -1,4 +1,4 @@
-<!-- creative-scrub-ref-version: 1 -->
+<!-- creative-scrub-ref-version: 2 -->
 <!-- origin: skill-builder | modifiable: true -->
 # Portable AI-Text-Signature Library (text-tells)
 
@@ -18,7 +18,12 @@ only: pattern → tell → falsifiable test.
 1. **Clustering, not signals** (principle 1). No pattern below blocks in isolation
    unless its row says so. Default escalation: 1 signal in a passage → CONSIDER;
    2 → SHOULD FIX; 3+ → MUST FIX. The exceptions are marked **[hard]** — mechanical
-   defects and factual-integrity failures that are blocking at first occurrence.
+   defects and factual-integrity failures. A **[hard]** row is NOT subject to
+   clustering: it is actionable at (or near) first occurrence, and it is NEVER demoted
+   by the voice-protection, cluster-density, or human-presence gates. Those gates
+   govern judgment-class signals only — they never soften a mechanical
+   character/punctuation tell. An evaluator handed only this catalog still applies the
+   **[hard]** rows mechanically, with no "house style" or "genre baseline" exemption.
 2. **Dedupe by mechanism when counting clusters.** Two library rows describing one
    underlying mechanism count ONCE toward density. Never let catalog granularity
    lower the effective blocking threshold.
@@ -26,9 +31,12 @@ only: pattern → tell → falsifiable test.
    voice-profile characteristic demotes to CONSIDER. Absent a voice profile, every
    voice-dependent judgment in this library is advisory-only.
 4. **Per-project hard directives override defaults.** A project may elevate any
-   pattern to zero-tolerance MUST FIX by its own directive (common examples:
-   em-dashes, rhetorical colons). Those elevations live in the project's skills,
-   never in this shipped file.
+   pattern to zero-tolerance MUST FIX by its own directive (common example:
+   rhetorical colons, client language, pronoun rules). **Em-dash overuse now ships as
+   [hard] in this catalog** (Tier 1) — the mechanical floor against the most common AI
+   tell no longer depends on per-project elevation. A project may still tighten
+   further (e.g., flag *every* occurrence with zero allowance). Project elevations live
+   in the project's skills, never in this shipped file.
 5. **Tests are the contract** (principle 9). Apply the test column, not vibes. A
    pattern added locally without a falsifiable test is not done.
 
@@ -40,7 +48,7 @@ only: pattern → tell → falsifiable test.
 
 | Pattern | Tell / example | Falsifiable test |
 |---|---|---|
-| Em-/en-dash density | Heavy `—`/`–` use where the genre or author norm is lighter | Count per 1,000 words against the author/genre baseline; pair with the semicolon/parenthesis-scarcity check below |
+| Em-/en-dash as crutch **[hard]** | `—`/`–` leaned on as a routine connector, aside, or dramatic pause — the "whisker" the prose rests on. AI text reaches for it constantly; disciplined writing almost never needs it | **Near-restriction, not a baseline ratio.** Target ≤1 em-dash per ~5,000 words. Flag every occurrence; a second within ~5,000 words is MUST FIX. Mechanical/style tell — NOT demotable by voice-protection, clustering, or human-presence (§ How to apply, [hard] rule). Compound-word hyphens (`long-term`, `real-time`) are not em-dashes. Rewrite a thought-break em-dash as two sentences, a comma, or parentheses |
 | Rhetorical colons | Setup-punchline: "The result: a seamless experience." / "Here's the truth: it doesn't work." | Restructure as a plain sentence; if nothing is lost, it was emphasis theater. Never flag list introductions, URLs, timestamps, dialogue attribution, or footnote syntax |
 | Punctuation-regularity bundle | 100% Oxford commas, zero typos, no sentence-initial And/But, no fragments — combined with heavy dashes but near-zero semicolons and parentheses | Tally serial commas, semicolons, parentheses per 1,000 words vs. baseline; perfect uniformity plus the dash/semicolon skew flags it |
 | Curly/straight quote seams | Mixed “curly” and "straight" quotes or apostrophes in adjacent paragraphs | Regex both forms; consistent use is human/tooling, mixed pairs mark a paste seam |
