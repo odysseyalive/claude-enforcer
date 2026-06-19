@@ -1,6 +1,6 @@
 # Claude Code Skill Platform Architecture
 
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+<!-- origin: skill-builder | version: 1.6 | modifiable: true -->
 
 Reference for how Claude Code discovers, loads, and executes skills internally.
 Use this when creating or optimizing skills to work *with* the platform rather than against it.
@@ -98,10 +98,24 @@ Skills with `paths` frontmatter are held separately until matching files are tou
 
 ## Permission Model
 
-- Deny rules evaluated first (deny always wins)
+- Deny rules evaluated first (deny always wins), then allow, then ask, then `defaultMode`
 - Allow rules support prefix matching (`review:*`)
 - Skills with only "safe" properties auto-approve without user prompt
 - Unsafe properties (hooks, allowed-tools, context) require user permission
+
+### Rule granularity (`permissions` in `settings.json`)
+
+A permission rule is `Tool` or `Tool(specifier)`. Three specifier forms exist:
+
+- **Command/path globs** (long-standing): `Bash(npm run:*)`, `Read(./.env)`, `Read(./secrets/**)`, `Edit(.env)`.
+- **Directory scope** (long-standing): `additionalDirectories: ["/path/outside/project"]` grants tool access to a directory beyond the project root. This is the directory-level access control to reach for when a skill or agent must read a library or content tree outside the working directory.
+- **Parameter matching** (`Tool(param:value)`, added Claude Code 2.1.178): matches a tool's *input parameter*, not a command string. The canonical case is `Agent(model:opus)` to deny spawning a subagent on a given model. **Caveat:** this only matches a model that is passed as an explicit Task/Agent parameter. A subagent whose model is pinned in its own `AGENT.md` frontmatter is resolved by the harness from frontmatter, so a `Agent(model:…)` rule does NOT fire for frontmatter-pinned agents (e.g. the lane-pinned excursion fleet). Treat it as a guardrail against ad-hoc explicit spawns, not as enforcement of the pinned fleet.
+
+### Subagent permissions (do not assume inheritance)
+
+- A subagent's `allowed-tools` / `disallowedTools` (its own frontmatter) is the reliable way to restrict what a subagent can do. Curate it minimally per agent.
+- **Rules-based permission-mode inheritance from parent to child is NOT reliable** (open upstream issues; a child often re-prompts even when the parent bypassed, and `deny` rules do not transitively bind a spawned child). Author any required deny/allow at the **project `settings.json` level** rather than relying on a child inheriting the parent's rules.
+- What 2.1.178 actually added on the subagent-security axis is an **auto-mode pre-spawn classifier**: in auto permission mode, a subagent's task is vetted by a classifier *before* it launches, closing the gap where a child could request a blocked action without review. This is heuristic vetting in auto mode, not rules inheritance — do not design enforcement that depends on it firing.
 
 ## Inline Shell Blocks
 

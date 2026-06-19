@@ -433,13 +433,14 @@ Hook script exits 2 to block, 0 to allow. Receives JSON via stdin.
 ```json
 {
   "permissions": {
-    "deny": ["Edit(.env)", "Bash(rm:*)"],
-    "allow": ["Read", "Bash(curl:*)"]
+    "deny": ["Edit(.env)", "Bash(rm:*)", "Agent(model:opus)"],
+    "allow": ["Read", "Bash(curl:*)"],
+    "additionalDirectories": ["/path/to/shared-content"]
   }
 }
 ```
 
-Deny rules are evaluated FIRST and cannot be overridden.
+Deny rules are evaluated FIRST and cannot be overridden. Specifiers come in three forms: command/path globs (`Bash(rm:*)`, `Read(./secrets/**)`); a `Tool(param:value)` parameter match (`Agent(model:opus)`, added 2.1.178) that matches a tool's input parameter rather than a command string; and `additionalDirectories` for directory-level access beyond the project root. See [platform.md](platform.md) § "Permission Model" for the `Agent(model:…)` firing caveat (it does not match frontmatter-pinned subagents).
 
 ### 3. Allowed-Tools in Skills (Workflow restriction)
 
@@ -462,6 +463,8 @@ allowed-tools: Read, Grep, Glob
 context: fork
 ---
 ```
+
+A subagent's own `allowed-tools` is the reliable restriction surface. Do NOT assume a child inherits the parent's `deny`/`allow` rules or permission mode: rules-based subagent inheritance is unreliable in practice (open upstream issues), so author any required deny/allow at the project `settings.json` level rather than expecting it to propagate into a spawned child. Claude Code 2.1.178 added an auto-mode pre-spawn classifier (a child's task is vetted before launch in auto mode) — that is heuristic vetting, not rules inheritance; never design enforcement that depends on it firing. See [platform.md](platform.md) § "Subagent permissions".
 
 ---
 

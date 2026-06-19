@@ -197,6 +197,21 @@ Scan each skill for temporal exposure — patterns that indicate the skill produ
 
 **Grounding:** Read [references/temporal-validation.md](../temporal-validation.md) before generating temporal hooks.
 
+#### Step 3d: Detect Lane-Guardrail Permission Opportunities (opt-in, never auto-executed)
+
+This step surfaces a `settings.json` permission guardrail, not a hook. It uses the `Agent(model:value)` parameter-matching deny syntax (Claude Code 2.1.178) to block subagent spawns on models OUTSIDE the project's configured lanes — defense-in-depth for the lane system.
+
+**Detect.** This opportunity applies only when the project participates in the lane system: `model-lanes.md` exists with at least one lane mapped to a model ID, OR lane-pinned agents are present (`generated-by: skill-builder lane-excursion`). If neither holds, skip silently.
+
+**Two hard caveats — state both in the report; do not paper over them:**
+
+1. **It does not bind the pinned fleet.** Lane-pinned agents resolve their model from `AGENT.md` frontmatter, which the harness reads directly — a model passed via frontmatter is not a Task-tool parameter, so `Agent(model:…)` deny rules do NOT fire for them. The guardrail only catches *ad-hoc/explicit* off-lane spawns (a Task call that passes `model:` directly). It is a backstop, never the primary enforcement; frontmatter pinning + the Fleet Rewrite remain the enforcement of record.
+2. **It is a hard block, departing from the lane system's advisory-only norm.** The primary-lane mechanism is advisory and never blocks (No-Switch-Prompt directive, 2026-06-06). A deny rule is the opposite posture. Because of that, this opportunity is **opt-in only**: report it, never auto-wire it under `audit` (Audit Autonomy Gate excludes it), and require explicit user opt-in even in `--execute`.
+
+**Proposed rule shape** (host-local, written to `.claude/settings.local.json` only on opt-in): a `permissions.deny` entry per model ID that is NOT assigned to any configured lane, e.g. with lanes on `claude-opus-4-8` only, propose `"deny": ["Agent(model:opus-4-6)", "Agent(model:haiku)"]`. Never deny a model that IS a configured lane. Lanes unconfigured or a cell blank → propose nothing for that model class (a blank cell disables flagging, per model-lanes.md parity).
+
+Add to the report under "New Opportunities" with hook type "Lane-guardrail (settings.json deny)" and Priority **Low**, plus a one-line note that it is opt-in and a backstop. **Grounding:** [references/enforcement.md](../enforcement.md) § "Permission Denials" and [references/lane-delegation.md](../lane-delegation.md) § "Lane-Guardrail Permission Rules".
+
 #### Step 4: Generate Report
 
 ```markdown
@@ -244,6 +259,7 @@ Scan each skill for temporal exposure — patterns that indicate the skill produ
 | Skill | Directive | Hook Type | Priority |
 |-------|-----------|-----------|----------|
 | /skill-name | "Never use Uncategorized" | Grep-block | High |
+| (project) | lanes mapped to claude-opus-4-8 | Lane-guardrail (settings.json deny) — opt-in backstop | Low |
 
 ## Needs Agent, Not Hook
 
@@ -304,6 +320,11 @@ Execute mode acts only on the unambiguous classes. Protective and load-bearing-n
 - After all tasks complete, re-run Step 1 cross-reference as a post-check; report any remaining dead wiring.
 
 To skip the git recoverability check at scale (large monorepos, shallow clones where `git log` is slow), pass `--no-git` through to Step 2.5. In that mode, every finding is treated as "recoverability unknown" and the execute-mode auto-recover branch is disabled — the user must explicitly confirm recovery for each file.
+
+**Lane-guardrail permission rules (Step 3d findings — opt-in only):**
+- Never auto-wire. Under `audit`, these land in the report only (Audit Autonomy Gate excludes them). In standalone `--execute`, present the proposed `permissions.deny` entries and the two caveats from Step 3d, then write to `.claude/settings.local.json` ONLY after an explicit AskUserQuestion opt-in (Display/Execute Rule 8).
+- On opt-in: merge the proposed `Agent(model:…)` entries into `permissions.deny` in `.claude/settings.local.json` (never `settings.json` — host-local). Preserve JSON validity and existing entries; dedupe. Never deny a model that is a configured lane. Re-read `model-lanes.md` at write time so a model is not denied that the user just mapped.
+- Verify the merged JSON parses before marking the task complete.
 
 **Template for command hooks (grep-block):**
 ```bash

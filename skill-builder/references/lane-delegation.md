@@ -328,6 +328,25 @@ Agent Model-Assignment Gate):
 
 ---
 
+## Lane-Guardrail Permission Rules (optional, host-local, opt-in)
+
+A defense-in-depth backstop for the lane system, distinct from everything above. Using the
+`Agent(model:value)` parameter-matching deny syntax (Claude Code 2.1.178), `.claude/settings.local.json`
+can deny subagent spawns on models OUTSIDE the configured lanes. Two boundaries make this a backstop,
+never the enforcement of record:
+
+1. **It does not bind this fleet.** Lane-pinned agents resolve `model:` from frontmatter, which the
+   harness reads directly — that model is not a Task-tool parameter, so `Agent(model:…)` rules do NOT
+   fire for frontmatter-pinned agents. The guardrail only catches ad-hoc/explicit off-lane spawns
+   (a Task call passing `model:` directly). Frontmatter pinning + the Fleet Rewrite above remain the
+   enforcement; this rule is a safety net for the path they do not cover.
+2. **It is a hard block, against the advisory-only norm.** The primary-lane mechanism is advisory and
+   never blocks (No-Switch-Prompt directive, 2026-06-06). A deny rule is the opposite posture, so it is
+   strictly opt-in: `hooks` § Step 3d reports it, never auto-wires it, and `audit` excludes it from
+   autonomous execution (Audit Autonomy Gate). Owner: `references/procedures/hooks.md` § Step 3d
+   (detection + opt-in write). Never deny a model that is a configured lane; re-read model-lanes.md at
+   write time.
+
 ## Reconciliation Contract
 
 | Action | Owner | Notes |
