@@ -6,13 +6,14 @@ complexity hotspots, reinvented helpers, leftover scaffolding). This command is
 skill-builder *machinery*; the `code-evaluator` skill it produces is what end
 users actually run.
 
-**Subcommands:** `create` · `review` · `sweep` · `sync`
+**Subcommands:** `create` · `review` · `sweep` · `sync` · `enforce`
 
 ```
 /skill-builder code-eval create            # scaffold code-evaluator if absent (low-risk, executes)
 /skill-builder code-eval review [path]     # post-write evaluation of a diff/path (high-risk, display default)
 /skill-builder code-eval sweep             # full-codebase report (high-risk, display default)
 /skill-builder code-eval sync              # refresh a user's code-evaluator references from shipped versions
+/skill-builder code-eval enforce           # host-generate the always-on enforcement hooks (high-risk, display default)
 ```
 
 ---
@@ -157,6 +158,207 @@ update; execute mode applies it (see [audit.md](audit.md) § code-evaluator step
 
 ---
 
+## Subcommand: `enforce`  (high-risk — display default, `--execute` to wire)
+
+Host-generate the **always-on enforcement hooks** that make the `code-evaluator`
+fire when code is written, regardless of whether any skill was loaded. This
+un-defers the host-local hook backstop that DEC-2026-06-04 (item 7) anticipated.
+The in-skill `CODE-EVAL-EMBED` gate (route.md § Step 7) is the *shipped*,
+always-present layer; this subcommand adds the *host* layer that closes the
+"code written with no skill loaded" gap.
+
+**No-Distribute compliance (hard).** These hooks are generated ON THE HOST and
+are NEVER shipped: they are not added to `skill-builder/hooks/`, not added to
+`manifest.txt`, and not declared in any source `SKILL.md` frontmatter. The
+EXCEPTION_HOOKS set (SKILL.md § Directives → No-Distribute-Hooks Gate) is exactly
+`{protect-directives.sh, unique-persona.sh, protect-directives.ps1,
+unique-persona.ps1}` — the enforce hooks are not in it and must never join it. This
+subcommand is the sanctioned host-generation path, exactly like
+`/skill-builder hooks --execute`.
+
+**Posture (honest scope).** "No exceptions" is delivered as the strongest honest
+mechanism, not a literal guarantee: a hook can nudge or block the model, but it
+cannot itself call a skill, and code written via Bash (heredoc, `sed -i`, `tee`,
+`cat >`) does not hit an `Edit|Write` matcher. The commit gate (Phase 3) is the
+matcher-agnostic backstop that catches Bash-written code at the chokepoint. State
+these residual gaps wherever the WIRED status is reported; never imply total
+coverage.
+
+### The three enforcement phases
+
+| Phase | Event / matcher | Posture | Purpose |
+|-------|-----------------|---------|---------|
+| **1 — before write** | `PreToolUse` `Edit\|Write\|NotebookEdit` | **hard block** (`exit 2`) | On the first code write of a changeset, bounce until the `code-design-advisor` has supplied direction (what exists, what to reuse, what to watch). |
+| **2 — at write** | `PostToolUse` `Edit\|Write\|NotebookEdit` | non-blocking inject | Track each changed source path as unreviewed; debounced reminder to run `/code-evaluator review`. |
+| **3 — commit gate** | `PreToolUse` `Bash` | **hard block** (`exit 2`) | Refuse `git commit` / `git push` while the working tree differs from the last clean review. Matcher-agnostic — catches Bash-written code too. |
+
+### Marker contract (the shared state, all under `.claude/`, all git-ignored)
+
+`enforce --execute` writes these names once; every hook and the evaluator's
+coordination block reference them verbatim. Do not rename without updating all
+consumers (the hooks, the evaluator's `CODE-EVAL-ENFORCE` block, verify, audit).
+
+| Marker | Writer | Reader | Meaning |
+|--------|--------|--------|---------|
+| `.code-eval-active` | evaluator (review start/end) | all three hooks | evaluator is running its own review/auto-fix → hooks **skip** (loop guard). |
+| `.code-eval-advised` | main model (after consulting the advisor) | Phase 1 | before-write direction taken for this changeset → Phase 1 allows writes. Cleared by a clean review. |
+| `.code-eval-pending` | Phase 2 | Phase 2, verify | newline list of changed source paths not yet reviewed. Cleared by a clean review. |
+| `.code-eval-reviewed` | evaluator (clean review) | Phase 3 | sha of the working-tree state at the last clean review. |
+| `.code-eval-nudge-ts` | Phase 2 | Phase 2 | debounce timestamp so the at-write reminder fires ~once/120s, never per keystroke. |
+
+### Preflight
+1. Run the code-eval Preflight CHECKPOINT (dev parse, locate shipped refs, ground).
+2. **Require `code-evaluator` installed.** If `.claude/skills/code-evaluator/SKILL.md`
+   is absent → STOP: "code-evaluator not installed — run `/skill-builder code-eval create`
+   first." The enforce hooks are inert without the skill they invoke.
+3. **Require the evaluator coordination block.** The generated `code-evaluator`
+   SKILL.md must carry the `CODE-EVAL-ENFORCE` managed block (shipped in
+   skill-template.md § SKILL.md). If absent (an older evaluator) → append it via a
+   `code-eval sync` first, then continue.
+
+### Display mode (default)
+Show, change nothing:
+- The three hook scripts (bodies below) that WOULD be written to
+  `.claude/skills/code-evaluator/hooks/`.
+- The exact `.claude/settings.local.json` wiring entries (escaped-quoted
+  `$CLAUDE_PROJECT_DIR`, shell-safety T3 form).
+- The `.gitignore` lines that WOULD be added for the five markers.
+- The current WIRED / UNWIRED status (are all three entries already present in
+  `settings.local.json` and do their script files exist?).
+
+### Execute mode (`--execute`) — atomic generate-and-wire or neither
+Generate a TaskCreate list; the whole set is **atomic**: if any step fails, roll
+back so there is no on-disk-but-unwired half-armed state (the DEC-2026-06-08
+lesson). Per OS, wire the matching variant (bash on linux/darwin, `.ps1` on
+windows; read the session `Platform:` line — a concrete read, no agent).
+
+1. Generate each script via `/skill-builder shell-safety write` (so the ERR trap,
+   defensive stdin, and fail-open boilerplate come from the template, not
+   hand-rolled), save under `.claude/skills/code-evaluator/hooks/`, `chmod +x`.
+2. `/skill-builder shell-safety lint` each script; a HARD finding aborts the whole
+   atomic set (write nothing).
+3. Wire all three entries into `.claude/settings.local.json` (T3 escaped-quoted
+   form). Validate the merged JSON parses before keeping it.
+4. Append the five marker names to `.claude/.gitignore` (create if absent) — these
+   are runtime state, never committed.
+5. Report `WIRED` with the honest-scope note (Bash-written code is caught only at
+   the commit gate; the before/at-write hooks are `Edit|Write|NotebookEdit`-scoped;
+   a hook nudges/blocks the model but cannot itself call the skill).
+
+`/skill-builder code-eval enforce --remove [--execute]` strips all three wiring
+entries and the script files, and reports the markers left behind (safe to delete).
+
+### Hook bodies (bash — the host-generated scripts)
+
+All three open with `trap 'exit 0' ERR` and read stdin defensively: **fail-open** —
+any internal error exits 0 so a broken hook never bricks editing or commits
+(shell-safety R3/R4/R5). `PROJ="${CLAUDE_PROJECT_DIR:-.}"` throughout.
+
+**`code-eval-prewrite.sh`** — Phase 1, hard block before the first code write:
+```bash
+#!/bin/bash
+# code-eval enforce — Phase 1 (before write): force design direction before code lands.
+trap 'exit 0' ERR
+INPUT=$(cat 2>/dev/null) || exit 0
+PROJ="${CLAUDE_PROJECT_DIR:-.}"
+[ -f "$PROJ/.claude/.code-eval-active" ] && exit 0          # loop guard: evaluator's own edits
+[ -f "$PROJ/.claude/.code-eval-advised" ] && exit 0         # direction already taken this changeset
+FILE_PATH=$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//')
+[ -z "$FILE_PATH" ] && exit 0
+case "$FILE_PATH" in
+  *.claude/*) exit 0 ;;                                      # skip skill machinery
+  *.md|*.mdx|*.txt|*.rst|*.json|*.yaml|*.yml|*.toml|*.lock|*.cfg|*.ini|*.env) exit 0 ;;  # skip prose/config/data
+esac
+{
+  echo "BLOCKED by code-eval enforce (before-write): get design direction before writing code."
+  echo "1. Spawn the code-design-advisor (Task) for this approach — what already exists, what to reuse, what to watch for."
+  echo "2. Then mark direction taken and re-attempt: touch \"$PROJ/.claude/.code-eval-advised\""
+} >&2
+exit 2
+```
+
+**`code-eval-postwrite.sh`** — Phase 2, track + debounced reminder:
+```bash
+#!/bin/bash
+# code-eval enforce — Phase 2 (at write): track unreviewed source, remind to review.
+trap 'exit 0' ERR
+INPUT=$(cat 2>/dev/null) || exit 0
+PROJ="${CLAUDE_PROJECT_DIR:-.}"
+[ -f "$PROJ/.claude/.code-eval-active" ] && exit 0          # loop guard
+FILE_PATH=$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//')
+[ -z "$FILE_PATH" ] && exit 0
+case "$FILE_PATH" in
+  *.claude/*) exit 0 ;;
+  *.md|*.mdx|*.txt|*.rst|*.json|*.yaml|*.yml|*.toml|*.lock|*.cfg|*.ini|*.env) exit 0 ;;
+esac
+PENDING="$PROJ/.claude/.code-eval-pending"
+grep -qxF "$FILE_PATH" "$PENDING" 2>/dev/null || printf '%s\n' "$FILE_PATH" >> "$PENDING" 2>/dev/null || exit 0
+TS="$PROJ/.claude/.code-eval-nudge-ts"
+NOW=$(date +%s 2>/dev/null) || exit 0
+LAST=$(cat "$TS" 2>/dev/null || echo 0)
+if [ $((NOW - LAST)) -ge 120 ]; then
+  printf '%s' "$NOW" > "$TS" 2>/dev/null
+  printf '{"additionalContext":"code-eval enforce: source changed and not yet reviewed. Before declaring this code task done, invoke /code-evaluator review on the changed paths. Nothing commits until the review is clean."}\n'
+fi
+exit 0
+```
+
+**`code-eval-commit-gate.sh`** — Phase 3, hard block on commit/push until reviewed:
+```bash
+#!/bin/bash
+# code-eval enforce — Phase 3 (commit gate): no commit/push until the tree matches the last clean review.
+trap 'exit 0' ERR
+INPUT=$(cat 2>/dev/null) || exit 0
+PROJ="${CLAUDE_PROJECT_DIR:-.}"
+[ -f "$PROJ/.claude/.code-eval-active" ] && exit 0
+CMD=$(printf '%s' "$INPUT" | grep -oE '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//')
+printf '%s' "$CMD" | grep -qE '\bgit[[:space:]]+(commit|push)\b' 2>/dev/null || exit 0
+CUR=$( { git -C "$PROJ" diff HEAD 2>/dev/null; git -C "$PROJ" status --porcelain 2>/dev/null; } | sha256sum 2>/dev/null | cut -d' ' -f1)
+[ -z "$CUR" ] && exit 0                                     # not a git repo / no sha tool → fail-open
+SAVED=$(cat "$PROJ/.claude/.code-eval-reviewed" 2>/dev/null || echo "")
+if [ "$CUR" != "$SAVED" ]; then
+  {
+    echo "BLOCKED by code-eval enforce (commit gate): the working tree changed since the last clean /code-evaluator review."
+    echo "Run /code-evaluator review (it stamps the reviewed state on a clean pass), then commit."
+  } >&2
+  exit 2
+fi
+exit 0
+```
+
+### Hook bodies (PowerShell companions — `.ps1`)
+
+Fail-open and **untested on a real Windows host** (same standing caveat as the
+shipped `.ps1` exception hooks — DEC-2026-06-06-cross-platform-installer). Wired
+only on `windows` platforms. Each mirrors its bash sibling: read `$input`, resolve
+`$env:CLAUDE_PROJECT_DIR`, honor the same markers and skip-list, `exit 2` to block
+(Phase 1 / 3) or emit the `additionalContext` JSON (Phase 2); any error path falls
+through to `exit 0`. Generate them with `/skill-builder shell-safety write` (the
+PowerShell template) at `--execute` time; do not hand-roll. Until validated on a
+real Windows host, Windows status reports `UNWIRED (PowerShell port unvalidated)`
+rather than implying coverage.
+
+### Evaluator coordination (why the markers stay consistent)
+The hooks only set/read markers; clearing them is the evaluator's job, wired by the
+`CODE-EVAL-ENFORCE` block in the generated `code-evaluator` SKILL.md
+(skill-template.md § SKILL.md). On every `review`: set `.code-eval-active` at
+start, remove it at end (loop guard); on a **clean** pass, write the
+`.code-eval-reviewed` sha and delete `.code-eval-pending` and `.code-eval-advised`.
+The before-write protocol (consult advisor → `touch .code-eval-advised` →
+re-attempt) is named in Phase 1's block message and documented in that block.
+
+### Audit & legibility integration
+- **Audit (DEFER only, never auto-wire).** Audit Step 4a-bis detects "installed
+  but enforcement unwired" and DEFERs `/skill-builder code-eval enforce --execute`
+  with the honest-scope note. Audit must NEVER auto-wire these hooks — wiring is a
+  deliberate host act (DEC-2026-06-08; SKILL.md § Directives → No-Distribute-Hooks
+  Gate). They are not in the Audit Autonomy Gate's AUTO tier.
+- **verify** reports a `Code-eval enforcement` WIRED/UNWIRED row.
+- The `CODE-EVAL-EMBED` block (route.md § Step 7d) surfaces enforcement status so a
+  dormant hook is never mistaken for live coverage.
+
+---
+
 ## Grounding
 
 - [../code-evaluator/version.md](../code-evaluator/version.md) — drift anchor (shipped version + changelog)
@@ -164,4 +366,5 @@ update; execute mode applies it (see [audit.md](audit.md) § code-evaluator step
 - [../code-evaluator/cross-file-detection.md](../code-evaluator/cross-file-detection.md), [guards.md](../code-evaluator/guards.md), [mistake-taxonomy.md](../code-evaluator/mistake-taxonomy.md), [native-tool-map.md](../code-evaluator/native-tool-map.md), [gotchas.md](../code-evaluator/gotchas.md) — the shipped intel set
 - [new.md](new.md) — scaffolding contract `create` mirrors
 - [route.md](route.md) — the embed gates that wire the advisor/reviewer into code-touching skills
-- [audit.md](audit.md) — automatic ensure-exists + sync integration
+- [audit.md](audit.md) — automatic ensure-exists + sync integration; Step 4a-bis DEFERs `enforce` when unwired
+- [shell-safety.md](shell-safety.md) — `shell-safety write`/`lint` generate and validate the `enforce` hook scripts (fail-open, R1–R9)

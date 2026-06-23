@@ -482,6 +482,7 @@ CHECKPOINT — Code Evaluation Gate (fires only while this skill writes/edits/de
 2. POST-WRITE. After writing or editing code, BEFORE declaring the code task done, invoke `/code-evaluator review <changed paths>` via the Skill tool. It evaluates the diff for dead code, duplication, and complexity, tiers the findings, and applies only HIGH-confidence, guard-cleared fixes.
 3. SAFETY. Never let a grep-based "unused" verdict authorize a deletion: only HIGH-confidence, guard-cleared dead code is auto-fixed, through the build + full-test safety cycle. Duplication and complexity are reported for human decision.
 4. NO-EVALUATOR PATH. IF the `code-evaluator` skill is not installed → skip this gate silently and proceed; do not block. (Run `/skill-builder code-eval create` to install it.)
+5. ENFORCEMENT BACKSTOP (legibility — never assume coverage). This embed is the in-skill layer only. The always-on host hooks (before/at-write gates + commit gate) are a SEPARATE layer wired by `/skill-builder code-eval enforce`. IF code writes are not automatically prompting `/code-evaluator review`, the host hooks are NOT wired — only this gate is live. Bash-written code is caught only by the commit gate. Wire the backstop with `/skill-builder code-eval enforce`.
 <!-- END ENFORCEMENT ANNOTATION -->
 <!-- /origin -->
 <!-- CODE-EVAL-EMBED END -->

@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 1 -->
+<!-- code-eval-ref-version: 2 -->
 <!-- origin: skill-builder | modifiable: true -->
 # code-evaluator reference version
 
@@ -10,7 +10,7 @@ This file is the **drift anchor**. `skill-builder audit` reads the integer below
 reference blocks in the user's copy, preserving any `origin: user` seams.
 
 ```
-code-eval-ref-version: 1
+code-eval-ref-version: 2
 ```
 
 Bump this integer whenever ANY file under `references/code-evaluator/` changes in
@@ -20,6 +20,11 @@ with this number so a per-file check is possible.
 
 ## Changelog
 
+- **v2** (2026-06-23) — Generated SKILL.md gains the `CODE-EVAL-ENFORCE`
+  coordination block (no-op unless `/skill-builder code-eval enforce` is wired):
+  review sets/clears the `.code-eval-active` loop guard, stamps `.code-eval-reviewed`
+  and clears `.code-eval-pending` / `.code-eval-advised` on a clean pass. The five
+  intel files are unchanged from v1. `sync` pushes the new block to existing installs.
 - **v1** (2026-06-04) — Initial release. Language-agnostic cross-file dead-code,
   duplication, and complexity detection and an adversarial false-positive guard
   set. Three-layer model: pre-write advisor agent, post-write reviewer agent,

@@ -506,8 +506,9 @@ Subcommands of `code-eval`:
 - `/skill-builder code-eval review [path]` — post-write evaluation (high-risk; display default, `--execute` to apply HIGH-tier fixes).
 - `/skill-builder code-eval sweep` — full-codebase report (high-risk; display default).
 - `/skill-builder code-eval sync` — refresh a user's `code-evaluator` references from skill-builder's shipped versions when the shipped `code-eval-ref-version` is newer (block-aware; preserves user-origin seams).
+- `/skill-builder code-eval enforce` — host-generate the always-on enforcement hooks (high-risk; display default, `--execute` to wire). Three write-keyed phases — **before write** (PreToolUse hard block until the design-advisor gave direction), **at write** (PostToolUse review reminder), and a **commit gate** (PreToolUse hard block on `git commit`/`push` until the tree matches the last clean review — catches Bash-written code too). Closes the "code written with no skill loaded" gap that the shipped `CODE-EVAL-EMBED` gate cannot reach. Host-generated, NEVER shipped (No-Distribute-Hooks Gate); atomic generate-and-wire; fail-open; audit DEFER-recommends it but never auto-wires (DEC-2026-06-08, deliberate host act). "No exceptions" is the strongest honest backstop, not a literal guarantee — a hook nudges/blocks the model but cannot itself call a skill.
 
-**Audit integration:** `audit` automatically ensures `code-evaluator` exists (creating it if absent) and runs `code-eval sync` to keep its references current, before the route terminal tasks. See [audit.md](references/procedures/audit.md) § Step 4a-bis.
+**Audit integration:** `audit` automatically ensures `code-evaluator` exists (creating it if absent) and runs `code-eval sync` to keep its references current, before the route terminal tasks; it also DEFER-recommends `code-eval enforce` when the evaluator is installed but the enforcement hooks are not wired. See [audit.md](references/procedures/audit.md) § Step 4a-bis.
 
 **Grounding:** Read [references/procedures/code-eval.md](references/procedures/code-eval.md) for the full procedure (create / review / sweep / sync), [references/code-evaluator/skill-template.md](references/code-evaluator/skill-template.md) for the generated SKILL.md + advisor/reviewer agent templates, and [references/code-evaluator/cross-file-detection.md](references/code-evaluator/cross-file-detection.md) + [guards.md](references/code-evaluator/guards.md) for the detection method and false-positive guards.
 <!-- /origin -->
@@ -639,7 +640,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 |------|----------|-------------|
 | **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync`, `model-map` | **Execute directly** |
 | **Single-consent auto** (2026-06-06 Audit Autonomy Gate) | `audit`, `audit --quick` | **Scan + report, then auto-execute** under the Step 0 disclaimer consent; `--review`/`--dry-run` = report-only; `--execute` = harmless no-op |
-| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep`, `local-mode` | **Display mode** (requires `--execute`) *when invoked standalone; under audit they run in the auto-execution phase* |
+| **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep`, `code-eval enforce`, `local-mode` | **Display mode** (requires `--execute`) *when invoked standalone; under audit they run in the auto-execution phase* |
 | **Destructive** (deletes files irreversibly) | `strip` | **Display mode** (requires `--execute`; `--confirm-breaking` if dependents exist) — NEVER auto-fired by audit (DEFER tier) |
 
 | Mode | Behavior | Flag |

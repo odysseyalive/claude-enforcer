@@ -65,6 +65,25 @@ For each wired hook in settings.local.json:
 - Does the script file exist?
 - **Shell-safety lint:** Run `/skill-builder shell-safety lint .claude/settings.local.json` and `/skill-builder shell-safety lint .claude/skills/*/hooks/*.sh`. Surface any HARD findings as FAIL and SOFT findings as WARN. (Shell-safety ships as a skill-builder subcommand — its rule set is always available without a separate install.)
 
+### Step 3a: Code-eval Enforcement Status
+
+If `.claude/skills/code-evaluator/SKILL.md` exists, report whether the always-on
+enforcement hooks (`/skill-builder code-eval enforce`) are wired — a legibility
+check so a dormant backstop is never mistaken for live coverage:
+
+```bash
+Read: .claude/settings.local.json → hooks section
+Glob: .claude/skills/code-evaluator/hooks/code-eval-*.{sh,ps1}
+```
+
+- All three entries (before-write PreToolUse, at-write PostToolUse, commit-gate
+  PreToolUse Bash) wired AND their script files exist → **WIRED**.
+- Some or none wired → **UNWIRED** — note: "Code-eval enforcement not wired (only
+  the in-skill CODE-EVAL-EMBED gate is active). Run `/skill-builder code-eval enforce`
+  for the host backstop." Honest-scope reminder: Bash-written code is caught only at
+  the commit gate.
+- `code-evaluator` not installed → N/A (skip silently).
+
 ### Step 3b: Team Validation
 
 ```bash
@@ -120,6 +139,7 @@ For each agent carrying `generated-by: skill-builder lane-excursion` (from the S
 | Hooks wired | [N]/[N] [PASS/FAIL] |
 | Hooks executable | [N]/[N] [PASS/FAIL] |
 | Shell-safety lint (hooks/settings) | [N]/[N] [PASS/WARN/FAIL] |
+| Code-eval enforcement | [WIRED/UNWIRED/N/A] |
 | Stale artifacts | [NONE/WARN — list] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
 | Minions registered (lane-excursion fleet) | [N]/[N] [PASS/FAIL/N/A] |

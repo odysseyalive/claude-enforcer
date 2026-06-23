@@ -98,6 +98,30 @@ It is not a user command — it advises before code is written.
 - Dynamic languages (Python/JS/Lua/Bash) have no compile-time net → extra
   confirmation, prefer report-only.
 
+<!-- CODE-EVAL-ENFORCE START — coordinates with /skill-builder code-eval enforce host hooks; safe to replace -->
+<!-- origin: skill-builder | modifiable: true -->
+## Enforcement coordination
+
+These steps are **no-ops unless `/skill-builder code-eval enforce` is wired on this
+host** (the host-generated `code-eval-*` hooks in `.claude/settings.local.json`).
+They keep the shared markers (all under `.claude/`) consistent so the always-on
+hooks gate correctly. Skip silently when enforcement is not wired.
+
+1. **Loop guard — every `review` run.** At the START of the run, `touch
+   .claude/.code-eval-active`; at the END (success or failure), remove it. While it
+   exists the enforce hooks skip, so the evaluator's own auto-fix edits never
+   re-trigger the before/at-write gates.
+2. **Stamp on a clean pass.** When `review` finishes with no outstanding MUST-FIX /
+   HIGH findings, record the reviewed state and clear the debt:
+   - `{ git diff HEAD; git status --porcelain; } | sha256sum | cut -d' ' -f1 > .claude/.code-eval-reviewed`
+   - `rm -f .claude/.code-eval-pending .claude/.code-eval-advised`
+   This is what lets the commit gate (Phase 3) pass and clears the at-write list.
+3. **Before-write protocol.** The Phase-1 block tells the *caller* (the main model)
+   to consult the `code-design-advisor`, then `touch .claude/.code-eval-advised` and
+   re-attempt the write. The advisor is read-only; the caller sets the marker.
+<!-- /origin -->
+<!-- CODE-EVAL-ENFORCE END -->
+
 ## Grounding
 
 - [references/cross-file-detection.md](references/cross-file-detection.md) — detection procedure (read first)
