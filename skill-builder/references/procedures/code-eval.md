@@ -182,14 +182,48 @@ cannot itself call a skill, and code written via Bash (heredoc, `sed -i`, `tee`,
 `cat >`) does not hit an `Edit|Write` matcher. The commit gate (Phase 3) is the
 matcher-agnostic backstop that catches Bash-written code at the chokepoint. State
 these residual gaps wherever the WIRED status is reported; never imply total
-coverage.
+coverage. Phase 2's ladder signals are **heuristic pointers, not the evaluation**:
+a grep can flag *that* a dependency manifest grew or *that* a name collides, but
+only the advisor/reviewer decides whether it is actually over-built — the signal
+narrows the agent's attention, it never renders a verdict.
+
+### Enforce script versioning & drift
+
+<!-- code-eval-enforce-version: 1 -->
+
+The generated hook scripts are **versioned** so a wired host can detect when its
+on-disk scripts predate the current procedure — the scripts are host-generated and
+never shipped, so the installer/`code-eval sync` drift channel (which only refreshes
+the markdown references) cannot carry an improved hook body. The shipped anchor is
+the integer in the comment above (`code-eval-enforce-version`); **bump it whenever
+any hook body in this section changes** in a way a wired host should receive. Each
+generated script carries a matching `# code-eval-enforce-version: N` header line,
+written at `--execute` time.
+
+Drift is a one-way, host-only refresh:
+- `shipped` = this section's anchor, read from the skill-builder install
+  (`.claude/skills/skill-builder/references/procedures/code-eval.md`; in `dev` mode,
+  the source path).
+- `recorded` = the `# code-eval-enforce-version: N` header in the wired
+  `.claude/skills/code-evaluator/hooks/code-eval-prewrite.sh` (absent → `0`, a
+  pre-versioning install).
+- `recorded >= shipped` → current. `recorded < shipped` → **stale**: the wired
+  scripts predate the current signal/gate logic. `audit` Step 4a-bis and `verify`
+  Step 3a DEFER-recommend a re-run of `/skill-builder code-eval enforce --execute`
+  (never auto-run — re-wiring is a deliberate host act, exactly like initial wiring).
+  Re-running regenerates every variant at the current version.
+
+**Changelog:**
+- **v1** (2026-06-23) — First versioned release. Phase 2 gains the deterministic
+  ladder-signal pre-filter (rung 5 dependency / scaffolding / rung 2 reinvented
+  helper). Pre-versioning wired installs report `recorded = 0` → stale → re-run.
 
 ### The three enforcement phases
 
 | Phase | Event / matcher | Posture | Purpose |
 |-------|-----------------|---------|---------|
 | **1 — before write** | `PreToolUse` `Edit\|Write\|NotebookEdit` | **hard block** (`exit 2`) | On the first code write of a changeset, bounce until the `code-design-advisor` has supplied direction (what exists, what to reuse, what to watch). |
-| **2 — at write** | `PostToolUse` `Edit\|Write\|NotebookEdit` | non-blocking inject | Track each changed source path as unreviewed; debounced reminder to run `/code-evaluator review`. |
+| **2 — at write** | `PostToolUse` `Edit\|Write\|NotebookEdit` | non-blocking inject | Track each changed source path as unreviewed; run the deterministic ladder-signal pre-filter (rung 5 / scaffolding / rung 2) over the added lines; debounced reminder to run `/code-evaluator review`. |
 | **3 — commit gate** | `PreToolUse` `Bash` | **hard block** (`exit 2`) | Refuse `git commit` / `git push` while the working tree differs from the last clean review. Matcher-agnostic — catches Bash-written code too. |
 
 ### Marker contract (the shared state, all under `.claude/`, all git-ignored)
@@ -224,7 +258,9 @@ Show, change nothing:
   `$CLAUDE_PROJECT_DIR`, shell-safety T3 form).
 - The `.gitignore` lines that WOULD be added for the five markers.
 - The current WIRED / UNWIRED status (are all three entries already present in
-  `settings.local.json` and do their script files exist?).
+  `settings.local.json` and do their script files exist?), and for a wired host the
+  scripts' `code-eval-enforce-version` vs the shipped anchor — WIRED / WIRED-STALE
+  (§ Enforce script versioning & drift).
 
 ### Execute mode (`--execute`) — atomic generate-and-wire or neither
 Generate a TaskCreate list; the whole set is **atomic**: if any step fails, roll
@@ -234,16 +270,20 @@ windows; read the session `Platform:` line — a concrete read, no agent).
 
 1. Generate each script via `/skill-builder shell-safety write` (so the ERR trap,
    defensive stdin, and fail-open boilerplate come from the template, not
-   hand-rolled), save under `.claude/skills/code-evaluator/hooks/`, `chmod +x`.
+   hand-rolled), stamping the `# code-eval-enforce-version: <shipped>` header from
+   the § Enforce script versioning anchor into each, save under
+   `.claude/skills/code-evaluator/hooks/`, `chmod +x`.
 2. `/skill-builder shell-safety lint` each script; a HARD finding aborts the whole
    atomic set (write nothing).
 3. Wire all three entries into `.claude/settings.local.json` (T3 escaped-quoted
    form). Validate the merged JSON parses before keeping it.
 4. Append the five marker names to `.claude/.gitignore` (create if absent) — these
    are runtime state, never committed.
-5. Report `WIRED` with the honest-scope note (Bash-written code is caught only at
-   the commit gate; the before/at-write hooks are `Edit|Write|NotebookEdit`-scoped;
-   a hook nudges/blocks the model but cannot itself call the skill).
+5. Report `WIRED (scripts v<shipped>)` with the honest-scope note (Bash-written code
+   is caught only at the commit gate; the before/at-write hooks are
+   `Edit|Write|NotebookEdit`-scoped; a hook nudges/blocks the model but cannot itself
+   call the skill). A re-run on an already-wired host is the sanctioned drift refresh
+   — it regenerates every variant at the current version.
 
 `/skill-builder code-eval enforce --remove [--execute]` strips all three wiring
 entries and the script files, and reports the markers left behind (safe to delete).
@@ -258,6 +298,7 @@ any internal error exits 0 so a broken hook never bricks editing or commits
 ```bash
 #!/bin/bash
 # code-eval enforce — Phase 1 (before write): force design direction before code lands.
+# code-eval-enforce-version: 1
 trap 'exit 0' ERR
 INPUT=$(cat 2>/dev/null) || exit 0
 PROJ="${CLAUDE_PROJECT_DIR:-.}"
@@ -277,36 +318,104 @@ esac
 exit 2
 ```
 
-**`code-eval-postwrite.sh`** — Phase 2, track + debounced reminder:
+**`code-eval-postwrite.sh`** — Phase 2, track + deterministic ladder signals + debounced reminder:
 ```bash
 #!/bin/bash
-# code-eval enforce — Phase 2 (at write): track unreviewed source, remind to review.
+# code-eval enforce — Phase 2 (at write): track unreviewed source, emit deterministic ladder signals, remind to review.
+# code-eval-enforce-version: 1
 trap 'exit 0' ERR
 INPUT=$(cat 2>/dev/null) || exit 0
 PROJ="${CLAUDE_PROJECT_DIR:-.}"
 [ -f "$PROJ/.claude/.code-eval-active" ] && exit 0          # loop guard
 FILE_PATH=$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//')
 [ -z "$FILE_PATH" ] && exit 0
+case "$FILE_PATH" in *.claude/*) exit 0 ;; esac           # skill machinery
+
+emit() {                                                   # $1 = plain text -> JSON additionalContext (fail-open)
+  local esc
+  esc=$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+  printf '{"additionalContext":"%s"}\n' "$esc"
+}
+
+# rung 5 — dependency manifest grew. Checked BEFORE the code skip-list so package.json/etc. are seen.
 case "$FILE_PATH" in
-  *.claude/*) exit 0 ;;
+  */package.json|package.json|*/composer.json|composer.json|*/requirements*.txt|requirements*.txt|*/pyproject.toml|pyproject.toml|*/Cargo.toml|Cargo.toml|*/go.mod|go.mod|*/Gemfile|Gemfile|*/build.gradle*|*/pom.xml)
+    if git -C "$PROJ" ls-files --error-unmatch -- "$FILE_PATH" >/dev/null 2>&1; then
+      N=$(git -C "$PROJ" diff HEAD -- "$FILE_PATH" 2>/dev/null | grep -c '^+[^+]') || true   # tracked: added lines
+    else
+      N=$(grep -c . "$FILE_PATH" 2>/dev/null) || true                                        # untracked: whole file is new
+    fi
+    [ "${N:-0}" -gt 0 ] 2>/dev/null && emit "code-eval enforce — rung 5 (dependency): $FILE_PATH grew by ${N} line(s). Before a new dependency, check whether stdlib, a native feature, or an already-installed dep already covers what was added."
+    exit 0 ;;
+esac
+
+# code files only beyond here
+case "$FILE_PATH" in
   *.md|*.mdx|*.txt|*.rst|*.json|*.yaml|*.yml|*.toml|*.lock|*.cfg|*.ini|*.env) exit 0 ;;
 esac
 PENDING="$PROJ/.claude/.code-eval-pending"
 grep -qxF "$FILE_PATH" "$PENDING" 2>/dev/null || printf '%s\n' "$FILE_PATH" >> "$PENDING" 2>/dev/null || exit 0
+
+# Deterministic ladder signals over ADDED lines only (grep, no LLM). New/untracked file -> whole body is new.
+# `|| true` on every grep-terminated substitution: a no-match grep returns non-zero, which the ERR trap
+# would otherwise turn into a silent fail-open exit before the signal is ever emitted (shell-safety).
+DIFF=$(git -C "$PROJ" diff HEAD -- "$FILE_PATH" 2>/dev/null | grep '^+' | grep -v '^+++') || true
+[ -z "$DIFF" ] && DIFF=$(sed 's/^/+/' "$FILE_PATH" 2>/dev/null)
+SIGNALS=""
+SCAF=$(printf '%s' "$DIFF" | grep -noE 'console\.(log|debug)|\bdebugger\b|\bTODO\b|\bFIXME\b|\bdbg!|binding\.pry|pdb\.set_trace' | head -1) || true
+[ -n "$SCAF" ] && SIGNALS="${SIGNALS}- scaffolding: debug/TODO marker in added lines ($SCAF) — strip before done.\n"
+NAME=$(printf '%s' "$DIFF" | grep -oE '(def|function|fn|func)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' | head -1 | grep -oE '[A-Za-z_][A-Za-z0-9_]*$') || true
+if [ -n "$NAME" ]; then
+  REL="${FILE_PATH#"$PROJ"/}"                               # repo-relative, to match git grep's output and exclude self
+  HIT=$(git -C "$PROJ" grep -wl -e "$NAME" 2>/dev/null | grep -vxF "$REL" | grep -ivE 'node_modules|vendor|dist|build|/\.' | head -1)
+  [ -n "$HIT" ] && SIGNALS="${SIGNALS}- rung 2 (reuse): new \`$NAME\` may duplicate an existing symbol in $HIT — reuse before reimplementing.\n"
+fi
+
+# One debounced injection (~120s); actionable signals take priority over the generic reminder.
 TS="$PROJ/.claude/.code-eval-nudge-ts"
 NOW=$(date +%s 2>/dev/null) || exit 0
 LAST=$(cat "$TS" 2>/dev/null || echo 0)
-if [ $((NOW - LAST)) -ge 120 ]; then
-  printf '%s' "$NOW" > "$TS" 2>/dev/null
-  printf '{"additionalContext":"code-eval enforce: source changed and not yet reviewed. Before declaring this code task done, invoke /code-evaluator review on the changed paths. Nothing commits until the review is clean."}\n'
+[ $((NOW - LAST)) -ge 120 ] || exit 0
+printf '%s' "$NOW" > "$TS" 2>/dev/null
+if [ -n "$SIGNALS" ]; then
+  emit "code-eval enforce — ladder signals on added code:\n${SIGNALS}Then run /code-evaluator review; nothing commits until the review is clean."
+else
+  emit "code-eval enforce: source changed and not yet reviewed. Before declaring this code task done, invoke /code-evaluator review on the changed paths. Nothing commits until the review is clean."
 fi
 exit 0
 ```
+
+### Deterministic ladder signals (Phase 2 — heuristic pre-filter)
+
+Phase 2 runs three **grep-only** checks (no LLM, no skill call) over the *added*
+lines of the just-written file, and folds any hit into the debounced injection so
+the agent gets a *specific rung* instead of a generic "go review." They are a
+pre-filter that points attention; the advisor/reviewer still renders every verdict.
+
+| Signal | Maps to | Detection (added lines only) |
+|--------|---------|------------------------------|
+| **rung 5 — new dependency** | mistake-taxonomy.md "Needless new dependency" | the changed file is a known manifest (`package.json`, `requirements*.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`, …) and `git diff HEAD` shows ≥1 added line |
+| **scaffolding** | mistake-taxonomy.md "Leftover scaffolding" | added line matches `console.log/debug`, `debugger`, `TODO`/`FIXME`, `dbg!`, `binding.pry`, `pdb.set_trace` |
+| **rung 2 — reinvented helper** | mistake-taxonomy.md "Reinvented helper" | an added top-level `def`/`function`/`fn`/`func` name that `git grep -w` also finds elsewhere in the repo (excluding the file itself and vendored/build dirs) |
+
+Discipline (all fail-open, all bounded):
+- **Added lines only** (`git diff HEAD`, or the whole body for an untracked new
+  file) so pre-existing code is never re-flagged.
+- **`git grep`, not a new tool** — reuses the git the commit gate already needs; no
+  dependency on `rg` being installed.
+- **Debounced** through the existing `.code-eval-nudge-ts` (≤1 injection / ~120s),
+  so a colliding name on a file edited repeatedly cannot nag.
+- **Heuristic, never a verdict** — `print(` is deliberately excluded (too noisy in
+  Python); the reinvented-helper signal says "*may* duplicate," and the agent
+  confirms via the advisor against `guards.md` before acting.
+- New pitfall classes are added to this signal list the same way the taxonomy
+  grows — one place, regenerated into the host script on the next `enforce`.
 
 **`code-eval-commit-gate.sh`** — Phase 3, hard block on commit/push until reviewed:
 ```bash
 #!/bin/bash
 # code-eval enforce — Phase 3 (commit gate): no commit/push until the tree matches the last clean review.
+# code-eval-enforce-version: 1
 trap 'exit 0' ERR
 INPUT=$(cat 2>/dev/null) || exit 0
 PROJ="${CLAUDE_PROJECT_DIR:-.}"
@@ -332,11 +441,14 @@ Fail-open and **untested on a real Windows host** (same standing caveat as the
 shipped `.ps1` exception hooks — DEC-2026-06-06-cross-platform-installer). Wired
 only on `windows` platforms. Each mirrors its bash sibling: read `$input`, resolve
 `$env:CLAUDE_PROJECT_DIR`, honor the same markers and skip-list, `exit 2` to block
-(Phase 1 / 3) or emit the `additionalContext` JSON (Phase 2); any error path falls
-through to `exit 0`. Generate them with `/skill-builder shell-safety write` (the
-PowerShell template) at `--execute` time; do not hand-roll. Until validated on a
-real Windows host, Windows status reports `UNWIRED (PowerShell port unvalidated)`
-rather than implying coverage.
+(Phase 1 / 3) or emit the `additionalContext` JSON (Phase 2). The Phase 2 port
+mirrors the same three ladder signals (rung 5 / scaffolding / rung 2) using
+`git diff`/`git grep` and `Select-String`. Any error path falls through to
+`exit 0`. Generate them with `/skill-builder shell-safety write` (the
+PowerShell template) at `--execute` time; do not hand-roll. Each `.ps1` carries the
+same `# code-eval-enforce-version: N` header so the drift check covers Windows too.
+Until validated on a real Windows host, Windows status reports
+`UNWIRED (PowerShell port unvalidated)` rather than implying coverage.
 
 ### Evaluator coordination (why the markers stay consistent)
 The hooks only set/read markers; clearing them is the evaluator's job, wired by the
@@ -349,11 +461,15 @@ re-attempt) is named in Phase 1's block message and documented in that block.
 
 ### Audit & legibility integration
 - **Audit (DEFER only, never auto-wire).** Audit Step 4a-bis detects "installed
-  but enforcement unwired" and DEFERs `/skill-builder code-eval enforce --execute`
-  with the honest-scope note. Audit must NEVER auto-wire these hooks — wiring is a
-  deliberate host act (DEC-2026-06-08; SKILL.md § Directives → No-Distribute-Hooks
-  Gate). They are not in the Audit Autonomy Gate's AUTO tier.
-- **verify** reports a `Code-eval enforcement` WIRED/UNWIRED row.
+  but enforcement unwired" → DEFERs `/skill-builder code-eval enforce --execute`,
+  AND "wired but stale" (`recorded < shipped` per § Enforce script versioning &
+  drift) → DEFERs the same re-run with a "scripts predate the current procedure"
+  reason. Both carry the honest-scope note. Audit must NEVER auto-wire OR auto-refresh
+  these hooks — wiring/re-wiring is a deliberate host act (DEC-2026-06-08; SKILL.md
+  § Directives → No-Distribute-Hooks Gate). They are not in the Audit Autonomy Gate's
+  AUTO tier.
+- **verify** reports a `Code-eval enforcement` WIRED / WIRED-STALE / UNWIRED row
+  (staleness = wired scripts older than the shipped `code-eval-enforce-version`).
 - The `CODE-EVAL-EMBED` block (route.md § Step 7d) surfaces enforcement status so a
   dormant hook is never mistaken for live coverage.
 

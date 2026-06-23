@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 1 -->
+<!-- code-eval-ref-version: 3 -->
 <!-- origin: skill-builder | modifiable: true -->
 # Generated-skill template — `code-evaluator`
 
@@ -38,7 +38,7 @@ and report it.
 name: code-evaluator
 description: Evaluate code to prevent common AI coding mistakes — dead code, duplication, complexity hotspots, reinvented helpers, leftover scaffolding. Two functions plus a pre-write advisor. Use after writing or editing code, when asked to review code quality, clean up the codebase, find unused code, find duplicates, check complexity, or evaluate what an AI just wrote. Commands: review (post-write), sweep (full codebase).
 lane: coding
-code_eval_ref_version: 1
+code_eval_ref_version: 3
 allowed-tools: Read, Glob, Grep, Bash, Task, Skill
 ---
 
@@ -53,7 +53,7 @@ safety model — grep proposes candidates, the compiler and the test suite decid
 | Command | Layer | Action |
 |---------|-------|--------|
 | `/code-evaluator review [path]` | L2 (post-write) | Evaluate a diff or path just written; tier findings; apply only HIGH-confidence, guard-cleared fixes |
-| `/code-evaluator sweep` | L3 (full codebase) | Whole-tree dead-code / duplication / complexity report (report-only at scale) |
+| `/code-evaluator sweep` | L3 (full codebase) | Whole-tree dead-code / duplication / complexity / over-engineering report (report-only at scale) |
 
 A third layer (**L1, pre-write**) is the `code-design-advisor` agent, spawned by
 *other* skills at non-obvious code decisions (wired in by `/skill-builder route`).
@@ -153,21 +153,57 @@ Read-only. Your tools are for searching and reading, never editing.
 
 ## What you check (focus on prevention — see mistake-taxonomy.md Group 2)
 
-1. **Does it already exist?** Grep for an existing helper/util/type that already
-   does the planned job (`rg -w`, search likely util/lib/shared dirs). If one
-   exists, recommend reuse over a new implementation.
-2. **Will it rot?** Is the planned abstraction premature (a generic/factory/
-   wrapper for a single caller)? Recommend the simplest thing that works.
-3. **Pattern fit.** Does the surrounding code establish an idiom the plan should
-   follow? Flag drift.
-4. **Structural hazards.** Would the plan create a circular dependency, a dead
-   export, or duplication of a sibling block? Name the specific risk.
+First read the task and trace the real flow the change touches — laziness
+shortens the solution, never the comprehension. Then walk the **minimalism
+escalation ladder** and recommend the highest rung that holds:
+
+1. **Does this need to exist at all?** Speculative need with no current caller or
+   stated requirement → recommend skipping it (YAGNI).
+2. **Already in this codebase?** Grep for an existing helper/util/type/pattern
+   that already does the job (`rg -w`, search likely util/lib/shared dirs) →
+   recommend reuse over a new implementation.
+3. **Stdlib does it?** A documented standard-library function covers it → use it,
+   don't hand-roll it.
+4. **Native platform feature covers it?** `<input type="date">` over a picker lib,
+   CSS over JS, a DB constraint over app code → prefer it over a dependency.
+5. **Already-installed dependency solves it?** Use it before recommending a new
+   one. Never add a dependency for what a few lines or an existing dep can do.
+6. **One line?** If it collapses to one line, recommend the one line.
+
+Alongside the ladder:
+
+- **Will it rot?** Is the planned abstraction premature (a generic/factory/
+  wrapper for a single caller)? Recommend the simplest thing that works.
+- **Pattern fit.** Does the surrounding code establish an idiom the plan should
+  follow? Flag drift.
+- **Structural hazards.** Would the plan create a circular dependency, a dead
+  export, or duplication of a sibling block? Name the specific risk.
+
+## Safety floor — never minimize these away
+
+The ladder cuts what is not needed, never what is necessary. NEVER recommend
+removing or skipping: input validation at trust boundaries, error handling that
+prevents data loss, security measures, accessibility basics, or anything the user
+explicitly requested. A deliberate bounded shortcut the caller marks with an
+intent comment (`// code-eval: <ceiling>, <upgrade path>`) is intentional — do
+not flag it (guards.md #21).
 
 ## How you answer
 
-Return a short, prioritized list: each item = the risk + the concrete signal you
-found (file:line) + the recommended adjustment. If the approach is clean, say so
-in one line. Do not pad. You are advisory — the caller decides.
+Output discipline (ponytail's rule, applied to advice instead of code): **the
+recommendation is the payload — lead with it, and never let the rationale outweigh
+it.** You write no code, so "code first" becomes "the actionable rung first": the
+file:line + the concrete adjustment, then at most one line of why. Every extra
+sentence defending the advice is complexity smuggled back in as prose — cut it.
+
+- Return a short, prioritized list, highest-value rung first. Each item is one
+  compressed line: `<risk>: <signal @ file:line> → <adjustment>`
+  (e.g. `reinvented: fmt_date already at utils/date.py:12 → reuse it, drop the new helper`).
+- A clean approach gets exactly one line: `Clean — no reuse/abstraction/structural risk.`
+- No essays, no design notes, no options tour. If the explanation is longer than
+  the recommendation it qualifies, delete the explanation.
+
+You are advisory — the caller decides.
 
 Ground against `references/cross-file-detection.md`, `references/guards.md`, and
 `references/mistake-taxonomy.md` in the code-evaluator skill before reporting,
@@ -202,6 +238,31 @@ you may apply fixes only under the safety model below.
 3. Tier each finding HIGH / MEDIUM / LOW per cross-file-detection.md §3.
 4. Emit the output contract: kind, location, tier, evidence (ref counts, traced
    barrel chain, tool agreement), guards_cleared, recommendation.
+
+## Over-engineering findings (report-only)
+
+Beyond dead code, surface live-but-over-built code (mistake-taxonomy.md Group 2).
+These are **always report-only** — never auto-fixed, regardless of tier — because
+cutting live code is a human-decide call.
+
+Score on the rubric in `references/mistake-taxonomy.md` § "Over-engineering
+evaluation": **self-calibrate against the known pair there FIRST** (your read is
+trustworthy only if it ranks the over-built snippet strictly above the minimal
+one), then score each candidate 0–3, naming the construct or "none." Report only
+scores ≥2; a test file or a single in-file self-check is never scored as
+over-engineering. Tag each reported finding on one line: `<file>:L<n>: <tag>
+<what>. <replacement>.`
+
+- `delete:` dead flexibility / speculative feature with no caller. Replaces with nothing.
+- `stdlib:` hand-rolled what the standard library ships. Name the function.
+- `native:` a dependency or code doing what the platform already does. Name the feature.
+- `yagni:` an abstraction with one implementation, a config nobody sets, a layer with one caller.
+- `shrink:` same logic, fewer lines. Show the shorter form.
+
+Honor the minimalism safety floor (mistake-taxonomy.md): never tag validation,
+error handling, security, accessibility, or an explicitly-requested feature as
+over-built. Respect intent markers (guards.md #21) — a marked shortcut is not a
+finding.
 
 ## Authority
 

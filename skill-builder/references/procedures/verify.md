@@ -77,7 +77,15 @@ Glob: .claude/skills/code-evaluator/hooks/code-eval-*.{sh,ps1}
 ```
 
 - All three entries (before-write PreToolUse, at-write PostToolUse, commit-gate
-  PreToolUse Bash) wired AND their script files exist → **WIRED**.
+  PreToolUse Bash) wired AND their script files exist → check for drift: read
+  `recorded` = the `# code-eval-enforce-version: N` header in
+  `code-eval-prewrite.sh` (absent → `0`) vs `shipped` = the
+  `<!-- code-eval-enforce-version: N -->` anchor in the skill-builder install's
+  `references/procedures/code-eval.md`.
+  - `recorded >= shipped` → **WIRED** (scripts v[recorded], current).
+  - `recorded < shipped` → **WIRED-STALE** — note: "wired enforce hooks predate the
+    current procedure (v[recorded] → v[shipped]); re-run `/skill-builder code-eval
+    enforce --execute` to refresh the host backstop."
 - Some or none wired → **UNWIRED** — note: "Code-eval enforcement not wired (only
   the in-skill CODE-EVAL-EMBED gate is active). Run `/skill-builder code-eval enforce`
   for the host backstop." Honest-scope reminder: Bash-written code is caught only at
@@ -139,7 +147,7 @@ For each agent carrying `generated-by: skill-builder lane-excursion` (from the S
 | Hooks wired | [N]/[N] [PASS/FAIL] |
 | Hooks executable | [N]/[N] [PASS/FAIL] |
 | Shell-safety lint (hooks/settings) | [N]/[N] [PASS/WARN/FAIL] |
-| Code-eval enforcement | [WIRED/UNWIRED/N/A] |
+| Code-eval enforcement | [WIRED/WIRED-STALE/UNWIRED/N/A] |
 | Stale artifacts | [NONE/WARN — list] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
 | Minions registered (lane-excursion fleet) | [N]/[N] [PASS/FAIL/N/A] |

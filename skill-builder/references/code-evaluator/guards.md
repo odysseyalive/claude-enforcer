@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 1 -->
+<!-- code-eval-ref-version: 3 -->
 <!-- origin: skill-builder | modifiable: true -->
 # False-Positive Guards — clear EVERY guard before flagging code dead
 
@@ -34,6 +34,7 @@ zero-reference symbol is **"unreferenced (candidate)," never "dead."**
 | 18 | **macro-codegen-poison** | reference exists only post-expansion | `macro_rules!`/`proc_macro`/derive, C `##` token-paste, `//go:generate`, `.tmpl`/Jinja, `*.pb.go`/`__generated__` | affected symbols used; the real fix is in the generator, not the output |
 | 19 | **framework-convention** | invoked by the framework by name/location | `@app.route`/`@task`/`@click`, magic methods (`__call__`, `Dispose`), file-based routing under `pages/`/`app/`/`cmd/`, default exports in framework dirs | convention-invoked symbol = root |
 | 20 | **collision-disambiguate** | short/common name collides across scopes | `run`, `id`, `name`, `data`; same identifier defined in multiple files | require scope/qualifier disambiguation; on collision downgrade confidence |
+| 21 | **intent-marker-respect** | a simplification is deliberate, not ignorant | an intent comment naming a ceiling + upgrade path next to the construct: `// code-eval:`/`# code-eval:`/`ponytail:` (e.g. `// code-eval: O(n²) scan, index if it grows`) | a marked construct is INTENTIONAL — never flag its complexity/over-abstraction/shortcut as a finding. Applies to the over-engineering & complexity classes, not just dead-code. A marker whose named condition demonstrably no longer holds → report as **stale** (like a stale suppression), never auto-edit |
 
 ## Hard-forbidden auto-delete (any one → report only, never auto-apply)
 
