@@ -19,16 +19,44 @@ function Install-ClaudeEnforcer {
     Write-Host '========================='
     Write-Host ''
 
-    # Check for CLAUDE.md in current directory
+    # Check for CLAUDE.md in current directory.
+    #
+    # No CLAUDE.md means this is almost always a BRAND-NEW project. We print a
+    # ready-to-run bootstrap prompt for Claude Code rather than auto-launching:
+    # this installer arrives via `irm ... | iex`, whose stdin is the download
+    # pipe (not the console), so a launched interactive `claude` cannot reliably
+    # read keystrokes. The user pastes the prompt into `claude` themselves.
+    # The prompt text mirrors the bash installer's BOOTSTRAP_PROMPT (only the
+    # re-run command differs, PowerShell uses irm | iex).
     if (-not (Test-Path 'CLAUDE.md' -PathType Leaf)) {
-        Write-Host 'Error: CLAUDE.md not found in current directory.'
+        $bootstrapPrompt = @'
+Goal: bootstrap a preliminary CLAUDE.md for this brand-new project, then install the skill-builder skill.
+
+First, create a durable task list with TaskCreate (so this work survives context compaction) covering the steps below, then work through them in order:
+
+1. Ask me, using AskUserQuestion, what this project is meant to accomplish: its purpose and the problem it solves.
+2. Based on my answer, ask focused follow-up questions (one batch at a time) about the language and stack, how to build / run / test it, the key directories, the conventions to follow, and any hard constraints or things to avoid. Keep the questions tight and ask only what you need to write a useful CLAUDE.md. Stop asking once you have enough.
+3. Write a preliminary CLAUDE.md at the project root capturing the purpose, stack, how to build / run / test, layout, and conventions from my answers. Keep it concise and accurate. Do not invent details I did not give you.
+4. As the final step, install the skill-builder skill by running this in a Bash tool:
+   powershell -NoProfile -Command "irm https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install.ps1 | iex"
+5. After it installs, tell me to restart Claude Code and run /skill-builder audit.
+
+Begin with step 1 now.
+'@
+        Write-Host 'No CLAUDE.md found in current directory.'
         Write-Host ''
-        Write-Host 'This installer must be run from a Claude Code project root.'
-        Write-Host "If you haven't initialized Claude Code yet, run:"
+        Write-Host 'If this is an EXISTING project, the quickest path is:'
         Write-Host ''
         Write-Host '    claude /init'
         Write-Host ''
-        Write-Host 'Then run this installer again.'
+        Write-Host 'If this is a BRAND-NEW project, start Claude Code with this goal to'
+        Write-Host 'build a CLAUDE.md interactively, then re-run this installer. Run:'
+        Write-Host ''
+        Write-Host '    claude "<the prompt below>"'
+        Write-Host ''
+        Write-Host '----- bootstrap prompt -----'
+        Write-Host $bootstrapPrompt
+        Write-Host '----------------------------'
         return
     }
 

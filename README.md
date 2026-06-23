@@ -37,11 +37,19 @@ Each layer has its own details and tradeoffs. See [COMMANDS.md § Technical Back
 
 Claude Code **v2.1.32 or later** is required. Skills became user-invocable in v2.1.3 (January 2026). Earlier versions refuse to run `/skill-builder` directly. Check with `claude --version` and update with `claude update` if needed.
 
-```bash
-claude /init
-```
+The installer needs a `CLAUDE.md` at the project root. Which path you take depends on the project:
 
-If you haven't already initialized the project. Then run the installer.
+- **Existing project** (has code already): initialize first, then run the installer.
+
+  ```bash
+  claude /init
+  ```
+
+  `/init` reads your codebase and writes a `CLAUDE.md` for you.
+
+- **Brand-new project** (empty or near-empty directory): do **not** use `claude /init`, because there is nothing for it to read. Instead, just run the installer below. When it finds no `CLAUDE.md`, it offers to start Claude Code with a guided goal. It interviews you about what the project should accomplish, writes a preliminary `CLAUDE.md`, then re-runs the installer automatically. (On Windows PowerShell the installer instead prints a ready-to-paste prompt for you to run in `claude`, since the `irm | iex` pipe cannot drive an interactive session directly.)
+
+Then run the installer.
 
 **Linux / macOS** (or Windows with Git Bash):
 

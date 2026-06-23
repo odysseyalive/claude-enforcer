@@ -21,17 +21,91 @@ echo "Claude Enforcer Installer"
 echo "========================="
 echo
 
-# Check for CLAUDE.md in current directory
+# Check for CLAUDE.md in current directory.
+#
+# No CLAUDE.md means this is almost always a BRAND-NEW project. Rather than
+# erroring out, offer to bootstrap a preliminary CLAUDE.md interactively with
+# Claude Code: it interviews the user about the project, writes the file, then
+# re-runs this installer. (Existing projects are better served by `claude /init`,
+# which we surface in the fallback message and the README.)
+#
+# BOOTSTRAP_PROMPT is the seed handed to `claude` as the session's first turn.
+# It MUST be NATURAL LANGUAGE, not a bare slash command: Claude Code silently
+# DROPS a startup positional prompt that begins with "/". Kept in sync with the
+# here-string printed by install.ps1 (only the re-run command differs).
 if [ ! -f "CLAUDE.md" ]; then
-    echo "Error: CLAUDE.md not found in current directory."
-    echo
-    echo "This installer must be run from a Claude Code project root."
-    echo "If you haven't initialized Claude Code yet, run:"
-    echo
-    echo "    claude /init"
-    echo
-    echo "Then run this installer again."
-    exit 1
+    BOOTSTRAP_PROMPT='Goal: bootstrap a preliminary CLAUDE.md for this brand-new project, then install the skill-builder skill.
+
+First, create a durable task list with TaskCreate (so this work survives context compaction) covering the steps below, then work through them in order:
+
+1. Ask me, using AskUserQuestion, what this project is meant to accomplish: its purpose and the problem it solves.
+2. Based on my answer, ask focused follow-up questions (one batch at a time) about the language and stack, how to build / run / test it, the key directories, the conventions to follow, and any hard constraints or things to avoid. Keep the questions tight and ask only what you need to write a useful CLAUDE.md. Stop asking once you have enough.
+3. Write a preliminary CLAUDE.md at the project root capturing the purpose, stack, how to build / run / test, layout, and conventions from my answers. Keep it concise and accurate. Do not invent details I did not give you.
+4. As the final step, install the skill-builder skill by running this in a Bash tool:
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"
+5. After it installs, tell me to restart Claude Code and run /skill-builder audit.
+
+Begin with step 1 now.'
+
+    print_bootstrap_help() {
+        echo "If this is an EXISTING project, the quickest path is:"
+        echo
+        echo "    claude /init"
+        echo
+        echo "If this is a BRAND-NEW project, start Claude Code with this goal to"
+        echo "build a CLAUDE.md interactively, then re-run this installer:"
+        echo
+        echo "    claude \"<the prompt below>\""
+        echo
+        echo "----- bootstrap prompt -----"
+        printf '%s\n' "$BOOTSTRAP_PROMPT"
+        echo "----------------------------"
+    }
+
+    # No `claude` on PATH → cannot launch; print guidance and stop.
+    if ! command -v claude >/dev/null 2>&1; then
+        echo "Error: CLAUDE.md not found, and the 'claude' CLI is not on PATH."
+        echo
+        print_bootstrap_help
+        exit 1
+    fi
+
+    # Already inside a Claude Code session → do not nest a second one.
+    if [ -n "$CLAUDECODE" ]; then
+        echo "No CLAUDE.md found, and you are already in a Claude Code session."
+        echo "Run this prompt right here to build one, then re-run the installer:"
+        echo
+        echo "----- bootstrap prompt -----"
+        printf '%s\n' "$BOOTSTRAP_PROMPT"
+        echo "----------------------------"
+        exit 0
+    fi
+
+    # Non-interactive (CI, Docker, piped stdin) → never hang waiting on a human.
+    if [ ! -t 0 ]; then
+        echo "Error: CLAUDE.md not found (non-interactive shell, not bootstrapping)."
+        echo
+        print_bootstrap_help
+        exit 1
+    fi
+
+    # Interactive terminal, claude present, not nested → confirm, then hand off.
+    echo "No CLAUDE.md found in $(pwd). This looks like a brand-new project."
+    printf 'Set one up now with Claude Code? [Y/n] '
+    read -r reply
+    case "$reply" in
+        [Nn]*)
+            echo
+            echo "Skipped. To bootstrap later:"
+            echo
+            print_bootstrap_help
+            exit 0
+            ;;
+    esac
+    echo "Launching Claude Code to build your CLAUDE.md..."
+    # exec hands the terminal fully to claude (no trap/temp files exist yet at
+    # this point), and the re-run in step 4 starts a fresh installer process.
+    exec claude "$BOOTSTRAP_PROMPT"
 fi
 
 echo "Found CLAUDE.md in $(pwd)"
