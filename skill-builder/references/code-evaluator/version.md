@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 3 -->
+<!-- code-eval-ref-version: 4 -->
 <!-- origin: skill-builder | modifiable: true -->
 # code-evaluator reference version
 
@@ -10,7 +10,7 @@ This file is the **drift anchor**. `skill-builder audit` reads the integer below
 reference blocks in the user's copy, preserving any `origin: user` seams.
 
 ```
-code-eval-ref-version: 3
+code-eval-ref-version: 4
 ```
 
 Bump this integer whenever ANY file under `references/code-evaluator/` changes in
@@ -20,6 +20,15 @@ with this number so a per-file check is possible.
 
 ## Changelog
 
+- **v4** (2026-06-23) — Native-tool gate gains a **binary-presence probe**. A
+  matched marker file (`package.json`, `Cargo.toml`, …) now only proves the
+  ecosystem; `cross-file-detection.md` § 1 adds `have`/`have_npx`/`have_cargo`
+  helpers so a tool counts as present only when its marker matched AND its binary
+  resolves. Marker-but-no-binary degrades to the ripgrep fallback with a one-line
+  "install for AST-accurate results" note — never an auto-install, never a silent
+  skip. `native-tool-map.md` § Detection points at the probe. `guards.md`,
+  `mistake-taxonomy.md`, and `gotchas.md` are unchanged from their prior versions.
+  `sync` pushes the new content to existing installs.
 - **v3** (2026-06-23) — Prevention-first minimalism, ported from the `ponytail`
   laziness-ladder skill. `mistake-taxonomy.md` Group 2 gains three classes
   (reinvented stdlib/native, needless new dependency, speculative existence/YAGNI),

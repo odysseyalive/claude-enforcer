@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 1 -->
+<!-- code-eval-ref-version: 4 -->
 <!-- origin: skill-builder | modifiable: true -->
 # Cross-File Detection — dead code, duplication, complexity (language-agnostic)
 
@@ -55,10 +55,37 @@ rg --files -g '!**/{node_modules,vendor,dist,build,target,.git}/**' \
   | sed 's/.*\.//' | sort | uniq -c | sort -rn | head    # extension histogram
 ```
 
+A matched marker file means the *ecosystem* is present, not that the *analyzer* is
+installed. Probe the binary before claiming a tool is available — skipping the
+probe silently degrades the gate to ripgrep even when a real tool was one
+`npx`/`command -v` away:
+
+```bash
+have()      { command -v "$1" >/dev/null 2>&1; }                                         # global binary on PATH
+have_npx()  { [ -f package.json ] && npx --no-install "$1" --version >/dev/null 2>&1; }   # local JS dep, never downloads
+have_cargo(){ command -v "cargo-$1" >/dev/null 2>&1; }                                    # cargo subcommand (e.g. cargo-machete)
+
+# Probe ONLY the rows whose marker file matched the fingerprint above:
+have knip        || have_npx knip                # JS/TS dead code  (npx covers a devDependency, no global install)
+have ruff        ; have vulture ; have radon     # Python
+have clippy-driver ; have_cargo machete          # Rust  (clippy ships with the toolchain, invoked as `cargo clippy`)
+have deadcode    ; have staticcheck              # Go
+have jscpd       || have_npx jscpd               # duplication (any ecosystem)
+have lizard                                      # complexity (any ecosystem)
+```
+
+A tool counts as **present** only when its marker file matched AND its probe
+returns 0. Marker-but-no-binary is surfaced ONCE as a one-line note (e.g. "`knip`
+not installed — using ripgrep fallback; `npm i -D knip` for AST-accurate
+results") — never an auto-install, never a silent skip.
+
 Gate logic:
-1. Native dead-code tool present → run it; treat findings as *candidates*; use
-   ripgrep (§2) to cross-check, not replace.
-2. None present → run the ripgrep pipeline (§2–§5) as primary.
+1. Native dead-code tool **probed present** (marker matched AND its binary
+   resolves) → run it; treat findings as *candidates*; use ripgrep (§2) to
+   cross-check, not replace.
+2. Marker matched but the binary is absent, OR no marker at all → run the ripgrep
+   pipeline (§2–§5) as primary. For the marker-but-absent case, emit the one-line
+   "install for better results" note above. **Never auto-install a tool.**
 3. Never trust a single tool's "unused" verdict for an auto-fix; confirm with an
    independent ripgrep reference trace and the §3 safety cycle.
 

@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 1 -->
+<!-- code-eval-ref-version: 4 -->
 <!-- origin: skill-builder | modifiable: true -->
 # Native-Tool Map — prefer a real analyzer when present
 
@@ -14,6 +14,14 @@ consumers.
 Check for both the binary and the marker file:
 `package.json` → JS/TS · `pyproject.toml`/`setup.py` → Python · `Cargo.toml` →
 Rust · `go.mod` → Go · `pom.xml`/`build.gradle` → Java/Kotlin · `*.csproj` → .NET.
+
+A matched marker file proves the ecosystem, not the analyzer. Probe binary
+presence before running — a global binary via `command -v <tool>`, a JS
+devDependency via `npx --no-install <tool> --version` (never downloads), a cargo
+subcommand via `command -v cargo-<sub>`. The concrete probe block lives in
+[cross-file-detection.md](cross-file-detection.md) § 1. A marker with no installed
+binary degrades to the ripgrep fallback with a one-line "install for AST-accurate
+results" note — never an auto-install, never a silent skip.
 
 ## Per-ecosystem
 

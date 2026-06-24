@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 3 -->
+<!-- code-eval-ref-version: 4 -->
 <!-- origin: skill-builder | modifiable: true -->
 # Generated-skill template — `code-evaluator`
 
@@ -53,7 +53,7 @@ and report it.
 name: code-evaluator
 description: Evaluate code to prevent common AI coding mistakes — dead code, duplication, complexity hotspots, reinvented helpers, leftover scaffolding. Two functions plus a pre-write advisor. Use after writing or editing code, when asked to review code quality, clean up the codebase, find unused code, find duplicates, check complexity, or evaluate what an AI just wrote. Commands: review (post-write), sweep (full codebase).
 lane: coding
-code_eval_ref_version: 3
+code_eval_ref_version: 4
 allowed-tools: Read, Glob, Grep, Bash, Task, Skill
 ---
 
