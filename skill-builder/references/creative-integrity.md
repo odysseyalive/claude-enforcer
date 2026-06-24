@@ -189,8 +189,10 @@ alone (tier 2 below), and pattern-library gap appends are APPLIED rather than de
 2. **New-skill scaffold (install-on-absence — 2026-06-12 directive, superseding newest-wins
    the 2026-06-11 declared-evidence precondition).** Eligible on **absence alone**: the
    signal-based existence test (§ Build Scaffolds pre-build guards) finds NO skill performing
-   the evaluator function, no `text-eval` skill directory exists, and `model-lanes.md` carries
-   no `<!-- creative-scrub-build: off -->` marker. Lane declarations do not gate the build —
+   the evaluator function, no `text-eval` skill directory exists, `model-lanes.md` carries
+   no `<!-- creative-scrub-build: off -->` marker, and the audit Step 0.3 companion gate did not
+   resolve `text-eval=off` (2026-06-24 — an unchecked `text-eval` suppresses the build the same
+   way the legacy marker does). Lane declarations do not gate the build —
    an all-coding project receives the evaluator too (the code-evaluator ensure-exists
    precedent, audit.md § Step 4a-bis). The scaffold authors its own `lane: creative`
    frontmatter and never touches the project's Skill→Lane table — declared-never-inferred
@@ -374,7 +376,11 @@ names are a completion-breaking conflict per reconcile's collision table); (c) *
 opt-out** — a `<!-- creative-scrub-build: off -->` marker in `references/model-lanes.md` (the
 same update-preserved, per-project mechanism as the setup-state markers) silently suppresses
 the new-skill build: a declarative opt-out, never a question (2026-06-12 directive's
-panel-adopted guard).
+panel-adopted guard). **As of 2026-06-24, the audit Step 0.3 Companion-Skill Selection Gate is
+the interactive equivalent:** an unchecked `text-eval` resolves the per-project
+`<!-- companion-skills: …,text-eval=off,… -->` marker (model-lanes.md § Companion Skills), which
+suppresses this scaffold exactly as `creative-scrub-build: off` does (the legacy marker reads as
+`text-eval=off`). Either marker present → no build.
 
 ## Research Digest (2026-06-11 — coding-lane research waves)
 

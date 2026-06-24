@@ -120,6 +120,54 @@ of the re-ask. The picker never writes this marker.
 
 ---
 
+## Companion Skills (per-project install/remove selection, managed by audit Step 0.3)
+
+Audit force-installs a small set of evaluator/helper **companion skills**. Per the 2026-06-24
+directive, audit's SECOND question (the Companion-Skill Selection Gate, audit.md § Step 0.3) is a
+multi-select checkbox letting you opt in or out of each, so a project with its own intricate
+evaluator set is never force-managed. Your choices are remembered here, per project, in a marker:
+
+```
+<!-- companion-skills: text-eval=on|off, code-evaluator=on|off, route=on|off, awareness-ledger=on|off -->
+```
+
+(The `on|off` above is a template; the active marker — written beside `model-lane-setup` with each
+key resolved to a single `on` or `off` — is what audit reads. Audit ignores this fenced example.)
+
+| Key | Companion | `on` | `off` |
+|-----|-----------|------|-------|
+| `text-eval` | text AI-tells evaluator | install-on-absence scaffold authorized | scaffold suppressed; if present + skill-builder-scaffolded, removal DEFERS to `strip` |
+| `code-evaluator` | code-quality evaluator | `code-eval create` authorized | create suppressed; removal DEFERS to `strip` |
+| `route` *(recommended)* | the `/route` dispatcher | `route index`/embed terminal tasks run | bootstrap suppressed when absent; removal DEFERS to `strip --confirm-breaking` when present |
+| `awareness-ledger` *(recommended)* | institutional-memory ledger | `ledger --execute` authorized | install suppressed; removal DEFERS to `strip` |
+
+**How the gate uses this marker:**
+
+- **Pre-check** — boxes are pre-checked by a **signal-based** presence test (a skill performing the
+  function counts under any directory name), reconciled against this marker. On-disk presence wins
+  for the pre-check; the marker records your intent. `route` and `awareness-ledger` show
+  `(recommended)` and default checked even when absent.
+- **Checked + absent** → the companion's install task is authorized (it does NOT run unconditionally
+  anymore — the checkbox is its authorization).
+- **Unchecked + absent** → install suppressed (the opt-out).
+- **Unchecked + present + skill-builder-scaffolded** → removal is **DEFERRED** to a ready-to-run
+  `/skill-builder strip <key> --execute` command (audit never auto-deletes; "Always defer to
+  strip"). Strip performs the complete cross-reference disconnection plus the `route index`/embed
+  refresh.
+- **Unchecked + present + your own hand-authored skill** → never removed (provenance guard); the
+  gate only notes that your own skill serves the function.
+
+**Back-compat.** A legacy `<!-- creative-scrub-build: off -->` marker (the 2026-06-12 text-eval
+build opt-out) reads as `text-eval=off` for the purpose of suppressing the text-eval scaffold.
+
+**Suppression.** The gate is interactive-only: headless / non-interactive runs and `audit --quick`
+render no checkbox, write no marker, and **remove nothing** — they honor an existing marker, or, with
+no marker, fall back to the pre-2026-06-24 install-on-absence defaults. Absence of an answer never
+means remove. A missing marker means "never configured" — the first full interactive audit asks and
+writes it. Hand-edit the marker any time to change your selection; delete it to be re-asked fresh.
+
+---
+
 ## Active-Model Detection (how audit reads the current model)
 
 There is **no environment variable or settings field** that reports the active session model.
