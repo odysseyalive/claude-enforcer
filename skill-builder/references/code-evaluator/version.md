@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 4 -->
+<!-- code-eval-ref-version: 5 -->
 <!-- origin: skill-builder | modifiable: true -->
 # code-evaluator reference version
 
@@ -10,7 +10,7 @@ This file is the **drift anchor**. `skill-builder audit` reads the integer below
 reference blocks in the user's copy, preserving any `origin: user` seams.
 
 ```
-code-eval-ref-version: 4
+code-eval-ref-version: 5
 ```
 
 Bump this integer whenever ANY file under `references/code-evaluator/` changes in
@@ -20,6 +20,15 @@ with this number so a per-file check is possible.
 
 ## Changelog
 
+- **v5** (2026-06-23) — Native-tool gate gains **PHP** and **.NET / C#** coverage.
+  `native-tool-map.md` adds `composer.json → PHP` and `*.csproj`/`*.sln` → .NET to
+  detection, plus per-ecosystem rows: PHP (`shipmonk/dead-code-detector` /
+  `psalm --find-dead-code`; `jscpd` since `phpcpd` is archived; `phpmd`/
+  `phpmetrics`) and .NET (Roslyn analyzers / `roslynator analyze`; `jscpd`/
+  `pmd cpd` since dupFinder was sunset; `lizard`/`roslynator`). `cross-file-detection.md`
+  § 1 gains a `have_php` helper (probes `vendor/bin/` and global) and PHP/.NET
+  probe rows. `guards.md`, `mistake-taxonomy.md`, and `gotchas.md` unchanged.
+  `sync` pushes the new content to existing installs.
 - **v4** (2026-06-23) — Native-tool gate gains a **binary-presence probe**. A
   matched marker file (`package.json`, `Cargo.toml`, …) now only proves the
   ecosystem; `cross-file-detection.md` § 1 adds `have`/`have_npx`/`have_cargo`

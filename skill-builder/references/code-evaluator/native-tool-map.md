@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 4 -->
+<!-- code-eval-ref-version: 5 -->
 <!-- origin: skill-builder | modifiable: true -->
 # Native-Tool Map — prefer a real analyzer when present
 
@@ -13,7 +13,8 @@ consumers.
 
 Check for both the binary and the marker file:
 `package.json` → JS/TS · `pyproject.toml`/`setup.py` → Python · `Cargo.toml` →
-Rust · `go.mod` → Go · `pom.xml`/`build.gradle` → Java/Kotlin · `*.csproj` → .NET.
+Rust · `go.mod` → Go · `pom.xml`/`build.gradle` → Java/Kotlin · `composer.json` →
+PHP · `*.csproj`/`*.sln` → .NET.
 
 A matched marker file proves the ecosystem, not the analyzer. Probe binary
 presence before running — a global binary via `command -v <tool>`, a JS
@@ -32,6 +33,8 @@ results" note — never an auto-install, never a silent skip.
 | **Rust** | compiler `dead_code` lint + `clippy`, `cargo machete` (deps, fast), `cargo +nightly udeps` (deps, accurate) | `jscpd` | `clippy` cognitive-complexity | `pub` items exempt from `dead_code` by design (treated as API) |
 | **Go** | `golang.org/x/tools/cmd/deadcode` (whole-program from `main`; `-test`, `-whylive`), `staticcheck` `U1000` | `dupl`, `jscpd` | `gocyclo`, `gocognit` | `deadcode` can't analyze a library pkg (no `main`); reflection assumed broad |
 | **Java/Kotlin** | `pmd` (UnusedX rules) | `pmd cpd`, `jscpd` | `pmd` | — |
+| **PHP** | `shipmonk/dead-code-detector` (PHPStan ext, auto-remove), `psalm --find-dead-code` | `jscpd` (`phpcpd` archived → `systemsdk/phpcpd` fork) | `phpmd`, `phpmetrics` | tools run from `vendor/bin/` (composer-local) or global. psalm/PHPStan dead-code need a **whole-project** run — single-file misses methods; `@psalm-api`/`@api` exempts public surface |
+| **.NET / C#** | Roslyn analyzers via `dotnet build` (`IDE0051` unused private), `roslynator analyze` (CLI) | `jscpd`, `pmd cpd` (dupFinder sunset 2021 → InspectCode/Qodana) | `lizard`, `roslynator` | `roslynator` = `dotnet tool install -g roslynator.dotnet.cli`. Roslyn unused-private is intra-project; public/cross-assembly needs whole-solution + the published-surface guard |
 | **Any / fallback** | — | `jscpd`, `pmd cpd` (token clones incl. renamed vars) | `lizard` (CCN/NLOC/params, ~16 langs; `--duplicate` also finds clones) | `ast-grep`/`sg` for structural grep when comment/string noise defeats plain ripgrep |
 
 ## Decision rule

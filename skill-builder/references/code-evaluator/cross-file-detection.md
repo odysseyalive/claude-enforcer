@@ -1,4 +1,4 @@
-<!-- code-eval-ref-version: 4 -->
+<!-- code-eval-ref-version: 5 -->
 <!-- origin: skill-builder | modifiable: true -->
 # Cross-File Detection — dead code, duplication, complexity (language-agnostic)
 
@@ -64,14 +64,17 @@ probe silently degrades the gate to ripgrep even when a real tool was one
 have()      { command -v "$1" >/dev/null 2>&1; }                                         # global binary on PATH
 have_npx()  { [ -f package.json ] && npx --no-install "$1" --version >/dev/null 2>&1; }   # local JS dep, never downloads
 have_cargo(){ command -v "cargo-$1" >/dev/null 2>&1; }                                    # cargo subcommand (e.g. cargo-machete)
+have_php()  { command -v "$1" >/dev/null 2>&1 || [ -x "vendor/bin/$1" ]; }                # composer-local (vendor/bin) or global
 
 # Probe ONLY the rows whose marker file matched the fingerprint above:
 have knip        || have_npx knip                # JS/TS dead code  (npx covers a devDependency, no global install)
 have ruff        ; have vulture ; have radon     # Python
 have clippy-driver ; have_cargo machete          # Rust  (clippy ships with the toolchain, invoked as `cargo clippy`)
 have deadcode    ; have staticcheck              # Go
-have jscpd       || have_npx jscpd               # duplication (any ecosystem)
-have lizard                                      # complexity (any ecosystem)
+have_php phpstan ; have_php psalm ; have_php phpmd # PHP dead code / complexity (composer-local; phpcpd archived → jscpd below)
+have dotnet      ; have roslynator               # .NET dead code (roslynator = `dotnet tool install -g roslynator.dotnet.cli`)
+have jscpd       || have_npx jscpd               # duplication (any ecosystem — incl. PHP & .NET; dupFinder sunset)
+have lizard                                      # complexity (any ecosystem — incl. PHP & C#)
 ```
 
 A tool counts as **present** only when its marker file matched AND its probe
