@@ -138,24 +138,31 @@ key resolved to a single `on` or `off` — is what audit reads. Audit ignores th
 |-----|-----------|------|-------|
 | `text-eval` | text AI-tells evaluator | install-on-absence scaffold authorized | scaffold suppressed; if present + skill-builder-scaffolded, removal DEFERS to `strip` |
 | `code-evaluator` | code-quality evaluator | `code-eval create` authorized | create suppressed; removal DEFERS to `strip` |
-| `route` *(recommended)* | the `/route` dispatcher | `route index`/embed terminal tasks run | bootstrap suppressed when absent; removal DEFERS to `strip --confirm-breaking` when present |
-| `awareness-ledger` *(recommended)* | institutional-memory ledger | `ledger --execute` authorized | install suppressed; removal DEFERS to `strip` |
+| `route` | the `/route` dispatcher | `route index`/embed terminal tasks run | bootstrap suppressed when absent; removal DEFERS to `strip --confirm-breaking` when present |
+| `awareness-ledger` | institutional-memory ledger | `ledger --execute` authorized | install suppressed; removal DEFERS to `strip` |
 
-**How the gate uses this marker:**
+**How the gate uses this marker (INVERTED widget — a check means *opt out*):**
 
-- **Pre-check** — boxes are pre-checked by a **signal-based** presence test (a skill performing the
-  function counts under any directory name), reconciled against this marker. On-disk presence wins
-  for the pre-check; the marker records your intent. `route` and `awareness-ledger` show
-  `(recommended)` and default checked even when absent.
-- **Checked + absent** → the companion's install task is authorized (it does NOT run unconditionally
-  anymore — the checkbox is its authorization).
-- **Unchecked + absent** → install suppressed (the opt-out).
-- **Unchecked + present + skill-builder-scaffolded** → removal is **DEFERRED** to a ready-to-run
+`AskUserQuestion` cannot pre-check boxes (it has no `selected`/`default` field), so the gate **inverts**
+the checkbox meaning rather than rendering a checkmark: an **unchecked** box keeps/installs the
+companion, a **checked** box opts it out. Presence is computed by a **signal-based** test (a skill
+performing the function counts under any directory name) and shown in each row's label as
+**PRESENT/ABSENT** — never as a pre-check. Leaving every box unchecked is the safe default: keep all
+present companions, install the absent install-on-absence ones (`route`, `awareness-ledger`,
+`text-eval`, `code-evaluator`). **No "(recommended)" wording is shown** — that mechanic is superseded
+(2026-06-24) because a "(recommended)" tag next to a remove-checkbox reads as "recommended to remove";
+`route` and `awareness-ledger` are simply the install-on-absence defaults, kept unless checked out.
+
+- **Unchecked + present** → kept; marker `=on`; no action.
+- **Unchecked + absent** → the companion's install task is authorized (it does NOT run unconditionally
+  anymore — the empty box is its authorization); marker `=on`.
+- **Checked + absent** → install suppressed (the opt-out); marker `=off`.
+- **Checked + present + skill-builder-scaffolded** → removal is **DEFERRED** to a ready-to-run
   `/skill-builder strip <key> --execute` command (audit never auto-deletes; "Always defer to
   strip"). Strip performs the complete cross-reference disconnection plus the `route index`/embed
-  refresh.
-- **Unchecked + present + your own hand-authored skill** → never removed (provenance guard); the
-  gate only notes that your own skill serves the function.
+  refresh; marker `=off`.
+- **Checked + present + your own hand-authored skill** → never removed (provenance guard); the
+  gate only notes that your own skill serves the function; marker `=off`.
 
 **Back-compat.** A legacy `<!-- creative-scrub-build: off -->` marker (the 2026-06-12 text-eval
 build opt-out) reads as `text-eval=off` for the purpose of suppressing the text-eval scaffold.
