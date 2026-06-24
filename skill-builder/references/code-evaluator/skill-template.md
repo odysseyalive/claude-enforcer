@@ -2,7 +2,7 @@
 <!-- origin: skill-builder | modifiable: true -->
 # Generated-skill template — `code-evaluator`
 
-`code-eval create` instantiates the three files below into the user's project:
+`code-eval create` instantiates the files below into the user's project:
 
 ```
 .claude/skills/code-evaluator/
@@ -16,6 +16,21 @@
     guards.md                               ← COPIED
     gotchas.md                              ← COPIED
 ```
+
+`create` also writes two **agent registrations** so the agents are spawnable via the
+Task tool — Claude Code only resolves a `subagent_type` registered under
+`.claude/agents/` (writing the AGENT.md under the skill directory alone is not
+enough; that omission is what made the Phase 1 enforce hook's advisor spawn fail):
+
+```
+.claude/agents/code-design-advisor.md   ← symlink/copy → skills/code-evaluator/agents/code-design-advisor/AGENT.md
+.claude/agents/deadcode-gardener.md     ← symlink/copy → skills/code-evaluator/agents/deadcode-gardener/AGENT.md
+```
+
+These registrations are marker-neutral: the agents do NOT carry `generated-by:
+skill-builder lane-excursion` (they are the evaluator's own L1/L2 agents, not
+cross-lane excursion minions, so the fleet contract-stamp / orphan-retirement
+machinery does not apply — DEC-2026-06-08).
 
 The five `references/*.md` are copied verbatim from skill-builder's shipped
 `references/code-evaluator/` (they keep their `<!-- code-eval-ref-version -->`

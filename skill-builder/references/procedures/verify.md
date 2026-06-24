@@ -133,6 +133,10 @@ For each agent carrying `generated-by: skill-builder lane-excursion` (from the S
 - **Contract stamped?** `contract-stamp:` present → recompute against the current skill workflow; mismatch → WARN `CONTRACT-DRIFT` ("skill changed under the minion — run `agents [skill]`"). Absent → WARN `UNSTAMPED`.
 - **Orphaned?** `excursion-skill:` names a directory that no longer exists → WARN with the retirement path (marker-gated AUTO task in audit's execution phase; DEFER in no-VCS projects — audit.md § Step 4f.5-bis).
 
+### Step 4c: Code-Evaluator Agent Registration (marker-neutral)
+
+Independently of the lane-excursion fleet, the two `code-evaluator` agents must be spawnable via the Task tool, or the `code-eval enforce` Phase 1 hard block (and any `CODE-EVAL-EMBED` advisor spawn) cannot resolve. If `.claude/skills/code-evaluator/SKILL.md` exists, for each of `code-design-advisor` and `deadcode-gardener` confirm a `.claude/agents/<name>.md` registration resolves (deref symlinks; copy-fallback counts). Unregistered → **FAIL** — "code-evaluator agent <name> unregistered: the Phase 1 enforce hook's Task spawn cannot resolve. Re-register via `/skill-builder code-eval create` (idempotent repair) or `/skill-builder audit`." This check recomputes NO contract stamp and considers NO orphan retirement — these are the evaluator's own agents, not lane-excursion minions (DEC-2026-06-08). `code-evaluator` not installed → N/A (skip silently).
+
 ### Step 5: Summary Output
 
 ```
@@ -148,6 +152,7 @@ For each agent carrying `generated-by: skill-builder lane-excursion` (from the S
 | Hooks executable | [N]/[N] [PASS/FAIL] |
 | Shell-safety lint (hooks/settings) | [N]/[N] [PASS/WARN/FAIL] |
 | Code-eval enforcement | [WIRED/WIRED-STALE/UNWIRED/N/A] |
+| Code-eval agents registered | [N]/[N] [PASS/FAIL/N/A] |
 | Stale artifacts | [NONE/WARN — list] |
 | Agents referenced | [N]/[N] [PASS/FAIL] |
 | Minions registered (lane-excursion fleet) | [N]/[N] [PASS/FAIL/N/A] |

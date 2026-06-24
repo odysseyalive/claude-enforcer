@@ -45,9 +45,15 @@ Scaffold `.claude/skills/code-evaluator/` if it does not already exist. Modeled 
 [new.md](new.md).
 
 ### Step 1 — Existence + name check
-- If `.claude/skills/code-evaluator/SKILL.md` already exists → do NOT overwrite.
-  Report: "code-evaluator already installed (ref version N). Use
-  `/skill-builder code-eval sync` to update its references." STOP.
+- If `.claude/skills/code-evaluator/SKILL.md` already exists → do NOT overwrite the
+  skill. First **repair any missing registration** (idempotent): for each of
+  `code-design-advisor` and `deadcode-gardener`, if `.claude/agents/<name>.md` does
+  not resolve to the installed AGENT.md, (re)create it per Step 3's registration
+  rule. This self-heals installs created before registration was part of `create`
+  (the agent files exist but were never registered, so the Phase 1 enforce hook's
+  Task spawn cannot resolve). Then report: "code-evaluator already installed (ref
+  version N)[; re-registered <names>]. Use `/skill-builder code-eval sync` to update
+  its references." STOP.
 
 ### Step 2 — Persona-uniqueness gate (BLOCKING)
 Per the user directive *"Each agent being created by this system always has to
@@ -76,6 +82,21 @@ write:
   `lane: coding` and `code_eval_ref_version: <shipped version>`.
 - `.claude/skills/code-evaluator/agents/code-design-advisor/AGENT.md` (§ADVISOR AGENT).
 - `.claude/skills/code-evaluator/agents/deadcode-gardener/AGENT.md` (§REVIEWER AGENT).
+
+**Register both agents so they are spawnable via the Task tool.** Writing the
+AGENT.md under the skill directory is NOT enough — Claude Code only resolves a
+`subagent_type` that has a registration under `.claude/agents/<name>.md`. After
+writing each AGENT.md, create its registration (mirroring [agents.md](agents.md)
+§ Step 4):
+- `.claude/agents/code-design-advisor.md` → the advisor AGENT.md
+- `.claude/agents/deadcode-gardener.md` → the reviewer AGENT.md
+Prefer a symlink; fall back to a copy where symlinks are unavailable (Windows) and
+report which was used. **Without this, the `code-eval enforce` Phase 1 hard block
+instructs the model to "Spawn the code-design-advisor (Task)" — an agent type that
+does not resolve — and the model is forced to improvise a bypass.** These are NOT
+lane-excursion minions: do NOT stamp `generated-by: skill-builder lane-excursion`
+or a `contract-stamp:` on them (that marker drives orphan-retirement deletion and
+CONTRACT-DRIFT findings meant for cross-lane agents — DEC-2026-06-08).
 
 Then COPY the shipped intel references verbatim from
 `<skill-builder-install>/references/code-evaluator/` into
@@ -145,6 +166,10 @@ For each shipped reference file (`cross-file-detection.md`, `mistake-taxonomy.md
   so this is a wholesale refresh; the block-aware merge protects future user edits.
 - Also refresh the two AGENT.md files and the non-frontmatter body of SKILL.md the
   same way, preserving any user-origin blocks and the user's chosen personas.
+- **Ensure both agent registrations resolve** (idempotent): for each of
+  `code-design-advisor` and `deadcode-gardener`, if `.claude/agents/<name>.md` is
+  missing, (re)create it per § create Step 3; on a copy-fallback host, refresh the
+  copy so the registration never drifts from the AGENT.md sync just applied.
 
 ### Step 3 — Stamp + report
 Update the user SKILL.md frontmatter `code_eval_ref_version` to `shipped`. Report:
@@ -189,7 +214,7 @@ narrows the agent's attention, it never renders a verdict.
 
 ### Enforce script versioning & drift
 
-<!-- code-eval-enforce-version: 1 -->
+<!-- code-eval-enforce-version: 2 -->
 
 The generated hook scripts are **versioned** so a wired host can detect when its
 on-disk scripts predate the current procedure — the scripts are host-generated and
@@ -217,6 +242,13 @@ Drift is a one-way, host-only refresh:
 - **v1** (2026-06-23) — First versioned release. Phase 2 gains the deterministic
   ladder-signal pre-filter (rung 5 dependency / scaffolding / rung 2 reinvented
   helper). Pre-versioning wired installs report `recorded = 0` → stale → re-run.
+- **v2** (2026-06-23) — Phase 1 before-write message gains a diagnostic line for the
+  case where `code-design-advisor` does not resolve (unregistered/uninstalled
+  evaluator): it points at `/skill-builder code-eval create` to restore the
+  registration and forbids fabricating a substitute agent, instead of leaving the
+  model to invent a bypass. Paired with the new registration step in `create`/`sync`
+  (the agent is now actually spawnable). Wired pre-v2 hosts report `recorded(1) <
+  shipped(2)` → stale → DEFER re-run.
 
 ### The three enforcement phases
 
@@ -245,6 +277,12 @@ consumers (the hooks, the evaluator's `CODE-EVAL-ENFORCE` block, verify, audit).
 2. **Require `code-evaluator` installed.** If `.claude/skills/code-evaluator/SKILL.md`
    is absent → STOP: "code-evaluator not installed — run `/skill-builder code-eval create`
    first." The enforce hooks are inert without the skill they invoke.
+2-bis. **Require both agents registered.** The Phase 1 hook hard-blocks until the
+   `code-design-advisor` is spawned via Task — so it MUST resolve. For each of
+   `code-design-advisor` and `deadcode-gardener`, confirm `.claude/agents/<name>.md`
+   resolves to the installed AGENT.md; if missing, (re)create it per § create Step 3
+   BEFORE wiring (it is additive/mechanical, not a hook write). Never wire a Phase 1
+   hard block pointing at an unregistered agent.
 3. **Require the evaluator coordination block.** The generated `code-evaluator`
    SKILL.md must carry the `CODE-EVAL-ENFORCE` managed block (shipped in
    skill-template.md § SKILL.md). If absent (an older evaluator) → append it via a
@@ -298,7 +336,7 @@ any internal error exits 0 so a broken hook never bricks editing or commits
 ```bash
 #!/bin/bash
 # code-eval enforce — Phase 1 (before write): force design direction before code lands.
-# code-eval-enforce-version: 1
+# code-eval-enforce-version: 2
 trap 'exit 0' ERR
 INPUT=$(cat 2>/dev/null) || exit 0
 PROJ="${CLAUDE_PROJECT_DIR:-.}"
@@ -314,6 +352,7 @@ esac
   echo "BLOCKED by code-eval enforce (before-write): get design direction before writing code."
   echo "1. Spawn the code-design-advisor (Task) for this approach — what already exists, what to reuse, what to watch for."
   echo "2. Then mark direction taken and re-attempt: touch \"$PROJ/.claude/.code-eval-advised\""
+  echo "   If the code-design-advisor agent type does not resolve, the code-evaluator is not registered. Run /skill-builder code-eval create to restore it. Do NOT fabricate a substitute agent or skip the design check."
 } >&2
 exit 2
 ```
@@ -322,7 +361,7 @@ exit 2
 ```bash
 #!/bin/bash
 # code-eval enforce — Phase 2 (at write): track unreviewed source, emit deterministic ladder signals, remind to review.
-# code-eval-enforce-version: 1
+# code-eval-enforce-version: 2
 trap 'exit 0' ERR
 INPUT=$(cat 2>/dev/null) || exit 0
 PROJ="${CLAUDE_PROJECT_DIR:-.}"
@@ -415,7 +454,7 @@ Discipline (all fail-open, all bounded):
 ```bash
 #!/bin/bash
 # code-eval enforce — Phase 3 (commit gate): no commit/push until the tree matches the last clean review.
-# code-eval-enforce-version: 1
+# code-eval-enforce-version: 2
 trap 'exit 0' ERR
 INPUT=$(cat 2>/dev/null) || exit 0
 PROJ="${CLAUDE_PROJECT_DIR:-.}"
