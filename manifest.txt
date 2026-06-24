@@ -48,6 +48,8 @@ skill-builder/references/procedures/agents.md
 skill-builder/references/procedures/hooks.md
 skill-builder/references/procedures/new.md
 skill-builder/references/procedures/strip.md
+skill-builder/references/procedures/backup.md
+skill-builder/references/procedures/restore.md
 skill-builder/references/procedures/directives.md
 skill-builder/references/procedures/inline.md
 skill-builder/references/procedures/post-action-chain.md
