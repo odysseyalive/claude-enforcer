@@ -89,7 +89,7 @@ respond. Three states:
 | State | Meaning | Audit behavior |
 |-------|---------|----------------|
 | `unset` | You have never configured lanes and never declined. The fresh-install default. | On a full interactive `audit`, offer the one-time **setup prompt** (Set it up now / Not now / Never ask in this project). |
-| `configured` | Lanes are set up. | Run the **Lane→Model picker** (re-confirm which model is creative and which is coding/everything-else, current values pre-selected as defaults — see [lane-delegation.md](lane-delegation.md) § Lane→Model Picker), then the normal mismatch check (§ Comparison Rule), reported as one-line advisories only — never a switch prompt. No *setup* offer. |
+| `configured` | Lanes are set up. | Run the **Lane→Model picker** UP FRONT at audit [§ Step 0.4](procedures/audit.md) (re-confirm which model is creative and which is coding/everything-else, current values pre-selected as defaults — see [lane-delegation.md](lane-delegation.md) § Lane→Model Picker), then later the normal mismatch check at § Step 4f (§ Comparison Rule), reported as one-line advisories only — never a switch prompt. No *setup* offer. |
 | `declined` | You chose "Never ask in this project." | Silent no-op. Audit never offers setup again (until you change this marker by hand). |
 
 **Reconciliation (no nag for manual setups).** If the marker says `unset` (or is missing) BUT the
@@ -311,7 +311,7 @@ every regeneration and reports `STALE-FUNCTION` rows; it never invents or auto-d
 
 ---
 
-*Read by `references/procedures/audit.md` § Step 4f (audit-time check + Lane→Model picker), by the
+*Read by `references/procedures/audit.md` § Step 0.4 (the every-audit Lane→Model picker) and § Step 4f (audit-time mismatch check + one-time setup onboarding), by the
 `MODEL-LANE-GATE` preflight that `references/procedures/route.md` § Step 8 embeds into
 lane-declared skills (invocation-time check), and by the excursion-delegation machinery in
 `references/lane-delegation.md` / `references/procedures/agents.md` § Step 4d. Installed if-absent

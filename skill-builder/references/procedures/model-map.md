@@ -4,7 +4,7 @@
 `model-map` lets the user choose the **creative** model and the **coding / everything-else** model
 (the 2-brain harness Lane→Model mapping), applies every resulting change, and stops — **without
 running a full `audit`**. It is the standalone door to the same machinery audit reaches at
-[audit.md](audit.md) § Step 4f step 2-bis. It is a mapping refresh only; it never scans skills,
+[audit.md](audit.md) § Step 0.4 (the every-audit picker). It is a mapping refresh only; it never scans skills,
 never assigns skills to lanes, and never switches the session model.
 
 **This procedure reuses canonical specs by pointer — do NOT duplicate them here:**
@@ -13,7 +13,7 @@ never assigns skills to lanes, and never switches the session model.
 - Setup-state semantics, Active-Model Detection, blank-cell-to-disable → [model-lanes.md](../model-lanes.md).
 
 This single picker implementation is shared with audit; if you change the picker behavior, change it
-in lane-delegation.md so both callers stay in sync (audit § Step 4f step 2-bis is the other caller).
+in lane-delegation.md so both callers stay in sync (audit § Step 0.4 is the other caller).
 
 ---
 
@@ -146,6 +146,6 @@ Print a short summary (no terminal question — this is informational prose):
 
 **Grounding:** [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker + § Fleet Rewrite on
 Remap (canonical picker + fleet mechanics), [model-lanes.md](../model-lanes.md) § Setup State /
-§ Active-Model Detection / § Comparison Rule, [audit.md](audit.md) § Step 4f step 2-bis (the other
+§ Active-Model Detection / § Comparison Rule, [audit.md](audit.md) § Step 0.4 (the other
 caller of the same picker), SKILL.md § Directives (No-Switch-Prompt Gate, Audit Agent
 Model-Assignment Gate, Non-Obvious Decision Gate).

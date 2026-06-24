@@ -260,7 +260,7 @@ announcements still print, so headless runs keep an auditable trail.
 
 ---
 
-## Lane→Model Picker (consumed by audit.md § Step 4f Step 2-bis)
+## Lane→Model Picker (consumed by audit.md § Step 0.4 and § Step 4f-setup, and by model-map.md)
 
 On **every full interactive audit** (suppressed: headless/non-interactive, `audit --quick`,
 `--no-model-prompt`), the user is asked which model handles each lane. ONE batched AskUserQuestion,
