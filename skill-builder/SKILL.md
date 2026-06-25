@@ -462,6 +462,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `code-eval [mode]` | [code-eval.md](references/procedures/code-eval.md) | Scaffold/maintain the `code-evaluator` skill (create / review / sweep / sync) |
 | `model-map` | [model-map.md](references/procedures/model-map.md) | Choose the creative + coding/everything-else model (Lane→Model picker + fleet rewrite), no audit |
 | `local-mode [--execute]` | [local-mode.md](references/procedures/local-mode.md) | Audit project for local LLM compatibility (classify skills, trim, install local infrastructure) |
+| `loop-foreman [create]` | [loop-foreman.md](references/procedures/loop-foreman.md) | Scaffold the `loop-foreman` skill (autonomous bounded task loop: work-order gate, mechanical+reasoning grader) |
 | `update` | *(inline below)* | Update to latest version |
 <!-- /origin -->
 
@@ -577,6 +578,22 @@ Choose which model runs the **creative** lane and which runs the **coding / ever
 ---
 
 <!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `loop-foreman` Command
+
+Scaffold the `loop-foreman` skill — a companion that drives a large, well-specified task to completion **unattended**, so the user can start it and step away. The work runs in a bounded worker→grader loop; "done" is gated behind a **mechanical oracle AND a fresh-context reasoning grader** (both must pass); the loop escalates to the human only on genuinely consequential forks. This command is skill-builder machinery; the `loop-foreman` skill it produces is what end users run (`/loop-foreman run`).
+
+v1 is the lean increment (ledger DEC-2026-06-25-loop-foreman-design): `create` only.
+
+- `/skill-builder loop-foreman create` — scaffold `loop-foreman` if absent (low-risk; executes). Runs the persona-uniqueness gate, stamps each agent's `model:` from the coding lane, writes the grader + research-assistant agents and registers them under `.claude/agents/`, copies the shipped recipe + rubric references, then chains `route index` so `/route` can OFFER it for large multi-task endeavors.
+
+The created skill's design, in one line: a single up-front **work order** (a checkable definition of done + the reach + a pre-authorized irreversible-action allowlist) is the consent that earns "step away"; the loop **offers, never auto-arms**; the second of its two checks is a **non-LLM oracle** so the loop never ships on a model grading its own work; bounds (cycle cap, best-so-far, divergence abort) are imported from the Canonical Scrub-Loop Spec; and persistent grader disagreement *is* the escalation signal. Honest scope: markdown instructs but cannot enforce — the hard loop bound holds only when the `Workflow` tool drives it, and the stop on irreversible actions is best-effort prose until a host-generated hook lands (a later increment).
+
+**Grounding:** Read [references/procedures/loop-foreman.md](references/procedures/loop-foreman.md) for the create procedure, [references/loop-foreman/skill-template.md](references/loop-foreman/skill-template.md) for the generated SKILL.md + grader/researcher agent templates, [references/loop-foreman/grader-rubric.md](references/loop-foreman/grader-rubric.md) for the work order + two-check gate + stop threshold, and [references/loop-foreman/workflow-recipe.md](references/loop-foreman/workflow-recipe.md) for the bounded loop recipe.
+<!-- /origin -->
+
+---
+
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
 ## The `reconcile` Command
 
 Detect redundancies and collisions **across** skills and remediate only the ones that are mechanically safe. Where `cascade` looks inside one skill for over-suppression, `reconcile` looks across the whole installed set for the colliding-task failure mode: as a project grows and skills accumulate, two skills can fight over the same trigger, hook matcher, command name, dispatch step, or file region — so a skill "seems to fail to run" when it was really shadowed, bypassed, suppressed, or overwritten.
@@ -662,7 +679,7 @@ Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell s
    - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
    - NO  → `dev_mode = false`.
 2. Extract the first remaining positional argument as `first_arg`.
-3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, model-map, local-mode, backup, restore, update }`.
+3. Define the known-command set: `{ audit, optimize, agents, hooks, new, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, model-map, local-mode, loop-foreman, backup, restore, update }`.
 4. IF `first_arg` is empty (no arguments remaining) → dispatch to the default full-audit flow per § Quick Commands. Do NOT invoke the intent router. STOP this CHECKPOINT.
 5. IF `first_arg` is in the known-command set → treat it as the command name. Determine whether a skill target was specified in the remaining arguments. CONTINUE to step 7.
 6. IF `first_arg` is NOT in the known-command set AND the remaining argument string is non-empty →
@@ -696,7 +713,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 
 | Risk | Commands | Default Mode |
 |------|----------|-------------|
-| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync`, `model-map`, `backup` | **Execute directly** |
+| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync`, `model-map`, `loop-foreman create`, `backup` | **Execute directly** |
 | **Single-consent auto** (2026-06-06 Audit Autonomy Gate) | `audit`, `audit --quick` | **Scan + report, then auto-execute** under the Step 0 disclaimer consent; `--review`/`--dry-run` = report-only; `--execute` = harmless no-op |
 | **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep`, `code-eval enforce`, `local-mode` | **Display mode** (requires `--execute`) *when invoked standalone; under audit they run in the auto-execution phase* |
 | **Destructive** (deletes files irreversibly) | `strip` | **Display mode** (requires `--execute`; `--confirm-breaking` if dependents exist) — NEVER auto-fired by audit (DEFER tier) |
@@ -763,8 +780,10 @@ Reference files:
 - [references/procedures/route.md](references/procedures/route.md) — Route subcommand procedure (index + embed) with `/route` skill bootstrap template
 - [references/procedures/code-eval.md](references/procedures/code-eval.md) — Code-eval subcommand procedure (create / review / sweep / sync) for the `code-evaluator` skill
 - [references/procedures/model-map.md](references/procedures/model-map.md) — Standalone Lane→Model picker + fleet rewrite (choose creative + coding models without an audit)
+- [references/procedures/loop-foreman.md](references/procedures/loop-foreman.md) — Loop-foreman subcommand procedure (create: scaffold the autonomous bounded-task-loop companion skill)
 - [references/procedures/reconcile.md](references/procedures/reconcile.md) — Reconcile subcommand procedure (cross-skill collision detection, conflicts-only scope, integrity-preserving remediation ladder, strip hand-off)
 - [references/code-evaluator/](references/code-evaluator/) — Shipped intel for the generated `code-evaluator` skill: version.md (drift anchor), cross-file-detection.md, guards.md, mistake-taxonomy.md, native-tool-map.md, gotchas.md, skill-template.md
+- [references/loop-foreman/](references/loop-foreman/) — Shipped intel for the generated `loop-foreman` skill: version.md (drift anchor), skill-template.md (SKILL.md + grader/researcher agents), workflow-recipe.md (bounded loop recipe), grader-rubric.md (work order + two-check gate + stop threshold)
 - [references/shell-safety/](references/shell-safety/) — Shell-safety rule set (rules.md, templates.md, audit-patterns.md) — the canonical pitfall catalog used by hooks, verify, and shell-safety
 - [agents/optimize-diff-auditor/](agents/optimize-diff-auditor/) — Post-optimize semantic equivalence verification agent
 <!-- /origin -->
