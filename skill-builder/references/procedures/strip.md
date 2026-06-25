@@ -80,7 +80,7 @@ Apply each of the 17 detection patterns below across `.claude/skills/`, `.claude
 | 9 | Agent cross-skill grounding | `\.claude/skills/<target>/` inside agent files | All agent files in BOTH forms: `agents/*.md` (flat) AND `agents/*/AGENT.md` (subdir) |
 | 10 | Auto-chain directives in prose | `(auto.?chain\|auto.?invoke\|chain (from\|to)\|invoke /<target>)` | All `*.md` |
 | 11 | Hook script bodies that name the target | `<target>` inside `*/hooks/*.sh` | All hook scripts |
-| 12 | Companion-skill hard-dependency phrases | `<target>/(ledger\|references)` if target is a known companion (awareness-ledger, voice, writing, text-eval, image-eval) | All `*.md` |
+| 12 | Companion-skill hard-dependency phrases | `<target>/(ledger\|references)` if target is a known companion (awareness-ledger, voice, writing, text-eval, image-eval, loop-foreman); for `loop-foreman` also sweep its two registered agents `loop-foreman-grader` and `loop-foreman-researcher` (in `.claude/agents/` and any agent-grounding references) | All `*.md` |
 | 13 | Repo-root `install` per-skill loops | `for (ref\|proc\|ss\|agent) in` containing the target's files | `/install` (dev-only) |
 | 14 | Repo-root `COMMANDS.md` mentions | target name as plain word | `/COMMANDS.md` (dev-only, if exists) |
 | 15 | Repo-root `CLAUDE.md` mentions | target name as plain word | `/CLAUDE.md` (dev-only, if exists) |
