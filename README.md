@@ -191,17 +191,19 @@ See [COMMANDS.md § Code Evaluation](COMMANDS.md#code-evaluation) for the full c
 
 Some tasks are big, well-specified, and mostly mechanical once you've described them. A rollout across a dozen files. A migration with a clear definition of done. The kind of thing you'd happily hand off if you trusted it to know when it was actually finished. The catch is that an AI grading its own work tends to declare victory early, so "run this until it's done" usually means babysitting it anyway.
 
-The `loop-foreman` command builds a skill for exactly this. You write one up-front work order: a checkable definition of done, how far the task reaches, and an allowlist for any irreversible action you're willing to pre-authorize. That work order is the consent that earns "step away." From there a worker drives toward the goal in a bounded loop, and "done" is gated behind two checks that both have to pass. A mechanical oracle runs a test, a build, or a grep. A fresh-context grader that never watched the work get written reads it cold and asks what would make it fail. The loop ships only when both agree, and it escalates to you only on the forks that genuinely matter.
-
-```
-/skill-builder loop-foreman create
-```
+The `loop-foreman` skill does exactly this. The audit installs it when you opt in at the companion-skill gate. Once it is there, you write one up-front work order: a checkable definition of done, how far the task reaches, and an allowlist for any irreversible action you're willing to pre-authorize. That work order is the consent that earns "step away." From there a worker drives toward the goal in a bounded loop, and "done" is gated behind two checks that both have to pass. A mechanical oracle runs a test, a build, or a grep. A fresh-context grader that never watched the work get written reads it cold and asks what would make it fail. The loop ships only when both agree, and it escalates to you only on the forks that genuinely matter.
 
 ```
 /loop-foreman run
 ```
 
-Two things to be honest about. It is **offered, never auto-fired**. The audit will surface it through `/route` for a large endeavor, but it never installs or arms itself, because handing a loop the keys is a decision you make, not one made for you. And the hard guarantees hold only so far: the loop bound is real when the `Workflow` tool drives it, and the stop-before-anything-irreversible rule is careful prose until a host-generated hook backs it in a later version. v1 keeps the scope lean on purpose.
+Or let `/route` handle it.
+
+```
+/route run this migration to completion, here is the definition of done
+```
+
+The hard guarantees hold only so far: the loop bound is real when the `Workflow` tool drives it, and the stop-before-anything-irreversible rule is careful prose until a host-generated hook backs it in a later version. v1 keeps the scope lean on purpose.
 
 See [COMMANDS.md § Autonomous Task Loops](COMMANDS.md#autonomous-task-loops) for the full command reference.
 
@@ -232,6 +234,20 @@ This update is what that discipline looks like, applied to every skill in the en
 Now the part that matters more than this release. Anthropic shipped Mythos Preview the same month 4.7 became available. Codename Capybara. A new tier, not an Opus upgrade, restricted to a small circle of critical-infrastructure partners through something called Project Glasswing. It found thousands of zero-day vulnerabilities during testing, across every major operating system and web browser. It was kept behind structured access because its autonomous capabilities were judged too dangerous for broad API release. 4.7 is the less-risky sibling that shipped alongside it. Mythos-class capabilities will reach the rest of us eventually. They always do. And the harness this project builds is not 4.7 scaffolding. Sacred directives, mechanical enforcement hooks, fresh-context validators, directive checksums, explicit execution contracts. These are the infrastructure for steering much more capable, much more autonomous models without losing the plot. 4.7 teaches us the vocabulary. Mythos will require fluency. Building the muscle now on a model that forgives less than 4.6 but more than what's coming is preparation, not paranoia.
 
 ![A capybara sitting calmly at the edge of a misty river at dawn, birds resting on its back](assets/images/mythos-capybara.png)
+
+## Uninstalling
+
+If you took a backup during your first audit (or ran `/skill-builder backup` at any point), the baseline snapshot holds your original `CLAUDE.md` and `.claude/` directory from before claude-enforcer touched anything. Restoring it is one command.
+
+```
+/skill-builder restore baseline --execute
+```
+
+That overwrites the live tree with your original config. It takes a safety snapshot first so you can undo the restore if you change your mind. If skill-builder is already gone and you cannot run the command, the restore kit inside `.claude-backups/` works without it: run `restore.sh` (or `restore.ps1` on Windows) directly.
+
+If you never took a backup, the manual path is to close the session, delete `.claude/skills/skill-builder/`, and remove any skill-builder entries from `.claude/settings.local.json`. Your other skills and your `CLAUDE.md` stay untouched.
+
+See [COMMANDS.md § Backup & Restore](COMMANDS.md#backup--restore) for the full command reference.
 
 ## Learn More
 
