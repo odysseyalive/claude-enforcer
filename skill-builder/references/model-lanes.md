@@ -128,15 +128,14 @@ multi-select checkbox letting you opt in or out of each, so a project with its o
 evaluator set is never force-managed. Your choices are remembered here, per project, in a marker:
 
 ```
-<!-- companion-skills: text-eval=on|off, code-evaluator=on|off, route=on|off, awareness-ledger=on|off, loop-foreman=on|off -->
+<!-- companion-skills: text-eval=on|off, code-evaluator=on|off, route=on|off, awareness-ledger=on|off -->
 ```
 
 (The `on|off` above is a template; the active marker — written beside `model-lane-setup` with each
 key resolved to a single `on` or `off` — is what audit reads. Audit ignores this fenced example.)
 
 The gate renders as **two grouped multi-selects in one `AskUserQuestion` call** (still one question
-slot): **Evaluators** (`text-eval`, `code-evaluator`) and **Helpers** (`route`, `awareness-ledger`,
-`loop-foreman`). The split is forced by the tool's four-options-per-question cap, not a policy change
+slot): **Evaluators** (`text-eval`, `code-evaluator`) and **Helpers** (`route`, `awareness-ledger`)
 — the sanctioned-question count is unchanged.
 
 | Key | Companion | Install on absence? | `on` | `off` |
@@ -145,7 +144,6 @@ slot): **Evaluators** (`text-eval`, `code-evaluator`) and **Helpers** (`route`, 
 | `code-evaluator` | code-quality evaluator | yes | `code-eval create` authorized | create suppressed; removal DEFERS to `strip` |
 | `route` | the `/route` dispatcher | yes | `route index`/embed terminal tasks run | bootstrap suppressed when absent; removal DEFERS to `strip --confirm-breaking` when present |
 | `awareness-ledger` | institutional-memory ledger | yes | `ledger --execute` authorized | install suppressed; removal DEFERS to `strip` |
-| `loop-foreman` | autonomous bounded-task loop | **no** | keep if present; NEVER auto-installed (offered via `/route` or `loop-foreman create`) | not wanted; if present + skill-builder-scaffolded, removal DEFERS to `strip --confirm-breaking` |
 
 **How the gate uses this marker (INVERTED widget — a check means *opt out*):**
 
@@ -154,32 +152,26 @@ the checkbox meaning rather than rendering a checkmark: an **unchecked** box kee
 companion, a **checked** box opts it out. Presence is computed by a **signal-based** test (a skill
 performing the function counts under any directory name) and shown in each row's label as
 **PRESENT/ABSENT** — never as a pre-check. Leaving every box unchecked is the safe default: keep all
-present companions, install the absent **install-on-absence** ones (`route`, `awareness-ledger`,
-`text-eval`, `code-evaluator` — NOT `loop-foreman`, which is never auto-installed). **No
-"(recommended)" wording is shown** — that mechanic is superseded (2026-06-24) because a "(recommended)"
-tag next to a remove-checkbox reads as "recommended to remove"; `route` and `awareness-ledger` are
-simply the install-on-absence defaults, kept unless checked out.
+present companions, install the absent **install-on-absence** ones — all four (`route`,
+`awareness-ledger`, `text-eval`, `code-evaluator`). **No "(recommended)" wording is shown** — that
+mechanic is superseded (2026-06-24) because a "(recommended)" tag next to a remove-checkbox reads as
+"recommended to remove"; `route` and `awareness-ledger` are simply install-on-absence defaults like
+the rest, kept unless checked out.
 
 - **Unchecked + present** → kept; marker `=on`; no action.
-- **Unchecked + absent + install-on-absence `yes`** → the companion's install task is authorized (it
-  does NOT run unconditionally anymore — the empty box is its authorization); marker `=on`.
-- **Unchecked + absent + install-on-absence `no`** (`loop-foreman`) → NO-OP: nothing is authorized
-  (it is "offered, never auto-fired"); marker `=on` means only "keep if present, never auto-install".
-- **Checked + absent** → install suppressed (the opt-out); marker `=off`. For `loop-foreman` there
-  was no install to suppress — `=off` just records "not wanted".
+- **Unchecked + absent** → the companion's install task is authorized (it does NOT run
+  unconditionally anymore — the empty box is its authorization); marker `=on`. All four companions
+  are install-on-absence: yes.
+- **Checked + absent** → install suppressed (the opt-out); marker `=off` — uniform across all four.
 - **Checked + present + skill-builder-scaffolded** → removal is **DEFERRED** to a ready-to-run
   `/skill-builder strip <key> --execute` command (audit never auto-deletes; "Always defer to
   strip"). Strip performs the complete cross-reference disconnection plus the `route index`/embed
-  refresh; marker `=off`. (`loop-foreman` always takes `--confirm-breaking` — two registered agents
-  plus route wiring make strip BREAKING.)
+  refresh; marker `=off`.
 - **Checked + present + your own hand-authored skill** → never removed (provenance guard); the
   gate only notes that your own skill serves the function; marker `=off`.
 
 **Back-compat.** A legacy `<!-- creative-scrub-build: off -->` marker (the 2026-06-12 text-eval
-build opt-out) reads as `text-eval=off` for the purpose of suppressing the text-eval scaffold. A
-marker written before 2026-06-25 has no `loop-foreman` key; a **missing `loop-foreman` key** reads as
-neutral/leave-as-is (never an install — it is `install-on-absence: no`), distinct from a missing
-whole marker.
+build opt-out) reads as `text-eval=off` for the purpose of suppressing the text-eval scaffold.
 
 **Suppression.** The gate is interactive-only: headless / non-interactive runs and `audit --quick`
 render no checkbox, write no marker, and **remove nothing** — they honor an existing marker, or, with

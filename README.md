@@ -187,26 +187,6 @@ Audit ties it together. Run `/skill-builder audit` and it creates the evaluator 
 
 See [COMMANDS.md § Code Evaluation](COMMANDS.md#code-evaluation) for the full command reference.
 
-## Starting a Job and Stepping Away
-
-Some tasks are big, well-specified, and mostly mechanical once you've described them. A rollout across a dozen files. A migration with a clear definition of done. The kind of thing you'd happily hand off if you trusted it to know when it was actually finished. The catch is that an AI grading its own work tends to declare victory early, so "run this until it's done" usually means babysitting it anyway.
-
-The `loop-foreman` skill does exactly this. The audit installs it when you opt in at the companion-skill gate. Once it is there, you write one up-front work order: a checkable definition of done, how far the task reaches, and an allowlist for any irreversible action you're willing to pre-authorize. That work order is the consent that earns "step away." From there a worker drives toward the goal in a bounded loop, and "done" is gated behind two checks that both have to pass. A mechanical oracle runs a test, a build, or a grep. A fresh-context grader that never watched the work get written reads it cold and asks what would make it fail. The loop ships only when both agree, and it escalates to you only on the forks that genuinely matter.
-
-```
-/loop-foreman run
-```
-
-Or let `/route` handle it.
-
-```
-/route run this migration to completion, here is the definition of done
-```
-
-The hard guarantees hold only so far: the loop bound is real when the `Workflow` tool drives it, and the stop-before-anything-irreversible rule is careful prose until a host-generated hook backs it in a later version. v1 keeps the scope lean on purpose.
-
-See [COMMANDS.md § Autonomous Task Loops](COMMANDS.md#autonomous-task-loops) for the full command reference.
-
 ## Keep Your Skills Current
 
 Have you ever noticed a skill that used to work perfectly start under-delivering after a model update? A directive that fired reliably on 4.6 suddenly needs more explicit instructions on 4.7. A hook that felt essential two releases ago might now be redundant with a new platform feature. Our skills aren't failing. The model underneath is shifting shape, and the rules need to shift with it.

@@ -66,7 +66,6 @@ skill-builder/references/procedures/route.md
 skill-builder/references/procedures/code-eval.md
 skill-builder/references/procedures/model-map.md
 skill-builder/references/procedures/local-mode.md
-skill-builder/references/procedures/loop-foreman.md
 
 # Shell-safety rule set
 skill-builder/references/shell-safety/rules.md
@@ -88,13 +87,6 @@ skill-builder/references/code-evaluator/native-tool-map.md
 skill-builder/references/code-evaluator/guards.md
 skill-builder/references/code-evaluator/gotchas.md
 skill-builder/references/code-evaluator/skill-template.md
-
-# loop-foreman intel set: shipped to skill-builder AND copied into a user's
-# generated loop-foreman skill by `/skill-builder loop-foreman create`.
-skill-builder/references/loop-foreman/version.md
-skill-builder/references/loop-foreman/skill-template.md
-skill-builder/references/loop-foreman/workflow-recipe.md
-skill-builder/references/loop-foreman/grader-rubric.md
 
 # Agents
 skill-builder/agents/optimize-diff-auditor/AGENT.md
