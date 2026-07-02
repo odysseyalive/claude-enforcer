@@ -283,7 +283,7 @@ CHECKPOINT — No-Switch-Prompt Gate (fires on EVERY skill-builder command, embe
 5. A flag whose only purpose is to force a switch prompt (`--model-prompt`) is retired; `--no-model-prompt` is accepted as a harmless no-op for backward compatibility.
 
 CHECKPOINT — Audit Disclaimer Gate (fires at the START of every `audit` run, including `audit --quick` and bare `/skill-builder`, BEFORE any scan, sub-command, or write):
-1. INTERACTIVE session → present the disclaimer via AskUserQuestion and STOP until answered:
+1. INTERACTIVE session → present the disclaimer as a clickable **AskUserQuestion** widget — the SAME mechanism as the Step 0.2 / 0.3 / 0.4 gates, NEVER as end-of-turn prose — and STOP until answered. This is a genuine two-way branch (Accept → run; Cancel → stop), not an FYI notice; the long, bullet-formatted body biases a literal executor toward narrating it as prose, so resist that: put a short prompt in the `question` field and carry the four bullets verbatim in the question body, with the two exact options below. (Rendering discipline lives in audit.md § Step 0 clause 1.)
    > **Disclaimer — acceptance required before the audit proceeds:**
    > - skill-builder is designed to be used with Opus 4.7 or higher model.
    > - However, skills created with skill-builder are backwards compatible with earlier models.
