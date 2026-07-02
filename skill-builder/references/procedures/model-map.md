@@ -1,6 +1,25 @@
 # `model-map` Procedure — Standalone Lane→Model Picker
 <!-- Enforcement: HIGH — read before running `/skill-builder model-map`. Reuses the canonical picker + fleet-rewrite spec; never restates it. -->
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `model-map` Command
+
+Choose which model runs the **creative** lane and which runs the **coding / everything-else** lane (the 2-brain harness Lane→Model mapping), apply the change, and stop — without running a full `audit`. This is the standalone door to the same Lane→Model Picker + Fleet Rewrite machinery audit reaches at Step 0.4 (the every-audit picker); it is purely a mapping refresh, never a scan.
+
+- `/skill-builder model-map` — run the Lane→Model picker (one batched AskUserQuestion: creative model / coding model), write only the changed cells in `references/model-lanes.md`, then fan the new IDs out to every generated `lane-pinned:` excursion agent (Fleet Rewrite). Executes immediately — the picker answer IS the consent (Display/Execute Rule 1).
+
+**Scope (deliberately narrow).** This command ONLY chooses lane→model and rewrites generated agents' `model:` lines. It NEVER assigns skills to lanes — Skill→Lane assignment stays declared-never-inferred (use `audit` onboarding or edit `model-lanes.md` by hand) — and NEVER runs an audit scan. On a project with no lanes configured it writes the Lane→Model mapping and marks lanes `configured` (Skill→Lane left empty); on a `declined` project it asks for an explicit opt-in before flipping the marker.
+
+**Configuration, not a switch.** The two model questions configure the mapping — they never ask the user to run `/model` and the command never switches the session model (No-Switch-Prompt directive; the Lane→Model picker is the sanctioned configuration carve-out). Suppressed in headless / non-interactive sessions: an interactive picker cannot run with no user, so it refuses cleanly and writes nothing.
+
+**Relationship to audit.** `audit` still runs this exact picker on every full interactive run (Step 0.4 — front question cluster); `model-map` is the lightweight path when you only want to change models and skip the scan. Blanking a lane's preferred-model cell disables that lane, and `model-map` then chains `route embed` to strip the now-orphaned gates and excursion maps.
+
+**Grounding:** Read [references/procedures/model-map.md](references/procedures/model-map.md) for the full procedure, which grounds against [references/lane-delegation.md](references/lane-delegation.md) § Lane→Model Picker + § Fleet Rewrite on Remap and [references/model-lanes.md](references/model-lanes.md) § Setup State.
+<!-- /origin -->
+
+---
+
 `model-map` lets the user choose the **creative** model and the **coding / everything-else** model
 (the 2-brain harness Lane→Model mapping), applies every resulting change, and stops — **without
 running a full `audit`**. It is the standalone door to the same machinery audit reaches at

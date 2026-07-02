@@ -203,32 +203,23 @@ CHECKPOINT — Source-First Ordering Gate (fires when `dev_mode == true`):
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
 <!-- Source directive: "No hooks! We don't distribute hooks. The project only makes hooks on the host system." -->
 <!-- Exception directive (2026-05-11, extended 2026-06-06): protect-directives.{sh,ps1} and unique-persona.{sh,ps1} DO ship in source. -->
+<!-- Frontmatter exception (2026-07-01, maintainer-ratified): the inline PostCompact directive-awareness block DOES ship in source frontmatter (clause 3b). -->
 CHECKPOINT — No-Distribute-Hooks Gate:
 1. Define the EXCEPTION_HOOKS set: `{ protect-directives.sh, unique-persona.sh, protect-directives.ps1, unique-persona.ps1 }` (the two bash originals per the 2026-05-11 directive, plus their PowerShell companions per the 2026-06-06 extension). Every step below applies to all hooks EXCEPT those in this set; the exception steps (1b, 3b) cover the named hooks explicitly.
 2. Before adding any hook script under `skill-builder/hooks/` whose basename is NOT in EXCEPTION_HOOKS → STOP. The source distribution MUST NOT contain hook scripts other than the named exceptions. Hooks live only in the runtime copy on the host system.
    - 2b. Exception path: adding any of the four EXCEPTION_HOOKS files under `skill-builder/hooks/` is PERMITTED and REQUIRED per the 2026-05-11 sacred directive and its 2026-06-06 PowerShell-companion extension. These ship in source.
 3. Before adding a `hooks:` frontmatter block to source `skill-builder/SKILL.md` → STOP. Source SKILL.md MUST NOT declare hooks. The runtime SKILL.md may declare hooks the host has generated locally; source must not.
+   - 3b. Exception path (2026-07-01, maintainer-ratified): the existing inline PostCompact directive-awareness block (a single `type: command` echo emitting `additionalContext`, no script file) IS permitted in source frontmatter and ships. It is directive-protection machinery of the same class as EXCEPTION_HOOKS. Any other frontmatter hook declaration remains forbidden; extending or adding to the block re-enters clause 3.
 4. Before adding any hook-script entry to `manifest.txt` (the shared file list consumed by both `install` and `install.ps1`) or any fetch line to either installer script → check against EXCEPTION_HOOKS.
    - 4a. If the basename is in EXCEPTION_HOOKS → PERMITTED. The manifest is expected to list these four files (the `.sh` pair with the `hook` flag for the unix executable bit; the `.ps1` pair as plain entries). Confirm the destination resolves to `.claude/skills/skill-builder/hooks/` on the host.
    - 4b. If the basename is NOT in EXCEPTION_HOOKS → STOP. Adding the manifest entry or fetch line violates the directive.
 5. Hooks ARE permitted in the runtime copy (`.claude/skills/skill-builder/hooks/`) and in runtime `SKILL.md` frontmatter, but only when generated on the host system via `/skill-builder hooks <skill> --execute` or maintained by hand by the host operator. The two EXCEPTION_HOOKS additionally arrive via the installers' manifest-driven fetch. Runtime hooks NOT in EXCEPTION_HOOKS never propagate back to the source distribution.
-6. IF a workflow proposes shipping a hook NOT in EXCEPTION_HOOKS via the installers, adding non-exception hook scripts to `skill-builder/`, or declaring hooks in source frontmatter → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only — only protect-directives.{sh,ps1} and unique-persona.{sh,ps1} are permitted in source per the 2026-05-11 exception and its 2026-06-06 extension."
+6. IF a workflow proposes shipping a hook NOT in EXCEPTION_HOOKS via the installers, adding non-exception hook scripts to `skill-builder/`, or declaring hooks in source frontmatter beyond the clause-3b PostCompact exception → REFUSE and report: "No-distribute-hooks directive violated. Hooks are made on the host system only — only protect-directives.{sh,ps1}, unique-persona.{sh,ps1}, and the inline PostCompact directive-awareness frontmatter block are permitted in source per the 2026-05-11 exception, its 2026-06-06 extension, and the 2026-07-01 frontmatter exception."
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "Bifurcate jobs based on the currently selected model — split jobs between creative work (ie image generation, content generation, and design generation) and coding (everything else, including testing). When we run an audit, I want to make sure it's fluid in managing switching between models, with prompting, or not." -->
-CHECKPOINT — Model-Lane Routing Gate (fires during `audit`; see audit.md § Step 4f):
-1. Read `references/model-lanes.md`. Parse the Lane→Model table, the Skill→Lane table, and the `<!-- model-lane-setup: <state> -->` per-project marker (missing = `unset`).
-2. IF the Skill→Lane table has no active (non-commented) rows AND no skill self-declares a `lane:` frontmatter key → the mapping is UNCONFIGURED. Branch on the setup-state marker (the onboarding fork; see audit.md § Step 4f-setup):
-   - `model-lanes.md` absent entirely, OR marker is `declined`, OR the run is suppressed (headless/non-interactive or `audit --quick`) → STOP this gate silently (no report section, no setup question, no marker write). An undeclared/declined preference is correctly absent, not a gap.
-   - marker is `unset` AND this is a full interactive `audit` → run the one-time Setup Onboarding Flow (offer Set it up now / Not now / Never ask). "Set it up now" → suggest+confirm per-skill lanes, confirm the Lane→Model mapping, write them plus `configured` into model-lanes.md (the only write this gate makes; it still never switches the model). "Not now" → leave `unset`. "Never ask" → write `declined`. Then continue or stop accordingly.
-3. Determine `ACTIVE_MODEL`: read the session system-context line "The exact model ID is ...", strip any `[1m]`/`[200k]` suffix, lowercase. This is a concrete read (no judgment) → no agent required.
-4. For each audited skill, resolve its lane ONLY from a declared source: `lane:` frontmatter → Skill→Lane table → NO LANE. A skill with no declared lane is SKIPPED — never auto-classified into a flag. (Audit MAY print a non-blocking lane *suggestion* for undeclared skills per model-lanes.md § Advisory Lane Suggestion; a suggestion never triggers a prompt.)
-5. Look up the resolved lane's Preferred Model. IF empty/absent → do NOT flag (lane flagging disabled by an empty cell). IF non-empty AND `preferred_model != ACTIVE_MODEL` → record a mismatch.
-6. Reporting: list every mismatch in the Step 5 "Model Lane" report section (Skill | Lane | Preferred | Active | Source). This is report-only and never blocks.
-7. Reporting is the CEILING (superseded mechanic, 2026-06-06 No-Switch-Prompt Gate): the report section in step 6 is the gate's entire output. NEVER emit a switch prompt, an AskUserQuestion, or any instruction to run `/model` — mismatches are stated as one-line advisories and the audit proceeds. (The pre-2026-06-06 batched switch prompt is abolished; `--model-prompt` is retired; `--no-model-prompt` is accepted as a harmless no-op.)
-8. Suppression ("or not"): IF the session is headless/non-interactive (e.g. `verify`), the section still prints when mismatches exist; `audit --quick` omits the section entirely.
-9. IF the gate fired but the model-lanes mapping could not be read while at least one skill declares a lane → STOP. Report: "Model-lane mapping unreadable; cannot evaluate model routing. Fix references/model-lanes.md."
+RELOCATED GATE: the CHECKPOINT "Model-Lane Routing Gate" now lives VERBATIM in references/procedures/audit.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires during `audit` (Step 4f). Read references/procedures/audit.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -242,36 +233,19 @@ CHECKPOINT — Integrity-Over-Performance Gate (governs the `reconcile` command;
 6. **Deletion is delegated, never reimplemented.** A confirmed redundant skill routes through `/skill-builder strip` (with its BREAKING detection and `--confirm-breaking` gate) — `reconcile` never deletes.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "When a project is audited and the model switching setup is deciding what is most likely creative, I want to make sure to flag any skill that has to do with communication, language translation, text evaluation, etc as creative." + "Anything that has to do with research must be performed by the coding model before being handed off to creative." -->
-CHECKPOINT — Creative-Scope Classification Gate (fires wherever a lane is SUGGESTED: audit Step 4f advisory suggestions and the Step 4f-setup onboarding's per-skill lane suggestions):
-1. Before emitting any lane suggestion for a skill, test its name and description against the signal lists in references/model-lanes.md § Advisory Lane Suggestion. Those lists implement this directive: communication, language-translation, and text-evaluation signals resolve to `creative`.
-2. RESEARCH PRECEDENCE — evaluate BEFORE any creative signal: IF the skill's name or description indicates research (name token `research`; description terms `research`, `cited`) → suggest `coding` and STOP, regardless of creative hits. Research is performed by the coding model before any handoff to creative.
-3. IF no research signal fired AND the skill's purpose is communication (email, messages, correspondence), language translation, or text evaluation → the suggestion MUST be `creative`. Never suggest `coding` for such a skill.
-4. This gate widens SUGGESTIONS only — lane assignment stays declared-never-inferred (model-lanes.md principle 2); a suggestion never auto-assigns a lane and never produces anything beyond its advisory line.
-5. IF a new class of skill requires a signal-list change to honor steps 2–3 → edit references/model-lanes.md; do NOT reword this directive or the 2026-06-01 directive.
+RELOCATED GATE: the CHECKPOINT "Creative-Scope Classification Gate" now lives VERBATIM in references/procedures/audit.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires wherever a lane suggestion is emitted (audit Step 4f advisories and the Step 4f-setup onboarding). Read references/procedures/audit.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "Why option 3 is important, and this should be a directive moving forward, … We're doing this to actually preserve the workflow and make the main model most effective at its task." -->
-CHECKPOINT — Bespoke Excursion-Agent Gate (fires whenever a lane-pinned excursion agent is designed or its delegation entry is woven into a skill — agents.md § Step 4d, and audit's legacy-revamp path):
-1. Read the FULL target skill before designing: SKILL.md, the complete workflow, existing managed-block embeds, and every routing point to other skills. The agent is designed per skill from this reviewed material — never instantiated generically from the template alone.
-2. Delegation replaces ONLY the EXECUTOR of the excursion step. Workflow order, step inputs/outputs, CHECKPOINT gates, and routing points to other skills stay exactly as written — the workflow body itself is never edited; delegation entries live in the skill's single LANE-AGENT-EMBED map block (references/lane-delegation.md § Delegation Map). IF a proposed delegation would reorder, merge, reword, or drop any step or routing point → STOP. Redesign.
-3. Token efficiency is NOT a valid rationale anywhere in this flow. IF the only justification for a delegation, merge, or simplification is token/cost/speed savings → STOP. Do not act.
-4. Each agent is highly focused: one excursion direction per skill (split only when the design panel finds contracts genuinely differ), a minimal excursion-appropriate `tools:` list (never Task/Skill/Edit), the OTHER lane's full model ID in `model:` frontmatter, and a unique persona (the Persona Assignment Gate applies in full).
-5. IF excursion-point identification is ambiguous (which steps are other-lane work, per the NON-DELEGABLE list in references/lane-delegation.md) → spawn the agent panel per the Non-Obvious Decision Gate. Panel disagreement → NO-DELEGATE; the step runs in the main session as written. Never guess a delegation.
-6. Delegation never substitutes for the primary-lane gate: a skill whose PRIMARY lane mismatches the active model still surfaces the mismatch as a one-line report advisory (route.md § Step 8 — never a prompt, per the 2026-06-06 No-Switch-Prompt Gate). In particular, coding/analysis primary work runs on the coding main model — never a creative main session orchestrating coding-pinned agents.
+RELOCATED GATE: the CHECKPOINT "Bespoke Excursion-Agent Gate" now lives VERBATIM in references/procedures/agents.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires whenever a lane-pinned excursion agent is designed or its delegation entry is woven into a skill (agents.md Step 4d, and audit's legacy-revamp path). Read references/procedures/agents.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "All agents created or modified during the audit should have a model specified, per the user's choice of creativity model and everything else model." -->
-CHECKPOINT — Audit Agent Model-Assignment Gate (fires whenever audit, or any command running under audit — agents, code-eval create/sync, ledger — creates or modifies an AGENT.md):
-1. Before writing the AGENT.md, read the Lane→Model table in references/model-lanes.md.
-2. Classify the agent's own work (not its parent skill's): creative (content/image/design generation, communication, translation, text evaluation) vs everything-else (coding, testing, research, analysis, validation). Research ALWAYS classifies as everything-else per the 2026-06-06 research-precedence directive. IF the classification is not overtly obvious → apply the Non-Obvious Decision Gate (agent input) before stamping.
-3. Stamp `model:` in the agent frontmatter with the classified lane's full model ID from the table. Never use an alias when a full ID is configured; never invent an ID.
-4. IF the lanes are UNCONFIGURED (no Lane→Model preference declared, or the relevant cell is empty) → do NOT invent a model. Leave `model:` absent and flag the agent in the audit report: "agent has no model: — configure model lanes to enable assignment."
-5. During audit's scan phase: any existing AGENT.md missing a `model:` field while lanes ARE configured → flag in the Model Lane report section with a fix task (stamp on `--execute`). Modifying any other part of an agent during audit also triggers this gate for that agent.
-6. A remap of the Lane→Model table at the audit picker fans out to every `lane-pinned:` agent's `model:` field per references/lane-delegation.md § Fleet Rewrite — the rewrite touches the `model:` line only.
+RELOCATED GATE: the CHECKPOINT "Audit Agent Model-Assignment Gate" now lives VERBATIM in references/procedures/audit.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires whenever audit, or any command running under audit, creates or modifies an AGENT.md. Read references/procedures/audit.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -284,13 +258,9 @@ CHECKPOINT — Two-Brain Harness Gate (governs audit onboarding, /route dispatch
 5. IF a proposed design routes around this gate's invariant (e.g., "mandatory routing" wording that closes the hand-run path, or lane data homed in an overwritten file) → STOP and report the directive conflict.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "When the user asks to create skills, route looks for a similar skill and modifies that or builds a new one — and the skill creation decision is part of the skill-builder skill. … high-risk commands prompt for it, low-risk additions run wherever the session is." -->
-CHECKPOINT — Skill-Creation Ownership Gate (fires on /route's no-match path and any route→skill-builder dispatch):
-1. Route NEVER decides modify-vs-create. On no catalog match it offers exactly: modify the closest-match skill / build a new skill / cancel (AskUserQuestion), then hands the verbatim freeform ask to skill-builder's intent-router (references/procedures/intent-router.md), which owns the classification. Route never invents a skill name and never invents a function.
-2. Claude proposes with maximum creative leeway; the USER ratifies via AskUserQuestion before any skill is created or modified. No ratification → no write.
-3. Route NEVER synthesizes the `dev` prefix. A route-dispatched ask targeting skill-builder itself surfaces the Self-Exclusion refusal verbatim. Direct `/skill-builder` invocation is the always-legal maintenance hatch — recovery never runs through the door.
-4. Risk tiering before dispatching skill-builder work: high-risk commands (optimize, audit --execute, route embed, strip, convert, reconcile --execute) → emit a one-line analytical-brain advisory when the active model is not the analytical brain (never a prompt, never a `/model` request — the "high-risk commands prompt for it" mechanic is superseded newest-wins by the 2026-06-06 No-Switch-Prompt directive, user-ratified; the risk-tier CLASSIFICATION itself stands). Low-risk additive commands (inline, new, skills, list, verify, checksums) → run on the current model with a one-line advisory.
+RELOCATED GATE: the CHECKPOINT "Skill-Creation Ownership Gate" now lives VERBATIM in references/procedures/route.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires on /route's no-match path and any route-to-skill-builder dispatch. Read references/procedures/route.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -325,39 +295,19 @@ CHECKPOINT — Audit Disclaimer Gate (fires at the START of every `audit` run, i
 4. This gate asks about the disclaimer ONLY — it never mentions models beyond the verbatim disclaimer text and never asks the user to switch anything. The sacred minimum content remains verbatim: bullets 1–2 and the LEAD sentence of bullet 3 ("Please backup your CLAUDE.md and .claude directory before proceeding.") are byte-for-byte the 2026-06-06 directive's words. The remainder of bullet 3 (the backup-process announcement) and bullet 4 are machinery disclosure for informed consent — bullet 3's tail announces the Step 0.2 backup offer and the clean-uninstall/restore it enables, per the 2026-06-24 Backup Offer directive. (The backup machinery was merged into bullet 3 on 2026-06-24 at the user's request to remove the duplicate backup line; the sacred lead sentence was preserved verbatim and only the modifiable machinery text was trimmed — see ledger DEC-2026-06-24-companion-gate-inversion's sibling note.)
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "likewise, I would like to prevent questions like this from happening, too. … The audit command should be as automated and streamlined as possible. There shouldn't be any hard questions like this for the user." + "I don't mind the two questions for choosing the creative model and analytical model. that needs asked every time audit is ran, regardless. Just limit any additional questions. Always do the work, instead of suggestion to skip work that will improve the system." -->
-CHECKPOINT — Audit Autonomy Gate (governs every `audit` run, full and `--quick`, from Step 0 through completion):
-1. FIVE QUESTIONS ONLY (the count was raised three → four by the 2026-06-24 Companion-Skill Selection Gate directive, then four → five by the 2026-06-24 Backup Offer directive, both newest-wins; this annotation's source-directive text and clause numbering are otherwise unchanged). An audit run may ask the user exactly: (a) the Step 0 disclaimer (Accept and proceed / Cancel audit), (b) the Step 0.2 Backup Offer (back up or not — fired SECOND, right after the disclaimer; suppressed in headless / non-interactive / `audit --quick`), (c) the Step 0.3 Companion-Skill Selection Gate (two grouped multi-selects — Evaluators / Helpers — in ONE AskUserQuestion call, so still ONE question slot; fired THIRD, right after the backup offer; same suppression), (d) the one-time 4f-setup lane onboarding, and (e) the Lane→Model picker — (a), (b), (c), and (e) asked EVERY full interactive audit run, regardless, per the user's verbatim instruction; (d) is one-time. NO other AskUserQuestion, y/n offer, execution menu, or end-of-turn decision question may be emitted anywhere in the audit path, including bootstrap mode, quick mode, chained sub-commands, and the post-action chain when its parent is audit. The backup offer and the companion gate are each a consent instrument alongside the disclaimer: backup authorizes ONE AUTO zip task at the head of Step 6 (never a delete); the companion gate authorizes the install half (AUTO) and feeds the removal half into the DEFER `strip` tier (clause 4) — neither auto-deletes.
-2. DISCLAIMER = CONSENT. Step 0 acceptance authorizes the whole run: scan → report (including the Execution Plan block) → auto-execute the AUTO-tier task list via TaskCreate, sequentially, under Display/Execute rules 4 and 5 (the printed task list is the contract; never add unplanned work mid-run).
-3. ALWAYS DO THE WORK. Work that improves the system is EXECUTED, never offered as skippable: mechanical fixes (descriptions reflowed without ever truncating or shortening — they are documentation), optimize/agents/hooks fixes, code-eval create/sync, Awareness Ledger creation, bootstrap CLAUDE.md extraction of HIGH-confidence candidates, reconcile's two mechanical auto-fixes, orphan minion retirement (marker-verified), and the terminal route index + route embed.
-4. DEFER tier — the ONLY legitimate deferrals, each reported as a Deferred Items row (item | why | exact command), never silently dropped: strip deletions (consent lives in strip's own gates); convert/2-Brain migration (its inline sacred ratification gates cannot fire in a no-questions run); quarantine repairs of hand-authored files; protective or unrecoverable dead-wiring decisions; AMBIGUOUS bootstrap extraction candidates; and git-dependent fixes (optimize auto-revert, orphan deletion) when the project has no VCS safety net.
-5. AMBIGUITY mid-run: agent panels fire exactly as procedures demand (the agent budget's display-mode suppression does not apply to the auto-execution phase). Panels agree → proceed; disagree → conservative alternative; a minion's `AMBIGUOUS:` return under audit resolves conservatively or DEFERS — never a mid-run user question, never a guess.
-6. CONTAINMENT: Step 0.5 VCS preflight (clean → full AUTO; dirty → proceed with a one-line warning; no VCS → downgrade git-dependent items to DEFER). Per-task failure → mark ✗, continue independent tasks, skip dependents, surface in the Execution Summary. HEADLESS runs are scan+report-only — the acceptance marker unlocks the scan, NEVER writes; auto-execution requires a live Step 0 acceptance this run.
-7. ESCAPE HATCH: `audit --review` (alias `--dry-run`) = full scan + report + would-be Execution Plan, zero writes, zero execution. `audit --execute` is accepted as a harmless no-op (execution is now the default).
-8. The terminal report (Execution Summary + Deferred Items) is informational prose — it never ends with a question (Rule 8's over-fire guard applies: it is not a decision handoff).
+RELOCATED GATE: the CHECKPOINT "Audit Autonomy Gate" now lives VERBATIM in references/procedures/audit.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires on every `audit` run, full and `--quick`, Step 0 through completion. Read references/procedures/audit.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "When you give route a task, it reads the whole course of action it's been handed and picks the dominant hemisphere for the job … This restores route's dispatch-time ask, superseding (newest-wins) only the route clause of the 2026-06-06 No-Switch-Prompt directive; audit and the per-skill gates stay report-only." -->
-CHECKPOINT — Route Dominant-Hemisphere Ask Gate (fires ONLY at /route dispatch; route-door only):
-1. SCOPE. This gate governs `/route` dispatch ONLY. It does NOT change hand-run skill invocation (the per-skill MODEL-LANE-GATE stays advisory-only), audit Step 4f (report-only), or any embed template. It supersedes newest-wins ONLY the route-dispatch-prompt clause of the 2026-06-06 No-Switch-Prompt directive.
-2. DOMINANT HEMISPHERE = the lane the main-loop job mostly lives in: the matched target skill's PRIMARY lane (DECLARED provenance only — frontmatter → Skill→Lane table; a per-function row for the resolved mode wins). Route dispatches one skill at a time and CANNOT enumerate a multi-skill chain at the door — it never guesses a plan-wide majority; it reads the entry skill's primary lane, or, on the no-match freeform path, lane-classifies the task per model-lanes.md § Advisory Lane Suggestion.
-3. TIE / UNCONFIRMED / ABSENT lane → resolve to the analytical (everything-else) brain and DO NOT ask. Research signals always resolve analytical (research precedence). An ask fires ONLY on a clear dominant-hemisphere mismatch.
-4. THE ASK. When the dominant hemisphere's preferred model ≠ the active model, route prints ONE blocking lane-check naming `/model <preferred>` and waits for the user (route.md § Canonical Dispatch CHECKPOINT clause 2). Route can NEVER switch the model itself — only the human `/model` command can. At most ONE ask per endeavor, at the route door. The user may switch then continue, or continue as-is.
-5. COVERAGE = assessment performed, not advisory printed. Route having assessed the lane this turn (whether it asked, matched silently, or — on non-route surfaces — advised) IS the endeavor-coverage signal: the dispatched skill's per-skill gate and every skill it chains stay silent (route.md § Step 8c clause 1). This holds whether the user switched, declined, or proceeded as-is.
-6. THE REST ON THE AGENTS. Off-hemisphere steps inside the dispatched workflow are delegated to lane-pinned excursion agents (Platoon Gate rationale (a) MODEL-FIT), never re-asked mid-workflow. Route picks the dominant-lane model for the main session; minority-lane steps run on pinned subagents.
-7. HEADLESS / non-interactive → skip the ask and dispatch (the door cannot block where there is no user).
+RELOCATED GATE: the CHECKPOINT "Route Dominant-Hemisphere Ask Gate" now lives VERBATIM in references/procedures/route.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires ONLY at /route dispatch (route-door only). Read references/procedures/route.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "Hand-run skills stay non-blocking on a lane mismatch, but the advisory must name the exact remedy: state the preferred model and the literal command — run `/model <preferred>` and re-invoke — then proceed as-is. Never a question, never blocking, and the skill still can never switch the model itself." -->
-CHECKPOINT — Named-Command Advisory Gate (fires wherever the per-skill MODEL-LANE-GATE advisory line is emitted, and wherever its template text is written or refreshed):
-1. The hand-run lane advisory remains exactly ONE line and NEVER blocks, NEVER emits an AskUserQuestion, and NEVER switches the model. This directive amends wording only — the 2026-06-07 hand-run advisory-only rule stands.
-2. The advisory line MUST name the exact remedy: "Lane advisory: this skill declares the `<lane>` lane (preferred `<preferred>`); the active model is `<active>` — to align, run `/model <preferred>` and re-invoke; proceeding as-is." `<preferred>` resolves from the Lane→Model table in references/model-lanes.md. An emitted or embedded advisory that omits the command is STALE (pre-2026-06-11 template) → refresh via `route embed`.
-3. Naming `/model` in this advisory is INFORMATIONAL, not a switch request: the No-Switch-Prompt Gate's stale-text grep (its clause 4) must NOT flag the Step 8c clause-4 template or its embedded copies. A question, a blocking wait, or an option menu built on this line remains FORBIDDEN.
-4. Scope: the per-skill MODEL-LANE-GATE advisory line ONLY. Audit Step 4f report advisories, the high-risk analytical-brain advisory, and route's door ask keep their own ratified formats unchanged.
-5. IF any surface converts this named-command advisory into a question, a blocking wait, or an automatic switch → STOP. Report the directive conflict instead of emitting it.
+RELOCATED GATE: the CHECKPOINT "Named-Command Advisory Gate" now lives VERBATIM in references/procedures/route.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires wherever the per-skill MODEL-LANE-GATE advisory line is emitted, and wherever its template text is written or refreshed (route embed). Read references/procedures/route.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 <!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
@@ -376,28 +326,15 @@ CHECKPOINT — Creative-Integrity Gate (fires during audit Step 4c-bis, and when
 6. Research precedence: research that grows pattern libraries or loop parameters runs on the coding model (2026-06-06 research-precedence directive) before handoff to creative drafting.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "I would like to add a gatekeeping item to the audit process. … If an item is unchecked, then audit should remove that skill set from the project." + "this question should be moved to second in line right after the acknowledgment question." + "If route is in this list, just make sure that in parentheses next to it it shows as recommended item. The same goes for ledger." + "Always defer to strip. But the removal process should be smart enough to go through all of the rest of the skills and remove it completely … the route index and rote embedding will affect the outcome too." -->
 <!-- Amending directive (2026-06-25, Evaluators/Helpers split): "I like the idea of breaking up the list between Evaluators and Helpers." The gate renders as TWO grouped multi-selects in ONE call (count stays FIVE). -->
-CHECKPOINT — Companion-Skill Selection Gate (fires THIRD in every full interactive `audit`, immediately after the Step 0.2 backup offer and BEFORE Step 0.5; see audit.md § Step 0.3):
-1. SUPPRESSION FIRST. IF the run is headless / non-interactive OR `audit --quick` → STOP this gate silently: render no checkbox, write no marker, REMOVE nothing. Headless install behavior falls back to the persisted `<!-- companion-skills: … -->` marker, or — marker absent — to the pre-2026-06-24 install-on-absence / ensure-exists defaults. The install-on-absence default set is all four companions (`text-eval`, `code-evaluator`, `route`, `awareness-ledger`). Absence of an answer NEVER means remove.
-2. THE OFFERABLE SET is the evaluator/helper companions audit force-installs: `text-eval` (Step 4c-bis), `code-evaluator` (Step 4a-bis), `route` (Step 4g), `awareness-ledger` (Step 4a). Each row carries an `install-on-absence` attribute: `yes` for all four. NO "(recommended)" label is rendered in this gate (the 2026-06-24 directive's "(recommended)" mechanic for `route`/`awareness-ledger` is SUPERSEDED newest-wins by the 2026-06-24 inversion follow-up — under the inverted widget of clause 3, a "(recommended)" tag next to a remove-checkbox reads as "recommended to remove"; the user ratified dropping it). `route` and `awareness-ledger` remain install-on-absence defaults, so the empty default keeps/installs them. The set is an enumerated table in audit.md § Step 0.3 so future companions extend it by adding a row, never by editing this block.
-3. NO PRE-CHECK POSSIBLE → INVERTED WIDGET, RENDERED AS TWO GROUPS. `AskUserQuestion` has no `selected`/`default` field, so a multi-select CANNOT render pre-checked boxes (every box renders empty). The directive's "checkmarks by present items" intent is honored by making the empty default SAFE, not by a rendered checkmark: the gate INVERTS — an UNCHECKED box keeps/installs the companion, a CHECKED box opts it OUT (remove if present / skip install if absent). The gate renders as TWO multi-select question OBJECTS inside ONE `AskUserQuestion` call — **Evaluators** (`text-eval`, `code-evaluator`) and **Helpers** (`route`, `awareness-ledger`) — per the 2026-06-25 split directive. Two objects in one call is still ONE prompt screen and ONE sanctioned question slot (Lane→Model picker precedent), so the FIVE-question count is unchanged. Presence is computed per the table: function-/signal-based for `text-eval` (Step 4c-bis / § Build Scaffolds test, any FUNCTION-performing skill counts under any name), and name-based for the named companions (`code-evaluator`, `route`, `awareness-ledger` → `.claude/skills/<name>/SKILL.md` exists). Presence is surfaced in each row's label/description as PRESENT/ABSENT, NOT as a pre-check. The marker, when it exists, is reconciled against on-disk presence; on-disk wins, the marker records intent. (Inversion ratified 2026-06-24 — tool-capability reconciliation; present companions are retained BY DEFAULT.)
-4. PROVENANCE GUARD (removal floor). Removal may target ONLY a skill skill-builder itself scaffolded (scaffold-provenance marker present). A function served by a user's hand-authored skill is detected-as-present (so no duplicate install is offered) but is NEVER eligible for removal: checking it for opt-out writes the `=off` intent and prints an informational note ("served by your own skill `<name>`; skill-builder will not remove a skill it did not create"), never a `strip` row.
-5. UNCHECKED = KEEP (default) resolution: unchecked + present → keep; write `<name>=on`; no action. Unchecked + absent → AUTHORIZE the companion's existing AUTO install task (this gate is the authorization for Steps 4a / 4a-bis / 4c-bis / 4g appends; they no longer fire unconditionally); write `=on`. All four companions are install-on-absence: yes, so the empty default installs every absent companion uniformly.
-6. CHECKED = OPT-OUT resolution: write `<name>=off`. IF absent → suppress the install (this is the opt-out; supersedes newest-wins the 2026-06-12 "absence alone" / "by default, not opt-in" auto-installs for this companion) — uniform across all four. IF present AND skill-builder-scaffolded → DEFER a `/skill-builder strip <name> --execute` row (add `--confirm-breaking` when HARD references exist) to the Deferred Items table. NEVER an AUTO delete — the user ratified "Always defer to strip", and the destructive-work-DEFERS floor (deletion delegated to strip, never reimplemented) is honored, not superseded. The DEFER note states that strip performs the COMPLETE cross-reference disconnection across every other skill plus the `route index`/embed refresh (why this gate fires THIRD — before the audit commits its terminal route tasks).
-7. THE ONE WRITE, RESOLVED ACROSS BOTH GROUPS. This gate's only write is the per-project `<!-- companion-skills: text-eval=…,code-evaluator=…,route=…,awareness-ledger=… -->` marker in references/model-lanes.md (the checkbox answer IS the consent, like the Lane→Model picker). Resolve EVERY companion across BOTH question objects before the write and assert coverage — every offerable companion must map to exactly one `on`/`off`; abort the write if any key is unresolved (guards the split against a dropped second-group answer). Back-compat: a legacy `<!-- creative-scrub-build: off -->` marker reads as `text-eval=off`. It never switches the session model and never asks one to.
-8. IF any change proposes auto-deleting on the opt-out selection (a checked box under the inverted widget), exposing a user-authored skill for removal, removing in a headless run, or removing without routing through `strip` → STOP and report the directive conflict.
+RELOCATED GATE: the CHECKPOINT "Companion-Skill Selection Gate" now lives VERBATIM in references/procedures/audit.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires THIRD in every full interactive `audit` (audit.md Step 0.3). Read references/procedures/audit.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
-<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution | relocated 2026-07-01 -->
 <!-- Source directive: "I would like Claude to ask if we would like to back up or not. The backup process would create a new zip file of the CLAUDE.md and the claude directory … rotation of the last three files and no more … check .getignore if it exists …" + "we also need a restore function … this backup is special and never removed by the rotation … if you choose Claude uninstall, it will restore this original Claude and skill set" + "updating the disclaimer … to let the person know that there is a backup process available … will allow for a clean uninstall of Claude enforcer." -->
-CHECKPOINT — Audit Backup Gate (fires SECOND in every full interactive `audit`, immediately after the Step 0 disclaimer is accepted and BEFORE the Step 0.3 companion gate; see audit.md § Step 0.2):
-1. SUPPRESSION FIRST. IF headless / non-interactive OR `audit --quick` → STOP this gate silently: ask nothing, back up nothing. No interactive question can render, and a missing answer NEVER triggers a backup (it is opt-in per run).
-2. THE QUESTION. ONE AskUserQuestion, right after the disclaimer: "Back up `CLAUDE.md` + `.claude/` before proceeding?" — options at least **Back up first** / **Skip backup**. It is a configuration/consent question, never a switch prompt. On "Skip" → record no backup task and continue to the Step 0.3 companion gate. On "Back up first" → queue the backup as the FIRST task of the Step 6 auto-execution phase.
-3. ORDER. The backup task runs FIRST in Step 6 — before any AUTO edit, before `code-eval`/`route`, before any deferred `strip` — so the zip captures the true pre-audit state. It never blocks: a zip failure is a one-line warning and the audit proceeds (the disclaimer was accepted).
-4. MECHANICS LIVE IN backup.md. The zip target is `CLAUDE.md` + `.claude/`; the destination is `.claude-backups/` at the repo root (a sibling of `.claude/`, never nested — no self-inclusion); rotation keeps the last 3 rotating snapshots; the FIRST-EVER backup is a pinned baseline rotation never removes; `.gitignore` gains `.claude-backups/` only if a `.gitignore` already exists; the create is atomic (temp → verify → rename); a host-generated restore kit is written into `.claude-backups/` (never shipped). Follow references/procedures/backup.md exactly; never inline or reinvent the shell here.
-5. RESTORE IS NOT THIS GATE. Restore is a standalone HIGH-RISK command (references/procedures/restore.md) — display-default + `--execute` + confirmation, auto-snapshot-before-overwrite, VCS check, blast-radius diff, integrity verify. Audit NEVER auto-fires restore (destructive-work-DEFERS floor). IF any change proposes auto-restoring during an audit, shipping the backup/restore shell as a manifest file, creating `.gitignore` where none exists, or letting rotation delete the baseline → STOP and report the directive conflict.
+RELOCATED GATE: the CHECKPOINT "Audit Backup Gate" now lives VERBATIM in references/procedures/audit.md under "Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)". It fires SECOND in every full interactive `audit` (audit.md Step 0.2). Read references/procedures/audit.md and execute that CHECKPOINT literally BEFORE the trigger runs; nothing about the gate changed except its location.
 <!-- END ENFORCEMENT ANNOTATION -->
 
 ---
@@ -467,183 +404,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `code-eval [mode]` | [code-eval.md](references/procedures/code-eval.md) | Scaffold/maintain the `code-evaluator` skill (create / review / sweep / sync) |
 | `model-map` | [model-map.md](references/procedures/model-map.md) | Choose the creative + coding/everything-else model (Lane→Model picker + fleet rewrite), no audit |
 | `local-mode [--execute]` | [local-mode.md](references/procedures/local-mode.md) | Audit project for local LLM compatibility (classify skills, trim, install local infrastructure) |
-| `update` | *(inline below)* | Update to latest version |
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `update` Command
-
-Re-run the installer to update skill-builder to the latest version.
-
-The installer issues many file writes and bash calls in sequence. Without auto-accept, the user will be prompted to approve each one. Claude Code does NOT expose a way for a skill to flip the session into "accept edits on" mode programmatically, nor to detect the current permission mode at runtime — mode changes require the user to press Shift+Tab. The procedure below therefore prompts the user to enable auto-accept before the installer runs.
-
-**CHECKPOINT — fires when `/skill-builder update` is invoked:**
-
-1. **BEFORE running the installer**, output this notice to the user verbatim and STOP for their acknowledgement:
-
-   > **Before I run the installer, please enable "accept edits on" mode so you don't get prompted for every file write and bash call.**
-   >
-   > Press **Shift+Tab** until the prompt indicator shows **"accept edits on"** (it cycles: default → accept edits on → plan mode).
-   >
-   > I cannot detect or set this mode from inside the session — it has to be you. Reply with anything (e.g., "go") once it's enabled and I'll run the installer.
-
-2. After the user acknowledges, select the installer by platform. Read the `Platform:` line from the session environment context (a concrete read, no judgment, no agent):
-   - IF platform is `linux` or `darwin` (macOS) → run via the shell tool: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install)"`
-   - IF platform is `windows`/`win32` → run via the shell tool: `powershell -NoProfile -Command "irm https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main/install.ps1 | iex"` (this works whether the session's shell tool is Git Bash or PowerShell, so no shell detection is needed)
-   - IF the platform line is absent or unrecognized → ask the user which OS they are on before running anything.
-   Both installers consume the same shared `manifest.txt`, so they ship identical content.
-3. Tell the user: **"Restart Claude Code to load the updated skill."** The current session still has the old skill loaded in memory, so start a new conversation. Once you're back, run `/skill-builder audit` — updates often add new recommendations that apply to your existing skills.
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `convert` Command
-
-Convert existing Opus 4.6-era skills to Opus 4.7-compatible execution. User directives stay verbatim and receive enforcement annotations (machine-generated CHECKPOINT blocks beneath the sacred block); skill-builder machinery (workflow steps, grounding statements) is rewritten in-place for literal execution.
-
-- Display mode (default): `/skill-builder convert [skill]` — report what would change
-- Execute mode: `/skill-builder convert [skill] --execute` — apply changes
-- Batch display: `/skill-builder convert --all` — summary across all skills
-- Batch execute: `/skill-builder convert --all --execute` — convert every skill in sequence (one task per skill; the task list survives context compaction)
-
-High-risk command — defaults to display mode, requires `--execute` to modify files.
-
-**Grounding:** Read [references/procedures/convert.md](references/procedures/convert.md) for the full procedure, [references/templates.md](references/templates.md) § "Enforcement Annotation Template" for the annotation format, and [references/enforcement.md](references/enforcement.md) § "Opus 4.7 Behavioral Contract" for the literal-execution model.
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `route` Command
-
-Maintain the `/route` skill — a glorified, auto-generated index of every installed skill — and embed route-consultation hooks into other skills so the AI dispatches through registered skills instead of freelancing. `/route` is a peer to `intent-router`, not a replacement: `intent-router` handles freeform `/skill-builder <text>` invocations within skill-builder; `/route` handles user-level task routing across every installed skill.
-
-- `/skill-builder route index` — scan all skills, regenerate `/route`'s catalog (including each skill's DECLARED lane with provenance — the index is a derived cache, never lane authority). Bootstraps `/route` if missing. Diffs against the prior index and reports NEW / REMOVED / UPDATED / UNCHANGED. Default mode is execute (low-risk; only writes auto-generated content inside `/route`).
-- `/skill-builder route index --dry-run` — display-only summary of what would change.
-- `/skill-builder route lane-status [skill]` — read-only legibility report: resolved lane → provenance → preferred vs active model → gate state → verdict ("silence is correct" / "would prompt"). Answers "why wasn't I prompted?" in one read (remediation of ledger INC-2026-06-06-silent-lane-correctness). Executes immediately (read-only).
-- `/skill-builder route embed` — display mode (high-risk default). For each skill, classify NEW / REFRESH / REMOVE / NOOP based on workflow heuristics + a reconciliation against any embed blocks already on disk.
-- `/skill-builder route embed --execute` — apply the planned embeds, refreshes, and removals; auto-runs `route index --execute` afterward to keep the catalog current.
-- `/skill-builder route embed --remove [skill]` — manually opt a skill out of the route gate.
-
-Both `index` and `embed` are intelligent on re-run: `index` diffs against the prior catalog and rewrites idempotently; `embed` reconciles against existing `<!-- ROUTE-EMBED START -->` markers and either refreshes them, removes them when the skill no longer qualifies, or adds them where workflows now require routing.
-
-`route embed` manages **four independent managed-block families** in one pass: the `ROUTE-EMBED` consultation gate (freeform-follow-up skills), the `CODE-EVAL-EMBED` gate (code-touching skills), the `MODEL-LANE-GATE` invocation-time preflight (skills that resolve to a model lane with a non-empty preferred model — see [route.md](references/procedures/route.md) § Step 8), and the `LANE-AGENT-EMBED` Excursion Delegation Map ([route.md](references/procedures/route.md) § Step 9 — **reconcile-only**: created by `agents [skill]` under the Bespoke Excursion-Agent Gate, never by `route embed`). The model-lane gate is the invocation-time complement to audit's report-only Step 4f: embedded near the top of a lane-declared skill's workflow, it surfaces a one-line lane advisory before any generative step when the active model does not match the skill's PRIMARY lane (never a prompt, never blocking — the advisory names `/model <preferred>` informationally per the 2026-06-11 named-command advisory directive). Cross-lane mid-workflow steps never re-advise — they delegate to lane-pinned excursion agents per the skill's delegation map (see [references/lane-delegation.md](references/lane-delegation.md)). Neither gate ever switches the model itself, and both are silent no-ops when no lane is declared or the lane's preferred-model cell is empty. `--remove [skill]` strips all four families.
-
-**Audit integration:** `route index` is appended as the second-to-last item in audit's task list, and `route embed` is the last item — and `route embed` is the single write path for the model-lane gate (no separate menu item). See [audit.md](references/procedures/audit.md) § Step 4g.
-
-**Grounding:** Read [references/procedures/route.md](references/procedures/route.md) for the full procedure, including the embed block format, reconciliation rules, and the `/route` skill template used during bootstrap.
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `code-eval` Command
-
-Scaffold and maintain the `code-evaluator` skill — a language-agnostic code quality evaluator that prevents common AI coding mistakes (dead code, duplication, complexity hotspots, reinvented helpers, leftover scaffolding). This command is skill-builder machinery; the `code-evaluator` skill it produces is what end users run. The evaluator is AI-driven (ripgrep + opportunistic native tools, no compiled analyzer), built on a strict safety model: grep proposes candidates, the compiler and the test suite decide.
-
-The created skill has a **three-layer model**, all owned by `code-evaluator`:
-- **L1 — pre-write advisor:** the `code-design-advisor` agent, spawned by *other* code-touching skills at non-obvious code decisions (wired in by `route embed`), to evaluate a planned approach before code is written.
-- **L2 — post-write review:** `/code-evaluator review [path]` runs the `deadcode-gardener` agent over a diff; only HIGH-confidence, guard-cleared dead code is auto-fixed.
-- **L3 — full sweep:** `/code-evaluator sweep` fans out a whole-codebase report (report-only at scale).
-
-Subcommands of `code-eval`:
-- `/skill-builder code-eval create` — scaffold `code-evaluator` if absent (low-risk; executes). Copies the shipped intel references and writes the two agents after a persona-uniqueness check.
-- `/skill-builder code-eval review [path]` — post-write evaluation (high-risk; display default, `--execute` to apply HIGH-tier fixes).
-- `/skill-builder code-eval sweep` — full-codebase report (high-risk; display default).
-- `/skill-builder code-eval sync` — refresh a user's `code-evaluator` references from skill-builder's shipped versions when the shipped `code-eval-ref-version` is newer (block-aware; preserves user-origin seams).
-- `/skill-builder code-eval enforce` — host-generate the always-on enforcement hooks (high-risk; display default, `--execute` to wire). Three write-keyed phases — **before write** (PreToolUse hard block until the design-advisor gave direction), **at write** (PostToolUse review reminder), and a **commit gate** (PreToolUse hard block on `git commit`/`push` until the tree matches the last clean review — catches Bash-written code too). Closes the "code written with no skill loaded" gap that the shipped `CODE-EVAL-EMBED` gate cannot reach. Host-generated, NEVER shipped (No-Distribute-Hooks Gate); atomic generate-and-wire; fail-open; audit DEFER-recommends it but never auto-wires (DEC-2026-06-08, deliberate host act). "No exceptions" is the strongest honest backstop, not a literal guarantee — a hook nudges/blocks the model but cannot itself call a skill.
-
-**Audit integration:** `audit` automatically ensures `code-evaluator` exists (creating it if absent) and runs `code-eval sync` to keep its references current, before the route terminal tasks; it also DEFER-recommends `code-eval enforce` when the evaluator is installed but the enforcement hooks are not wired. See [audit.md](references/procedures/audit.md) § Step 4a-bis.
-
-**Grounding:** Read [references/procedures/code-eval.md](references/procedures/code-eval.md) for the full procedure (create / review / sweep / sync), [references/code-evaluator/skill-template.md](references/code-evaluator/skill-template.md) for the generated SKILL.md + advisor/reviewer agent templates, and [references/code-evaluator/cross-file-detection.md](references/code-evaluator/cross-file-detection.md) + [guards.md](references/code-evaluator/guards.md) for the detection method and false-positive guards.
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `model-map` Command
-
-Choose which model runs the **creative** lane and which runs the **coding / everything-else** lane (the 2-brain harness Lane→Model mapping), apply the change, and stop — without running a full `audit`. This is the standalone door to the same Lane→Model Picker + Fleet Rewrite machinery audit reaches at Step 0.4 (the every-audit picker); it is purely a mapping refresh, never a scan.
-
-- `/skill-builder model-map` — run the Lane→Model picker (one batched AskUserQuestion: creative model / coding model), write only the changed cells in `references/model-lanes.md`, then fan the new IDs out to every generated `lane-pinned:` excursion agent (Fleet Rewrite). Executes immediately — the picker answer IS the consent (Display/Execute Rule 1).
-
-**Scope (deliberately narrow).** This command ONLY chooses lane→model and rewrites generated agents' `model:` lines. It NEVER assigns skills to lanes — Skill→Lane assignment stays declared-never-inferred (use `audit` onboarding or edit `model-lanes.md` by hand) — and NEVER runs an audit scan. On a project with no lanes configured it writes the Lane→Model mapping and marks lanes `configured` (Skill→Lane left empty); on a `declined` project it asks for an explicit opt-in before flipping the marker.
-
-**Configuration, not a switch.** The two model questions configure the mapping — they never ask the user to run `/model` and the command never switches the session model (No-Switch-Prompt directive; the Lane→Model picker is the sanctioned configuration carve-out). Suppressed in headless / non-interactive sessions: an interactive picker cannot run with no user, so it refuses cleanly and writes nothing.
-
-**Relationship to audit.** `audit` still runs this exact picker on every full interactive run (Step 0.4 — front question cluster); `model-map` is the lightweight path when you only want to change models and skip the scan. Blanking a lane's preferred-model cell disables that lane, and `model-map` then chains `route embed` to strip the now-orphaned gates and excursion maps.
-
-**Grounding:** Read [references/procedures/model-map.md](references/procedures/model-map.md) for the full procedure, which grounds against [references/lane-delegation.md](references/lane-delegation.md) § Lane→Model Picker + § Fleet Rewrite on Remap and [references/model-lanes.md](references/model-lanes.md) § Setup State.
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `reconcile` Command
-
-Detect redundancies and collisions **across** skills and remediate only the ones that are mechanically safe. Where `cascade` looks inside one skill for over-suppression, `reconcile` looks across the whole installed set for the colliding-task failure mode: as a project grows and skills accumulate, two skills can fight over the same trigger, hook matcher, command name, dispatch step, or file region — so a skill "seems to fail to run" when it was really shadowed, bypassed, suppressed, or overwritten.
-
-Governed by the sacred integrity-over-performance directive (§ Directives, 2026-06-04): **redundancy is never the target — only a conflict that breaks a skill's full completion is actionable. No shortcut mentality.** Harmless or intentional overlap (chains, shared kernels, defense-in-depth) is left alone.
-
-- Display mode (default): `/skill-builder reconcile` — scan all skills, report cross-skill conflicts with `file:line` evidence; change nothing
-- Targeted: `/skill-builder reconcile [skill]` — report conflicts involving one skill
-- Execute mode: `/skill-builder reconcile --execute` — apply ONLY the two mechanical auto-fixes (collapse a duplicate machine-generated embed block; drop a byte-identical duplicate hook entry). Everything touching a directive, description, persona, conflicting hook, or chain stays flag-only; a confirmed redundant skill is routed to `strip`, never deleted here
-
-High-risk command — defaults to display mode, requires `--execute`. `--execute` never edits `origin: user | immutable: true` content, never rewords descriptions or personas, and never deletes a skill directly.
-
-**Audit integration:** `reconcile` runs as audit **Step 4d-bis** (between cascade and the priority panel), display-only with its agent panels suppressed; completion-breaking findings elevate into Priority Fixes. Skipped in `audit --quick`. See [audit.md](references/procedures/audit.md) § Step 4d-bis.
-
-**Grounding:** Read [references/procedures/reconcile.md](references/procedures/reconcile.md) for the full procedure — the collision-class table with reliability tiers, the conflicts-only filter and complementary-overlap allow-list, the remediation ladder with the directive-touch hard floor, the mandatory agent adjudication for judgment-class findings, and the `strip` hand-off.
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `strip` Command
-
-Delete a skill completely and remove every connection to it from other skills, settings, hook bindings, and dev-repo manifests. The destructive counterpart to `new`.
-
-- Display mode (default): `/skill-builder strip [skill]` — produce an impact report listing every file to be deleted, every cross-reference to be removed, dependent skills, and BREAKING status if any HARD references exist
-- Execute mode: `/skill-builder strip [skill] --execute` — apply the deletion plan
-- Breaking confirmation: `/skill-builder strip [skill] --execute --confirm-breaking` — required when the target has HARD references in other skills (workflow Read instructions, hook scripts, or AGENT.md grounding)
-
-Destructive command — defaults to display mode, requires `--execute`. Stripping `skill-builder` itself is HARD-REFUSED even with the `dev` prefix; the prefix permits self-modification, not self-deletion.
-
-After deletion, the procedure auto-runs `route index --execute` to drop the target from the `/route` catalog (when `/route` is installed).
-
-**Grounding:** Read [references/procedures/strip.md](references/procedures/strip.md) for the full procedure, including the 15 cross-reference detection patterns, dependent classification, settings.local.json mutation rules, and the strict task ordering (sweep references before deletion).
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `backup` / `restore` Commands
-
-Snapshot and restore the project's Claude configuration so a clean uninstall of claude-enforcer is always recoverable. The audit's Step 0.2 question offers a backup right after the disclaimer; both are also standalone commands.
-
-- `/skill-builder backup` — zip `CLAUDE.md` + `.claude/` into `.claude-backups/` at the repo root (a sibling of `.claude/`, never nested). Keeps the last **3 rotating** snapshots and one pinned **baseline** (the first-ever backup, never rotated out — the original CLAUDE.md and skill set). Adds `.claude-backups/` to `.gitignore` only if a `.gitignore` already exists. Low-risk/additive (writes only into `.claude-backups/`) → executes immediately. Atomic (temp → verify → rename) so an interrupted run never leaves a poisoned snapshot. Also drops a host-generated restore kit (`RESTORE-README.md` + `restore.sh`/`.ps1`) into `.claude-backups/` so the baseline restores even after the skill is uninstalled.
-- `/skill-builder restore [snapshot]` — restore `CLAUDE.md` + `.claude/` from a chosen snapshot (baseline, rotating, or a pre-restore safety snapshot). **Destructive** (overwrites the live tree) → display mode by default (lists snapshots + a blast-radius diff), `--execute` plus a confirmation to apply. Always takes an automatic pre-restore snapshot first (its own undo, exempt from rotation), checks VCS like audit Step 0.5, and verifies the source's integrity before trusting it. **Audit NEVER auto-fires restore** (destructive-work-DEFERS floor) — it is always a deliberate, separate act.
-
-No script ships: both are markdown procedures driving host-generated commands, cross-platform via the session `Platform:` line (bash `zip`/`unzip`, Windows `Compress-Archive`/`Expand-Archive`). The audit's Step 0.2 backup runs FIRST in the auto-execution phase so the snapshot captures pre-audit state; it is skipped in headless / `audit --quick` and never blocks.
-
-**Grounding:** Read [references/procedures/backup.md](references/procedures/backup.md) (create / rotation / baseline / gitignore / restore-kit) and [references/procedures/restore.md](references/procedures/restore.md) (snapshot enumeration, integrity verify, pre-restore snapshot, VCS precondition, blast-radius diff, atomic extract).
-<!-- /origin -->
-
----
-
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
-## The `shell-safety` Command
-
-Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell strings) against the canonical pitfall rule set. Used internally by `hooks` and `verify`, and available for direct user invocation.
-
-- Write: `/skill-builder shell-safety write [target]` — generate a new script or JSON shell entry from a safe-default template
-- Audit: `/skill-builder shell-safety audit [path]` — scan for pitfalls; with `--execute`, patch the mechanical-safe ones
-- Lint: `/skill-builder shell-safety lint [file]` — read-only single-file check (exit 1 on findings, composes with `&&`)
-
-**Grounding:** Read [references/procedures/shell-safety.md](references/procedures/shell-safety.md) for the full procedure, [references/shell-safety/rules.md](references/shell-safety/rules.md) for the pitfall catalog, [references/shell-safety/templates.md](references/shell-safety/templates.md) for safe scaffolds, and [references/shell-safety/audit-patterns.md](references/shell-safety/audit-patterns.md) for detection regexes.
+| `update` | [update.md](references/procedures/update.md) | Update to latest version |
 <!-- /origin -->
 
 ---
@@ -724,7 +485,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 5. **Scope discipline during execution.** Execute ONLY the tasks in the task list. Do not add bonus tasks, expand scope, or create deliverables not in the original plan. If execution reveals a new opportunity, note it in the completion report — do not act on it. The task list is the contract.
 6. **Post-action chaining.** Any action that modifies a skill (`new`, `inline`, adding directives) automatically chains into a scoped mini-audit for the affected skill — running optimize, agents, and hooks in display mode, then offering execution choices. Additionally (2-Brain Harness, 2026-06-06), EVERY skill-mutating execute path (`new`, `inline`, `convert --execute`, `agents --execute`, `optimize --execute`, `code-eval create`) chains a **scoped route reconciliation** for the affected skill(s) — `route index` row refresh + four-family embed reconciliation per [post-action-chain.md](references/procedures/post-action-chain.md) § Step 1a — so new skills and newly generated functions are indexed and gated the moment they exist. Use `--no-chain` to suppress.
 7. **Model-lane reporting + audit disclaimer.** Model-switch prompts are ABOLISHED everywhere in skill-builder (2026-06-06 No-Switch-Prompt directive, superseding the earlier "flag + prompt" mechanic newest-wins): when `audit` finds a skill whose declared lane's preferred model differs from the active session model (see § Directives → Model-Lane Routing Gate and audit.md § Step 4f), it **reports** the mismatch as a one-line advisory and proceeds — never an AskUserQuestion, never an instruction to run `/model`. `--model-prompt` is retired; `--no-model-prompt` is a harmless no-op. **Disclaimer (every audit):** before any audit work begins, the user must accept the audit disclaimer (designed for Opus 4.7+; skills created are backwards compatible with earlier models; back up CLAUDE.md and .claude first) — see § Directives → Audit Disclaimer Gate and audit.md § Step 0. Headless runs require a prior interactive acceptance marker. **Onboarding:** when a project has no lanes configured yet, a full interactive `audit` offers a one-time setup question (Set it up now / Not now / Never ask in this project), tracked per project via the `model-lane-setup` marker in `model-lanes.md` — this configures the mapping; it never requests a switch. Bootstrap audits on fresh projects included (2026-06-07 fix — bootstrap mode runs Step 4f after its auto-execution phase; see audit.md § Step 2.5). See audit.md § Step 4f-setup and model-lanes.md § Setup State. **Picker (every full audit):** once configured, every full interactive audit re-confirms the Lane→Model mapping via a batched picker — options exactly `claude-opus-4-6`, `claude-opus-4-8`, and the latest released model by official ID (discovered live, never fabricated), current values pre-selected. A confirmed remap fans out to every generated `lane-pinned:` agent's `model:` frontmatter (Fleet Rewrite). The picker fires UP FRONT in the question cluster (audit.md § Step 0.4), not mid-scan — it was being skipped when buried at the old "Step 4f step 2-bis" location. See audit.md § Step 0.4 and references/lane-delegation.md. **Excursions never advise:** cross-lane mid-workflow steps delegate to lane-pinned agents instead (§ Directives → Bespoke Excursion-Agent Gate).
-8. **Decision handoffs use AskUserQuestion — never a free-text "should I?".** Every point where a command ends its turn to let the user decide *whether to proceed, what to change, or which direction to take* MUST be presented via **AskUserQuestion** (a clickable menu), not as end-of-turn prose like "Would you like me to proceed?". This holds for **every** command, display and execute alike, and generalizes Rules 3, 6, and 7 into one invariant. **Audit carve-out (2026-06-06 Audit Autonomy Gate, count raised to four by the 2026-06-24 Companion-Skill Selection Gate directive and to five by the 2026-06-24 Backup Offer directive):** under `audit` the only permitted questions are the Step 0 disclaimer, the Step 0.2 backup offer (fired second), the Step 0.3 Companion-Skill Selection Gate (two grouped multi-selects — Evaluators / Helpers — in one AskUserQuestion call, one question slot; fired third), the one-time 4f-setup onboarding, and the every-audit Lane→Model picker — audit makes no other decision handoffs; it does the work and defers the rest into the Deferred Items table (informational prose, not a handoff). **Over-fire guard:** if you cannot name at least two concrete options, it is not a decision handoff — ask in prose (open-ended freeform like "paste the error text" stays prose; in-turn status, progress narration, bare acknowledgements, and audit's terminal Execution Summary/Deferred Items never prompt). **Option floor:** every decision menu offers at least the recommended path, one genuine alternative, and an explicit **"Skip / not now"** so the user is never trapped into authorizing an action (AskUserQuestion's auto-appended "Other" preserves freeform on top of these). Style on the `update` CHECKPOINT.
+8. **Decision handoffs use AskUserQuestion — never a free-text "should I?".** Every point where a command ends its turn to let the user decide *whether to proceed, what to change, or which direction to take* MUST be presented via **AskUserQuestion** (a clickable menu), not as end-of-turn prose like "Would you like me to proceed?". This holds for **every** command, display and execute alike, and generalizes Rules 3, 6, and 7 into one invariant. **Audit carve-out (2026-06-06 Audit Autonomy Gate, count raised to four by the 2026-06-24 Companion-Skill Selection Gate directive and to five by the 2026-06-24 Backup Offer directive):** under `audit` the only permitted questions are the Step 0 disclaimer, the Step 0.2 backup offer (fired second), the Step 0.3 Companion-Skill Selection Gate (two grouped multi-selects — Evaluators / Helpers — in one AskUserQuestion call, one question slot; fired third), the one-time 4f-setup onboarding, and the every-audit Lane→Model picker — audit makes no other decision handoffs; it does the work and defers the rest into the Deferred Items table (informational prose, not a handoff). **Over-fire guard:** if you cannot name at least two concrete options, it is not a decision handoff — ask in prose (open-ended freeform like "paste the error text" stays prose; in-turn status, progress narration, bare acknowledgements, and audit's terminal Execution Summary/Deferred Items never prompt). **Option floor:** every decision menu offers at least the recommended path, one genuine alternative, and an explicit **"Skip / not now"** so the user is never trapped into authorizing an action (AskUserQuestion's auto-appended "Other" preserves freeform on top of these). Style on the `update` CHECKPOINT (references/procedures/update.md).
 <!-- /origin -->
 
 ---
@@ -769,6 +530,7 @@ Reference files:
 - [references/procedures/code-eval.md](references/procedures/code-eval.md) — Code-eval subcommand procedure (create / review / sweep / sync) for the `code-evaluator` skill
 - [references/procedures/model-map.md](references/procedures/model-map.md) — Standalone Lane→Model picker + fleet rewrite (choose creative + coding models without an audit)
 - [references/procedures/reconcile.md](references/procedures/reconcile.md) — Reconcile subcommand procedure (cross-skill collision detection, conflicts-only scope, integrity-preserving remediation ladder, strip hand-off)
+- [references/procedures/update.md](references/procedures/update.md): Update command procedure (installer re-run CHECKPOINT, platform selection; moved from SKILL.md 2026-07-01)
 - [references/code-evaluator/](references/code-evaluator/) — Shipped intel for the generated `code-evaluator` skill: version.md (drift anchor), cross-file-detection.md, guards.md, mistake-taxonomy.md, native-tool-map.md, gotchas.md, skill-template.md
 - [references/shell-safety/](references/shell-safety/) — Shell-safety rule set (rules.md, templates.md, audit-patterns.md) — the canonical pitfall catalog used by hooks, verify, and shell-safety
 - [agents/optimize-diff-auditor/](agents/optimize-diff-auditor/) — Post-optimize semantic equivalence verification agent

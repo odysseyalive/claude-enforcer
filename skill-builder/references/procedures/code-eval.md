@@ -1,5 +1,30 @@
 # Code-Eval Command Procedure
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `code-eval` Command
+
+Scaffold and maintain the `code-evaluator` skill — a language-agnostic code quality evaluator that prevents common AI coding mistakes (dead code, duplication, complexity hotspots, reinvented helpers, leftover scaffolding). This command is skill-builder machinery; the `code-evaluator` skill it produces is what end users run. The evaluator is AI-driven (ripgrep + opportunistic native tools, no compiled analyzer), built on a strict safety model: grep proposes candidates, the compiler and the test suite decide.
+
+The created skill has a **three-layer model**, all owned by `code-evaluator`:
+- **L1 — pre-write advisor:** the `code-design-advisor` agent, spawned by *other* code-touching skills at non-obvious code decisions (wired in by `route embed`), to evaluate a planned approach before code is written.
+- **L2 — post-write review:** `/code-evaluator review [path]` runs the `deadcode-gardener` agent over a diff; only HIGH-confidence, guard-cleared dead code is auto-fixed.
+- **L3 — full sweep:** `/code-evaluator sweep` fans out a whole-codebase report (report-only at scale).
+
+Subcommands of `code-eval`:
+- `/skill-builder code-eval create` — scaffold `code-evaluator` if absent (low-risk; executes). Copies the shipped intel references and writes the two agents after a persona-uniqueness check.
+- `/skill-builder code-eval review [path]` — post-write evaluation (high-risk; display default, `--execute` to apply HIGH-tier fixes).
+- `/skill-builder code-eval sweep` — full-codebase report (high-risk; display default).
+- `/skill-builder code-eval sync` — refresh a user's `code-evaluator` references from skill-builder's shipped versions when the shipped `code-eval-ref-version` is newer (block-aware; preserves user-origin seams).
+- `/skill-builder code-eval enforce` — host-generate the always-on enforcement hooks (high-risk; display default, `--execute` to wire). Three write-keyed phases — **before write** (PreToolUse hard block until the design-advisor gave direction), **at write** (PostToolUse review reminder), and a **commit gate** (PreToolUse hard block on `git commit`/`push` until the tree matches the last clean review — catches Bash-written code too). Closes the "code written with no skill loaded" gap that the shipped `CODE-EVAL-EMBED` gate cannot reach. Host-generated, NEVER shipped (No-Distribute-Hooks Gate); atomic generate-and-wire; fail-open; audit DEFER-recommends it but never auto-wires (DEC-2026-06-08, deliberate host act). "No exceptions" is the strongest honest backstop, not a literal guarantee — a hook nudges/blocks the model but cannot itself call a skill.
+
+**Audit integration:** `audit` automatically ensures `code-evaluator` exists (creating it if absent) and runs `code-eval sync` to keep its references current, before the route terminal tasks; it also DEFER-recommends `code-eval enforce` when the evaluator is installed but the enforcement hooks are not wired. See [audit.md](references/procedures/audit.md) § Step 4a-bis.
+
+**Grounding:** Read [references/procedures/code-eval.md](references/procedures/code-eval.md) for the full procedure (create / review / sweep / sync), [references/code-evaluator/skill-template.md](references/code-evaluator/skill-template.md) for the generated SKILL.md + advisor/reviewer agent templates, and [references/code-evaluator/cross-file-detection.md](references/code-evaluator/cross-file-detection.md) + [guards.md](references/code-evaluator/guards.md) for the detection method and false-positive guards.
+<!-- /origin -->
+
+---
+
 Scaffold and maintain the `code-evaluator` skill — a language-agnostic code
 quality evaluator that prevents common AI coding mistakes (dead code, duplication,
 complexity hotspots, reinvented helpers, leftover scaffolding). This command is

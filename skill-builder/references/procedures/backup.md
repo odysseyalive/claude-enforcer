@@ -1,5 +1,21 @@
 # Backup Command Procedure
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `backup` / `restore` Commands
+
+Snapshot and restore the project's Claude configuration so a clean uninstall of claude-enforcer is always recoverable. The audit's Step 0.2 question offers a backup right after the disclaimer; both are also standalone commands.
+
+- `/skill-builder backup` — zip `CLAUDE.md` + `.claude/` into `.claude-backups/` at the repo root (a sibling of `.claude/`, never nested). Keeps the last **3 rotating** snapshots and one pinned **baseline** (the first-ever backup, never rotated out — the original CLAUDE.md and skill set). Adds `.claude-backups/` to `.gitignore` only if a `.gitignore` already exists. Low-risk/additive (writes only into `.claude-backups/`) → executes immediately. Atomic (temp → verify → rename) so an interrupted run never leaves a poisoned snapshot. Also drops a host-generated restore kit (`RESTORE-README.md` + `restore.sh`/`.ps1`) into `.claude-backups/` so the baseline restores even after the skill is uninstalled.
+- `/skill-builder restore [snapshot]` — restore `CLAUDE.md` + `.claude/` from a chosen snapshot (baseline, rotating, or a pre-restore safety snapshot). **Destructive** (overwrites the live tree) → display mode by default (lists snapshots + a blast-radius diff), `--execute` plus a confirmation to apply. Always takes an automatic pre-restore snapshot first (its own undo, exempt from rotation), checks VCS like audit Step 0.5, and verifies the source's integrity before trusting it. **Audit NEVER auto-fires restore** (destructive-work-DEFERS floor) — it is always a deliberate, separate act.
+
+No script ships: both are markdown procedures driving host-generated commands, cross-platform via the session `Platform:` line (bash `zip`/`unzip`, Windows `Compress-Archive`/`Expand-Archive`). The audit's Step 0.2 backup runs FIRST in the auto-execution phase so the snapshot captures pre-audit state; it is skipped in headless / `audit --quick` and never blocks.
+
+**Grounding:** Read [references/procedures/backup.md](references/procedures/backup.md) (create / rotation / baseline / gitignore / restore-kit) and [references/procedures/restore.md](references/procedures/restore.md) (snapshot enumeration, integrity verify, pre-restore snapshot, VCS precondition, blast-radius diff, atomic extract).
+<!-- /origin -->
+
+---
+
 Snapshot the project's `CLAUDE.md` and `.claude/` directory into a date-stamped zip under
 `.claude-backups/` at the repo root, keep a rotation of the last 3 rotating snapshots, preserve a
 pinned **baseline** (the first-ever backup) that rotation never removes, and keep `.claude-backups/`

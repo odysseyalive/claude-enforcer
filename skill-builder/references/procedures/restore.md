@@ -1,5 +1,7 @@
 # Restore Command Procedure
 
+Command overview for the backup / restore pair (moved from SKILL.md 2026-07-01): see [backup.md](backup.md), section "The `backup` / `restore` Commands".
+
 Restore `CLAUDE.md` and the `.claude/` directory from a snapshot in `.claude-backups/` — a rotating
 backup, the pinned baseline, or a pre-restore safety snapshot. The counterpart to
 [backup.md](backup.md).

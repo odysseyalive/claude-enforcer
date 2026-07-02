@@ -4,6 +4,67 @@
 
 The `/route` skill is the user-facing dispatcher: pass a task description and route picks the right skill+function. The `skill-builder route` subcommand maintains it.
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `route` Command
+
+Maintain the `/route` skill — a glorified, auto-generated index of every installed skill — and embed route-consultation hooks into other skills so the AI dispatches through registered skills instead of freelancing. `/route` is a peer to `intent-router`, not a replacement: `intent-router` handles freeform `/skill-builder <text>` invocations within skill-builder; `/route` handles user-level task routing across every installed skill.
+
+- `/skill-builder route index` — scan all skills, regenerate `/route`'s catalog (including each skill's DECLARED lane with provenance — the index is a derived cache, never lane authority). Bootstraps `/route` if missing. Diffs against the prior index and reports NEW / REMOVED / UPDATED / UNCHANGED. Default mode is execute (low-risk; only writes auto-generated content inside `/route`).
+- `/skill-builder route index --dry-run` — display-only summary of what would change.
+- `/skill-builder route lane-status [skill]` — read-only legibility report: resolved lane → provenance → preferred vs active model → gate state → verdict ("silence is correct" / "would prompt"). Answers "why wasn't I prompted?" in one read (remediation of ledger INC-2026-06-06-silent-lane-correctness). Executes immediately (read-only).
+- `/skill-builder route embed` — display mode (high-risk default). For each skill, classify NEW / REFRESH / REMOVE / NOOP based on workflow heuristics + a reconciliation against any embed blocks already on disk.
+- `/skill-builder route embed --execute` — apply the planned embeds, refreshes, and removals; auto-runs `route index --execute` afterward to keep the catalog current.
+- `/skill-builder route embed --remove [skill]` — manually opt a skill out of the route gate.
+
+Both `index` and `embed` are intelligent on re-run: `index` diffs against the prior catalog and rewrites idempotently; `embed` reconciles against existing `<!-- ROUTE-EMBED START -->` markers and either refreshes them, removes them when the skill no longer qualifies, or adds them where workflows now require routing.
+
+`route embed` manages **four independent managed-block families** in one pass: the `ROUTE-EMBED` consultation gate (freeform-follow-up skills), the `CODE-EVAL-EMBED` gate (code-touching skills), the `MODEL-LANE-GATE` invocation-time preflight (skills that resolve to a model lane with a non-empty preferred model — see [route.md](references/procedures/route.md) § Step 8), and the `LANE-AGENT-EMBED` Excursion Delegation Map ([route.md](references/procedures/route.md) § Step 9 — **reconcile-only**: created by `agents [skill]` under the Bespoke Excursion-Agent Gate, never by `route embed`). The model-lane gate is the invocation-time complement to audit's report-only Step 4f: embedded near the top of a lane-declared skill's workflow, it surfaces a one-line lane advisory before any generative step when the active model does not match the skill's PRIMARY lane (never a prompt, never blocking — the advisory names `/model <preferred>` informationally per the 2026-06-11 named-command advisory directive). Cross-lane mid-workflow steps never re-advise — they delegate to lane-pinned excursion agents per the skill's delegation map (see [references/lane-delegation.md](references/lane-delegation.md)). Neither gate ever switches the model itself, and both are silent no-ops when no lane is declared or the lane's preferred-model cell is empty. `--remove [skill]` strips all four families.
+
+**Audit integration:** `route index` is appended as the second-to-last item in audit's task list, and `route embed` is the last item — and `route embed` is the single write path for the model-lane gate (no separate menu item). See [audit.md](references/procedures/audit.md) § Step 4g.
+
+**Grounding:** Read [references/procedures/route.md](references/procedures/route.md) for the full procedure, including the embed block format, reconciliation rules, and the `/route` skill template used during bootstrap.
+<!-- /origin -->
+
+---
+
+### Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)
+
+<!-- The following ENFORCEMENT ANNOTATION blocks moved VERBATIM from SKILL.md, comment headers intact. They are literal-execution gates for sacred user directives (SKILL.md, Directives section). Execute them exactly as written whenever their triggers fire; never reword or reorder their contents. -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "When the user asks to create skills, route looks for a similar skill and modifies that or builds a new one — and the skill creation decision is part of the skill-builder skill. … high-risk commands prompt for it, low-risk additions run wherever the session is." -->
+CHECKPOINT — Skill-Creation Ownership Gate (fires on /route's no-match path and any route→skill-builder dispatch):
+1. Route NEVER decides modify-vs-create. On no catalog match it offers exactly: modify the closest-match skill / build a new skill / cancel (AskUserQuestion), then hands the verbatim freeform ask to skill-builder's intent-router (references/procedures/intent-router.md), which owns the classification. Route never invents a skill name and never invents a function.
+2. Claude proposes with maximum creative leeway; the USER ratifies via AskUserQuestion before any skill is created or modified. No ratification → no write.
+3. Route NEVER synthesizes the `dev` prefix. A route-dispatched ask targeting skill-builder itself surfaces the Self-Exclusion refusal verbatim. Direct `/skill-builder` invocation is the always-legal maintenance hatch — recovery never runs through the door.
+4. Risk tiering before dispatching skill-builder work: high-risk commands (optimize, audit --execute, route embed, strip, convert, reconcile --execute) → emit a one-line analytical-brain advisory when the active model is not the analytical brain (never a prompt, never a `/model` request — the "high-risk commands prompt for it" mechanic is superseded newest-wins by the 2026-06-06 No-Switch-Prompt directive, user-ratified; the risk-tier CLASSIFICATION itself stands). Low-risk additive commands (inline, new, skills, list, verify, checksums) → run on the current model with a one-line advisory.
+<!-- END ENFORCEMENT ANNOTATION -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "When you give route a task, it reads the whole course of action it's been handed and picks the dominant hemisphere for the job … This restores route's dispatch-time ask, superseding (newest-wins) only the route clause of the 2026-06-06 No-Switch-Prompt directive; audit and the per-skill gates stay report-only." -->
+CHECKPOINT — Route Dominant-Hemisphere Ask Gate (fires ONLY at /route dispatch; route-door only):
+1. SCOPE. This gate governs `/route` dispatch ONLY. It does NOT change hand-run skill invocation (the per-skill MODEL-LANE-GATE stays advisory-only), audit Step 4f (report-only), or any embed template. It supersedes newest-wins ONLY the route-dispatch-prompt clause of the 2026-06-06 No-Switch-Prompt directive.
+2. DOMINANT HEMISPHERE = the lane the main-loop job mostly lives in: the matched target skill's PRIMARY lane (DECLARED provenance only — frontmatter → Skill→Lane table; a per-function row for the resolved mode wins). Route dispatches one skill at a time and CANNOT enumerate a multi-skill chain at the door — it never guesses a plan-wide majority; it reads the entry skill's primary lane, or, on the no-match freeform path, lane-classifies the task per model-lanes.md § Advisory Lane Suggestion.
+3. TIE / UNCONFIRMED / ABSENT lane → resolve to the analytical (everything-else) brain and DO NOT ask. Research signals always resolve analytical (research precedence). An ask fires ONLY on a clear dominant-hemisphere mismatch.
+4. THE ASK. When the dominant hemisphere's preferred model ≠ the active model, route prints ONE blocking lane-check naming `/model <preferred>` and waits for the user (route.md § Canonical Dispatch CHECKPOINT clause 2). Route can NEVER switch the model itself — only the human `/model` command can. At most ONE ask per endeavor, at the route door. The user may switch then continue, or continue as-is.
+5. COVERAGE = assessment performed, not advisory printed. Route having assessed the lane this turn (whether it asked, matched silently, or — on non-route surfaces — advised) IS the endeavor-coverage signal: the dispatched skill's per-skill gate and every skill it chains stay silent (route.md § Step 8c clause 1). This holds whether the user switched, declined, or proceeded as-is.
+6. THE REST ON THE AGENTS. Off-hemisphere steps inside the dispatched workflow are delegated to lane-pinned excursion agents (Platoon Gate rationale (a) MODEL-FIT), never re-asked mid-workflow. Route picks the dominant-lane model for the main session; minority-lane steps run on pinned subagents.
+7. HEADLESS / non-interactive → skip the ask and dispatch (the door cannot block where there is no user).
+<!-- END ENFORCEMENT ANNOTATION -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "Hand-run skills stay non-blocking on a lane mismatch, but the advisory must name the exact remedy: state the preferred model and the literal command — run `/model <preferred>` and re-invoke — then proceed as-is. Never a question, never blocking, and the skill still can never switch the model itself." -->
+CHECKPOINT — Named-Command Advisory Gate (fires wherever the per-skill MODEL-LANE-GATE advisory line is emitted, and wherever its template text is written or refreshed):
+1. The hand-run lane advisory remains exactly ONE line and NEVER blocks, NEVER emits an AskUserQuestion, and NEVER switches the model. This directive amends wording only — the 2026-06-07 hand-run advisory-only rule stands.
+2. The advisory line MUST name the exact remedy: "Lane advisory: this skill declares the `<lane>` lane (preferred `<preferred>`); the active model is `<active>` — to align, run `/model <preferred>` and re-invoke; proceeding as-is." `<preferred>` resolves from the Lane→Model table in references/model-lanes.md. An emitted or embedded advisory that omits the command is STALE (pre-2026-06-11 template) → refresh via `route embed`.
+3. Naming `/model` in this advisory is INFORMATIONAL, not a switch request: the No-Switch-Prompt Gate's stale-text grep (its clause 4) must NOT flag the Step 8c clause-4 template or its embedded copies. A question, a blocking wait, or an option menu built on this line remains FORBIDDEN.
+4. Scope: the per-skill MODEL-LANE-GATE advisory line ONLY. Audit Step 4f report advisories, the high-risk analytical-brain advisory, and route's door ask keep their own ratified formats unchanged.
+5. IF any surface converts this named-command advisory into a question, a blocking wait, or an automatic switch → STOP. Report the directive conflict instead of emitting it.
+<!-- END ENFORCEMENT ANNOTATION -->
+
+---
+
 ### Why dispatch enforcement exists (read this once)
 
 Earlier versions of `/route` defined dispatch as prose: Step 4 said "invoke the chosen skill with the Skill tool." That is soft guidance. On 2026-05-09 a real workflow announced `→ Routing to /nsayka-wawa debug label …` and then executed the dispatched skill's procedure manually with raw Edit/Bash calls. The announcement was emitted; the Skill tool was never called; the dispatched skill's CHECKPOINT-grade gates (asset-backup, frontend-design review, exit-tests, cascade) silently did not fire.

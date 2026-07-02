@@ -1,5 +1,24 @@
 ## Strip Command Procedure
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `strip` Command
+
+Delete a skill completely and remove every connection to it from other skills, settings, hook bindings, and dev-repo manifests. The destructive counterpart to `new`.
+
+- Display mode (default): `/skill-builder strip [skill]` — produce an impact report listing every file to be deleted, every cross-reference to be removed, dependent skills, and BREAKING status if any HARD references exist
+- Execute mode: `/skill-builder strip [skill] --execute` — apply the deletion plan
+- Breaking confirmation: `/skill-builder strip [skill] --execute --confirm-breaking` — required when the target has HARD references in other skills (workflow Read instructions, hook scripts, or AGENT.md grounding)
+
+Destructive command — defaults to display mode, requires `--execute`. Stripping `skill-builder` itself is HARD-REFUSED even with the `dev` prefix; the prefix permits self-modification, not self-deletion.
+
+After deletion, the procedure auto-runs `route index --execute` to drop the target from the `/route` catalog (when `/route` is installed).
+
+**Grounding:** Read [references/procedures/strip.md](references/procedures/strip.md) for the full procedure, including the 15 cross-reference detection patterns, dependent classification, settings.local.json mutation rules, and the strict task ordering (sweep references before deletion).
+<!-- /origin -->
+
+---
+
 **Delete a skill completely and remove every connection to it from all other skills, settings, and dev-repo manifests.**
 
 `strip` is the destructive counterpart to `new`. It deletes the target skill directory and sweeps every cross-reference (grounding links, route entries, hook bindings, permissions, prose mentions, agent grounding, installer manifests) so nothing dangles. High-risk — defaults to display mode and requires `--execute` to make changes.

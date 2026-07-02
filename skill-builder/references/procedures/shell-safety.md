@@ -1,5 +1,20 @@
 ## Shell-Safety Command Procedure
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `shell-safety` Command
+
+Write, audit, and lint shell code (scripts, hook commands, JSON-embedded shell strings) against the canonical pitfall rule set. Used internally by `hooks` and `verify`, and available for direct user invocation.
+
+- Write: `/skill-builder shell-safety write [target]` — generate a new script or JSON shell entry from a safe-default template
+- Audit: `/skill-builder shell-safety audit [path]` — scan for pitfalls; with `--execute`, patch the mechanical-safe ones
+- Lint: `/skill-builder shell-safety lint [file]` — read-only single-file check (exit 1 on findings, composes with `&&`)
+
+**Grounding:** Read [references/procedures/shell-safety.md](references/procedures/shell-safety.md) for the full procedure, [references/shell-safety/rules.md](references/shell-safety/rules.md) for the pitfall catalog, [references/shell-safety/templates.md](references/shell-safety/templates.md) for safe scaffolds, and [references/shell-safety/audit-patterns.md](references/shell-safety/audit-patterns.md) for detection regexes.
+<!-- /origin -->
+
+---
+
 **Write and audit shell code (scripts, hook commands, JSON-embedded shell) for portability and resilience pitfalls.**
 
 This procedure is the canonical rule set for any shell code generated or audited by skill-builder (hooks, verify, etc.) or by other skills via `/skill-builder shell-safety …`. It replaces the legacy standalone `shell-safety` skill — the rules, templates, and audit patterns are now co-located here so skill-builder's subsystems have a single source of truth.

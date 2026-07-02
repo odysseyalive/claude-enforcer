@@ -1,5 +1,23 @@
 ## Convert Command Procedure
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `convert` Command
+
+Convert existing Opus 4.6-era skills to Opus 4.7-compatible execution. User directives stay verbatim and receive enforcement annotations (machine-generated CHECKPOINT blocks beneath the sacred block); skill-builder machinery (workflow steps, grounding statements) is rewritten in-place for literal execution.
+
+- Display mode (default): `/skill-builder convert [skill]` — report what would change
+- Execute mode: `/skill-builder convert [skill] --execute` — apply changes
+- Batch display: `/skill-builder convert --all` — summary across all skills
+- Batch execute: `/skill-builder convert --all --execute` — convert every skill in sequence (one task per skill; the task list survives context compaction)
+
+High-risk command — defaults to display mode, requires `--execute` to modify files.
+
+**Grounding:** Read [references/procedures/convert.md](references/procedures/convert.md) for the full procedure, [references/templates.md](references/templates.md) § "Enforcement Annotation Template" for the annotation format, and [references/enforcement.md](references/enforcement.md) § "Opus 4.7 Behavioral Contract" for the literal-execution model.
+<!-- /origin -->
+
+---
+
 **Convert an existing Opus 4.6-era skill to be fully Opus 4.7-compatible while preserving all user directives verbatim.**
 
 This procedure is the 4.6 → 4.7 migration counterpart to `optimize`. Where `optimize` restructures for context efficiency, `convert` restructures for *literal-execution correctness* on Opus 4.7+. It never rewords user directives — those stay verbatim and receive enforcement annotations. It rewrites skill-builder-owned workflow steps, grounding statements, and machinery language in-place for explicit execution.

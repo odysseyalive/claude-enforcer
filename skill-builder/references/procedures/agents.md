@@ -2,6 +2,23 @@
 
 **Analyze and create agents for a skill.**
 
+### Sacred-Directive Enforcement Gates (relocated from SKILL.md, 2026-07-01)
+
+<!-- The following ENFORCEMENT ANNOTATION blocks moved VERBATIM from SKILL.md, comment headers intact. They are literal-execution gates for sacred user directives (SKILL.md, Directives section). Execute them exactly as written whenever their triggers fire; never reword or reorder their contents. -->
+
+<!-- ENFORCEMENT ANNOTATION — auto-generated for Opus 4.7+ literal execution -->
+<!-- Source directive: "Why option 3 is important, and this should be a directive moving forward, … We're doing this to actually preserve the workflow and make the main model most effective at its task." -->
+CHECKPOINT — Bespoke Excursion-Agent Gate (fires whenever a lane-pinned excursion agent is designed or its delegation entry is woven into a skill — agents.md § Step 4d, and audit's legacy-revamp path):
+1. Read the FULL target skill before designing: SKILL.md, the complete workflow, existing managed-block embeds, and every routing point to other skills. The agent is designed per skill from this reviewed material — never instantiated generically from the template alone.
+2. Delegation replaces ONLY the EXECUTOR of the excursion step. Workflow order, step inputs/outputs, CHECKPOINT gates, and routing points to other skills stay exactly as written — the workflow body itself is never edited; delegation entries live in the skill's single LANE-AGENT-EMBED map block (references/lane-delegation.md § Delegation Map). IF a proposed delegation would reorder, merge, reword, or drop any step or routing point → STOP. Redesign.
+3. Token efficiency is NOT a valid rationale anywhere in this flow. IF the only justification for a delegation, merge, or simplification is token/cost/speed savings → STOP. Do not act.
+4. Each agent is highly focused: one excursion direction per skill (split only when the design panel finds contracts genuinely differ), a minimal excursion-appropriate `tools:` list (never Task/Skill/Edit), the OTHER lane's full model ID in `model:` frontmatter, and a unique persona (the Persona Assignment Gate applies in full).
+5. IF excursion-point identification is ambiguous (which steps are other-lane work, per the NON-DELEGABLE list in references/lane-delegation.md) → spawn the agent panel per the Non-Obvious Decision Gate. Panel disagreement → NO-DELEGATE; the step runs in the main session as written. Never guess a delegation.
+6. Delegation never substitutes for the primary-lane gate: a skill whose PRIMARY lane mismatches the active model still surfaces the mismatch as a one-line report advisory (route.md § Step 8 — never a prompt, per the 2026-06-06 No-Switch-Prompt Gate). In particular, coding/analysis primary work runs on the coding main model — never a creative main session orchestrating coding-pinned agents.
+<!-- END ENFORCEMENT ANNOTATION -->
+
+---
+
 ### Display Mode (default)
 
 When running `/skill-builder agents [skill]`:

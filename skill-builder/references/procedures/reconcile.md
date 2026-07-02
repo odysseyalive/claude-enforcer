@@ -1,5 +1,26 @@
 ## Reconcile Command Procedure
 
+<!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
+<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+## The `reconcile` Command
+
+Detect redundancies and collisions **across** skills and remediate only the ones that are mechanically safe. Where `cascade` looks inside one skill for over-suppression, `reconcile` looks across the whole installed set for the colliding-task failure mode: as a project grows and skills accumulate, two skills can fight over the same trigger, hook matcher, command name, dispatch step, or file region — so a skill "seems to fail to run" when it was really shadowed, bypassed, suppressed, or overwritten.
+
+Governed by the sacred integrity-over-performance directive (§ Directives, 2026-06-04): **redundancy is never the target — only a conflict that breaks a skill's full completion is actionable. No shortcut mentality.** Harmless or intentional overlap (chains, shared kernels, defense-in-depth) is left alone.
+
+- Display mode (default): `/skill-builder reconcile` — scan all skills, report cross-skill conflicts with `file:line` evidence; change nothing
+- Targeted: `/skill-builder reconcile [skill]` — report conflicts involving one skill
+- Execute mode: `/skill-builder reconcile --execute` — apply ONLY the two mechanical auto-fixes (collapse a duplicate machine-generated embed block; drop a byte-identical duplicate hook entry). Everything touching a directive, description, persona, conflicting hook, or chain stays flag-only; a confirmed redundant skill is routed to `strip`, never deleted here
+
+High-risk command — defaults to display mode, requires `--execute`. `--execute` never edits `origin: user | immutable: true` content, never rewords descriptions or personas, and never deletes a skill directly.
+
+**Audit integration:** `reconcile` runs as audit **Step 4d-bis** (between cascade and the priority panel), display-only with its agent panels suppressed; completion-breaking findings elevate into Priority Fixes. Skipped in `audit --quick`. See [audit.md](references/procedures/audit.md) § Step 4d-bis.
+
+**Grounding:** Read [references/procedures/reconcile.md](references/procedures/reconcile.md) for the full procedure — the collision-class table with reliability tiers, the conflicts-only filter and complementary-overlap allow-list, the remediation ladder with the directive-touch hard floor, the mandatory agent adjudication for judgment-class findings, and the `strip` hand-off.
+<!-- /origin -->
+
+---
+
 **Cross-skill conflict detection and integrity-preserving remediation.** Where `cascade` looks *inside* one skill for over-suppression, `reconcile` looks *across* skills for collisions that make a skill silently fail to run, misfire, or get overwritten — and resolves only the ones that are mechanically safe, routing everything else to a human.
 
 **Governing directive (sacred — see SKILL.md § Directives):**
