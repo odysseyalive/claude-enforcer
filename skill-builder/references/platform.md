@@ -113,7 +113,7 @@ A permission rule is `Tool` or `Tool(specifier)`. Three specifier forms exist:
 
 ### Subagent permissions (do not assume inheritance)
 
-- A subagent's `allowed-tools` / `disallowedTools` (its own frontmatter) is the reliable way to restrict what a subagent can do. Curate it minimally per agent.
+- A subagent's `tools:` / `disallowedTools` (its own frontmatter) is the reliable way to restrict what a subagent can do. Curate it minimally per agent. (The key is `tools:` in AGENT.md files; `allowed-tools:` is the SKILL.md key and is ignored in agent frontmatter, silently granting all tools.)
 - **Rules-based permission-mode inheritance from parent to child is NOT reliable** (open upstream issues; a child often re-prompts even when the parent bypassed, and `deny` rules do not transitively bind a spawned child). Author any required deny/allow at the **project `settings.json` level** rather than relying on a child inheriting the parent's rules.
 - What 2.1.178 actually added on the subagent-security axis is an **auto-mode pre-spawn classifier**: in auto permission mode, a subagent's task is vetted by a classifier *before* it launches, closing the gap where a child could request a blocked action without review. This is heuristic vetting in auto mode, not rules inheritance — do not design enforcement that depends on it firing.
 

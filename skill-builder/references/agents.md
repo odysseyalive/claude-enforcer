@@ -52,7 +52,7 @@ description: "Review code for patterns and issues"
 persona: "Senior engineer who has reviewed this codebase for years"
 memory: project
 effort: high
-allowed-tools: Read, Grep, Glob
+tools: Read, Grep, Glob
 context: fork
 ---
 
@@ -103,7 +103,7 @@ name: async-validator
 description: "Validate changes in the background"
 background: true
 effort: medium
-allowed-tools: Read, Grep, Glob
+tools: Read, Grep, Glob
 context: fork
 ---
 
@@ -126,7 +126,7 @@ Or use the task system to report back.
 
 Spawn a background validator while continuing:
 
-Task tool with subagent_type: "general-purpose", background: true
+Task tool with subagent_type: "[agent-name]" (spawn per § Spawning Agents (Canonical Pattern)), background: true
 Prompt: "Validate [target] against [criteria].
         Write results to .claude/tmp/validation-results.md"
 
@@ -178,6 +178,77 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 
 ---
 
+## Output Contracts
+
+When a consumer parses an agent's result (a router feeding a dispatch branch, a validator gating a
+write, an evaluator whose verdict a procedure acts on), the AGENT.md MUST define an explicit
+**output contract**: the exact shape of what the agent returns, authored in the agent file itself.
+Untyped output contracts drift, and the consumer breaks silently. An agent whose output is only
+read informally may keep a loose format; an agent whose output something branches on may not.
+
+Two contract shapes, matched to the consumer:
+
+| Consumer | Contract shape | Shipped exemplar |
+|---|---|---|
+| Machine-parsed (caller branches on named fields) | Fenced JSON block naming every field, plus a "Return ONLY the JSON block, no prose before or after" rule | `agents/intent-router/AGENT.md` § Output |
+| Report-read (a human or the parent model reads labeled sections) | Labeled-section template ending in one unambiguous verdict line (PASS / FAIL) | `agents/optimize-diff-auditor/AGENT.md` § Output Format |
+
+Contract rules:
+
+1. **Authored at creation time**, in the AGENT.md, never only in the caller's prompt. The agent file is the single source of truth for its own output shape.
+2. **In-band failure channel is mandatory.** Every contract defines what the agent returns when it cannot answer: a structured field (intent-router's `confidence` and `alternatives`), a named token (`NOT FOUND:`, `UNCERTAIN`), or the `INCOMPLETE:` / `AMBIGUOUS:` sentinels. Any explicit in-band channel satisfies this rule; the literal sentinel pair with its single-retry discipline stays mandatory for lane-pinned excursion agents specifically (see [lane-delegation.md](lane-delegation.md) § Context Contract, which layers a REQUIRES half and orchestration rules on top of this section). An agent never guesses to fill a gap.
+3. **Caller-side parse-failure behavior is part of the contract.** The consumer states what happens when the return does not match: retry once, naming the gap, then degrade to the caller's conservative default (never loop, never improvise a value from a malformed return).
+4. **Contract and consumer change together.** When a procedure changes what it parses, the AGENT.md contract updates in the same change, and vice versa.
+
+## Spawning Agents (Canonical Pattern)
+
+An agent registered under `.claude/agents/` (see Registration below) is spawned **by its
+registered name**, so the harness honors its `model:` pin, `tools:` grant, and persona from
+frontmatter:
+
+```markdown
+Task tool with subagent_type: "[agent-name]"
+Prompt: "[task inputs only: file paths, criteria, every required input. The AGENT.md
+        already carries the persona, instructions, and output contract.]"
+```
+
+The registered name is the agent's plain `name:` value (e.g. `intent-router`), never a file path.
+
+**Fallback (unregistered hosts only).** If the spawn fails because the subagent_type does not
+resolve, fall back to:
+
+```markdown
+Task tool with subagent_type: "general-purpose"
+Prompt: "You are [persona from the AGENT.md]. Read .claude/skills/[skill]/agents/[name]/AGENT.md
+        and follow it exactly, including its tool restrictions ([restated inline, e.g. 'you are
+        read-only; never Write or Edit']) and its output contract. Then: [task inputs]."
+```
+
+The fallback is error-driven and loud, never the first choice and never silent: report
+"registered agent [name] unresolved; general-purpose fallback used; model pin and tool grants NOT
+applied", and recommend `/skill-builder agents [skill] --execute` to register the agent. A
+general-purpose spawn cannot enforce the agent's `model:` or `tools:`, which is why the fallback
+prompt restates the persona and the tool restrictions inline.
+
+**Carve-out: prompt-persona agents.** Ad-hoc panel personas (the 3-persona judgment panels) and
+the Text Evaluation Pair's fixed personas live in the Task prompt, have no registration, and
+correctly use `subagent_type: "general-purpose"` with the persona stated inline. No fallback
+language applies to them.
+
+**Registration.** Creating any agent that a procedure or skill spawns by name (equivalently: any
+agent with a defined output contract or a `model:` pin) includes registering it: create the
+symlink `.claude/agents/[name].md` pointing at the AGENT.md (copy fallback where symlinks are
+unavailable; report which was used, and on copy hosts re-copy after any AGENT.md edit so the two
+cannot drift). Before registering, check `.claude/agents/` for a name collision (a mechanical
+check); generic names collide across skills, so prefer `[skill]-` prefixed names
+(`payments-validator`, not `validator`). Ephemeral panel personas are never registered. The
+Persona Assignment Gate's glob union already covers `.claude/agents/*.md`, so registration sits
+inside the existing uniqueness perimeter. Precedent: ledger
+DEC-2026-06-23-code-eval-agent-registration (an unregistered agent left a hook naming an
+unresolvable subagent_type). Registration is host-generated, never shipped.
+
+---
+
 ## Agent Templates
 
 ### 1. ID Lookup Agent (Grounding Enforcement)
@@ -189,7 +260,7 @@ When auditing a skill, look for these patterns that suggest an agent would help:
 name: id-lookup
 description: Look up IDs from reference files
 persona: "[domain-specific data steward — e.g., 'Financial data analyst with zero tolerance for unverified identifiers']"
-allowed-tools: Read, Grep
+tools: Read, Grep
 context: none
 ---
 
@@ -220,7 +291,7 @@ Context: [surrounding info if helpful]
 
 Before using any ID, spawn the id-lookup agent:
 
-Task tool with subagent_type: "general-purpose"
+Task tool with subagent_type: "[skill]-id-lookup" (spawn per § Spawning Agents (Canonical Pattern); general-purpose fallback only if unregistered)
 Prompt: "Look up [description] in .claude/skills/[skill]/reference.md.
         Return only the ID and its context. If not found, say NOT FOUND."
 
@@ -236,7 +307,7 @@ Only proceed if agent returns FOUND.
 name: preflight-validator
 description: Validate operations against skill rules
 persona: "[domain-specific quality gatekeeper — e.g., 'Senior QA engineer who has seen every edge case']"
-allowed-tools: Read, Grep
+tools: Read, Grep
 context: fork
 ---
 
@@ -275,7 +346,7 @@ Suggested fix: [how to correct]
 name: evaluator
 description: Evaluate content for quality/issues
 persona: "[domain-specific critic — e.g., 'Veteran code reviewer,' 'Editor with 20 years at a literary magazine']"
-allowed-tools: Read, Glob, Grep
+tools: Read, Glob, Grep
 context: none
 ---
 
@@ -301,7 +372,7 @@ You evaluate content against criteria WITHOUT knowledge of how it was created.
 name: matcher
 description: Match inputs to predefined categories
 persona: "[domain-specific classifier — e.g., 'Taxonomist who has mapped this domain for a decade']"
-allowed-tools: Read, Grep
+tools: Read, Grep
 context: none
 ---
 
@@ -344,7 +415,7 @@ Recommendation: Ask user to choose
 name: text-eval-reducer
 description: Detect overbuilt, bloated, unnecessarily complex text
 persona: "Ruthless editor who has cut 50,000 words from manuscripts without losing meaning"
-allowed-tools: Read, Grep, Glob
+tools: Read, Grep, Glob
 context: none
 ---
 
@@ -394,7 +465,7 @@ Summary: [count] overbuilt passages, estimated [N] words cuttable
 name: text-eval-clarifier
 description: Detect confusing, ambiguous, and contradictory text
 persona: "Technical writer who has untangled contradictory specifications for 20 years"
-allowed-tools: Read, Grep, Glob
+tools: Read, Grep, Glob
 context: none
 ---
 
@@ -474,7 +545,7 @@ Synthesize both agents' findings. Fix all flagged issues before presenting to us
 name: capture-recommender
 description: Evaluate skill output for ledger-worthy institutional knowledge
 persona: "[knowledge management specialist — e.g., 'Organizational learning researcher who has seen teams lose critical knowledge by not recording it']"
-allowed-tools: Read, Grep, Glob
+tools: Read, Grep, Glob
 context: none
 ---
 
@@ -527,7 +598,7 @@ Confirm to record with /awareness-ledger record, or skip.
 
 After the skill completes its primary workflow, spawn the capture-recommender agent:
 
-Task tool with subagent_type: "general-purpose"
+Task tool with subagent_type: "[skill]-capture-recommender" (spawn per § Spawning Agents (Canonical Pattern); general-purpose fallback only if unregistered)
 Prompt: "Read the output from .claude/skills/[skill]/[output].
         Read capture trigger patterns from references/ledger-templates.md
         § 'Capture Trigger Patterns'. Evaluate the output for institutional
@@ -605,6 +676,11 @@ For each agent, select a persona using the heuristic: "If I could only gather 3 
 └── matcher.md
 ```
 
+When a consumer will parse an agent's result, author its output contract in the AGENT.md at
+creation time (§ Output Contracts). For each agent a procedure or skill will spawn by name, also
+create the registration symlink `.claude/agents/[name].md` after the name-collision check
+(§ Spawning Agents (Canonical Pattern), Registration).
+
 **Step 5: Update SKILL.md to invoke agents**
 
 Add to the workflow section:
@@ -613,7 +689,7 @@ Add to the workflow section:
 
 Before [action], spawn the [agent-name] agent:
 
-Task tool with subagent_type: "general-purpose"
+Task tool with subagent_type: "[agent-name]" (spawn per § Spawning Agents (Canonical Pattern); general-purpose fallback only if unregistered)
 Prompt: "[specific prompt for this use case]"
 
 [What to do with the result]

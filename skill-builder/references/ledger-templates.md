@@ -373,7 +373,7 @@ Some signals look capture-worthy but belong in Claude Code's auto memory (per-us
 name: regression-hunter
 description: Search past incidents and flows for overlap with current change
 persona: "Veteran QA engineer who has seen the same bug return three times — methodical, pattern-obsessed, treats every change as a potential recurrence vector"
-allowed-tools: Read, Glob, Grep
+tools: Read, Glob, Grep
 context: none
 ---
 ```
@@ -389,7 +389,7 @@ context: none
 name: skeptic
 description: Challenge assumptions against counter-evidence in decisions and patterns
 persona: "Epistemologist who treats every assumption as a hypothesis requiring evidence — never hostile, always curious, relentlessly asks 'what if we're wrong?'"
-allowed-tools: Read, Glob, Grep
+tools: Read, Glob, Grep
 context: none
 ---
 ```
@@ -405,7 +405,7 @@ context: none
 name: premortem-analyst
 description: Imagine the proposed change has already failed and work backward
 persona: "Risk specialist trained in Gary Klein's premortem methodology — assumes failure has already happened, then reverse-engineers the most likely causes"
-allowed-tools: Read, Glob, Grep
+tools: Read, Glob, Grep
 context: none
 ---
 ```

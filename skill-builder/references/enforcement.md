@@ -459,12 +459,12 @@ Delegate to a specialized agent with limited tools:
 ```yaml
 ---
 name: read-only-analyst
-allowed-tools: Read, Grep, Glob
+tools: Read, Grep, Glob
 context: fork
 ---
 ```
 
-A subagent's own `allowed-tools` is the reliable restriction surface. Do NOT assume a child inherits the parent's `deny`/`allow` rules or permission mode: rules-based subagent inheritance is unreliable in practice (open upstream issues), so author any required deny/allow at the project `settings.json` level rather than expecting it to propagate into a spawned child. Claude Code 2.1.178 added an auto-mode pre-spawn classifier (a child's task is vetted before launch in auto mode) — that is heuristic vetting, not rules inheritance; never design enforcement that depends on it firing. See [platform.md](platform.md) § "Subagent permissions".
+A subagent's own `tools:` frontmatter key is the reliable restriction surface (agent files use `tools:`, not the skill-frontmatter key `allowed-tools:`, which the harness ignores in an AGENT.md, silently granting all tools). Do NOT assume a child inherits the parent's `deny`/`allow` rules or permission mode: rules-based subagent inheritance is unreliable in practice (open upstream issues), so author any required deny/allow at the project `settings.json` level rather than expecting it to propagate into a spawned child. Claude Code 2.1.178 added an auto-mode pre-spawn classifier (a child's task is vetted before launch in auto mode); that is heuristic vetting, not rules inheritance, and never design enforcement that depends on it firing. See [platform.md](platform.md) § "Subagent permissions".
 
 ---
 

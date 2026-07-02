@@ -20,7 +20,7 @@ Each pattern below has three fields:
 
 **Tradeoff.** The agent catches paraphrase and semantic edge cases; the command does not. Paraphrase detection moves out of the always-on hot path into an explicit opt-in audit. For most skills this is a strict win because the hot path fires on every edit, while paraphrase audits happen once in a while.
 
-**Template location.** See [shell-safety/templates.md](shell-safety/templates.md) § T2 (blocking) and § T1 (advisory). See also `skill-builder/hooks/check-persona-uniqueness.sh` and `skill-builder/hooks/verify-directive-integrity.sh` as worked examples.
+**Template location.** See [shell-safety/templates.md](shell-safety/templates.md) § T2 (blocking) and § T1 (advisory). See also `skill-builder/hooks/unique-persona.sh` and `skill-builder/hooks/protect-directives.sh` as worked examples.
 
 ---
 
@@ -103,7 +103,7 @@ Execute-mode scope discipline still applies: do only the tasks on the list, note
 
 - [shell-safety/templates.md](shell-safety/templates.md) — hook script templates for P1 downshifts
 - [procedures/optimize.md](procedures/optimize.md) step 3 — content-creation profile indicators used by P2
-- [procedures/principles.md](principles.md) — worked example for P3 slim-down
+- [principles.md](principles.md) — worked example for P3 slim-down
 - [procedures/optimize.md](procedures/optimize.md) step 5b and [procedures/convert.md](procedures/convert.md) step 11 — worked examples for P4 precheck gating
 - [templates.md](templates.md) § "Frontmatter Requirements" — strictness field definition (Phase 6)
 - [patterns.md](patterns.md) § "Token efficiency as an optimization target" — rationale and lessons learned

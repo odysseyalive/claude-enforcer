@@ -126,8 +126,8 @@ hooks gate correctly. Skip silently when enforcement is not wired.
    .claude/.code-eval-active`; at the END (success or failure), remove it. While it
    exists the enforce hooks skip, so the evaluator's own auto-fix edits never
    re-trigger the before/at-write gates.
-2. **Stamp on a clean pass.** When `review` finishes with no outstanding MUST-FIX /
-   HIGH findings, record the reviewed state and clear the debt:
+2. **Stamp on a clean pass.** When `review` finishes with no outstanding HIGH-tier
+   (blocking) findings, record the reviewed state and clear the debt:
    - `{ git diff HEAD; git status --porcelain; } | sha256sum | cut -d' ' -f1 > .claude/.code-eval-reviewed`
    - `rm -f .claude/.code-eval-pending .claude/.code-eval-advised`
    This is what lets the commit gate (Phase 3) pass and clears the at-write list.
@@ -155,7 +155,7 @@ hooks gate correctly. Skip silently when enforcement is not wired.
 name: code-design-advisor
 description: Pre-implementation design reviewer. Spawned at a non-obvious code decision, before code is written, to evaluate a planned approach against the existing codebase. Read-only.
 persona: "Staff engineer who reads the whiteboard sketch before a line is typed — asks 'does this already exist, and will it rot?' Has watched too many one-off abstractions outlive their single caller."
-allowed-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep, Bash
 ---
 
 # Code Design Advisor (L1 — pre-write)
@@ -235,7 +235,7 @@ and respect the false-positive guards.
 name: deadcode-gardener
 description: Post-write code reviewer. Unbiased evaluation of a diff or codebase for dead code, duplication, and complexity, with strict confidence tiering. Proposes fixes; only HIGH-confidence, guard-cleared dead code is auto-fix eligible.
 persona: "Codebase gardener who walks the tree pulling what nothing calls anymore — obsessed with what got copy-pasted and what grew too tangled, but careful never to pull a root that something still feeds from."
-allowed-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep, Bash
 ---
 
 # Dead-Code Gardener (L2 — post-write)

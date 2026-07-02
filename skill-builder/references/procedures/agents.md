@@ -27,6 +27,11 @@ When running `/skill-builder agents [skill]`:
    - If cascade risk is MODERATE or HIGH, note in the report: "This skill has [N] existing validators with [risk level] cascade risk. Adding more validators may suppress creative output. Consider consolidating existing validators before adding new ones."
    - If cascade risk is LOW or NONE, proceed normally
 
+3c. **Output-contract & spawn-pattern check.** Enumerate the skill's existing agents (`agents/*.md` and `agents/*/AGENT.md`):
+   - For each agent whose output a consumer parses (mechanical trigger: the agent is referenced by a procedure or workflow step that branches on named fields, tokens, or a verdict line of its return), verify the AGENT.md defines an explicit output contract per `references/agents.md` § Output Contracts. Missing, or defined only in the caller's prompt → flag: "consumer-parsed agent without an output contract (drift risk)".
+   - Flag any spawn instruction that uses `subagent_type: "general-purpose"` for an agent registered under `.claude/agents/` (this bypasses the agent's `model:` pin, `tools:` grant, and persona; the fix is the canonical pattern in `references/agents.md` § Spawning Agents (Canonical Pattern)). Ad-hoc prompt-persona panels are exempt.
+   - Flag any agent spawned by name anywhere but not registered under `.claude/agents/` (unresolvable subagent_type; precedent ledger DEC-2026-06-23-code-eval-agent-registration).
+
 4. **Identify mandatory agent situations** — scan the skill for non-obvious decisions where guessing is involved. Per directive: "When a decision needs to be made that isn't overtly obvious, and guesses are involved, AGENTS ARE MANDATORY." Flag these as requiring agent panels.
 
 4b. **Detect Awareness Ledger** *(runs only when this skill is explicitly targeted, not during audit's display-mode pass)* — Check if `.claude/skills/awareness-ledger/SKILL.md` exists. If it does:
@@ -98,6 +103,9 @@ Rationale: [Why this routing — evaluation vs. implementation, isolation needs,
 | perf-analyst | Evaluation | Database performance engineer | Identify query bottlenecks | High |
 | ux-reviewer | Evaluation | Product designer (mobile-first) | Assess API ergonomics | Medium |
 
+### Output Contracts & Spawn Patterns
+[Findings from step 3c, or: "All consumer-parsed agents carry output contracts; spawn patterns canonical."]
+
 ### Mandatory Agent Situations
 [List any non-obvious decisions in this skill that require agent input]
 
@@ -113,7 +121,7 @@ When running `/skill-builder agents [skill] --execute`:
 1. Run display mode analysis first
 2. **Generate task list from findings** using TaskCreate — one task per agent to create (e.g., "Create security-reviewer agent with penetration tester persona for /auth")
 3. Execute each task sequentially, marking complete via TaskUpdate as it goes
-4. Each task: create the agent file in `.claude/skills/[skill]/agents/`, following templates from `references/agents.md`
+4. Each task: create the agent file in `.claude/skills/[skill]/agents/`, following templates from `references/agents.md`; when a consumer will parse the agent's result, author its output contract in the AGENT.md at creation time (`references/agents.md` § Output Contracts), including the in-band failure channel and the caller-side parse-failure behavior
 4b. **Model assignment (sacred directive, 2026-06-06):** every AGENT.md created or modified by these tasks gets an explicit `model:` field per SKILL.md § Directives → Audit Agent Model-Assignment Gate — classify the agent's own work (creative vs everything-else; research → everything-else) and stamp the matching lane's full model ID from model-lanes.md. Lanes unconfigured or cell empty → leave `model:` absent and flag; never invent an ID.
 4c. **Lane-pinned excursion tasks** (from step 4d findings, one task each, in this order per excursion):
    1. Design the bespoke agent from the skill's reviewed material (Bespoke Excursion-Agent Gate clauses 1–4; template + Context Contract per `references/lane-delegation.md`).
@@ -123,10 +131,11 @@ When running `/skill-builder agents [skill] --execute`:
    5. Insert or refresh the skill's single `LANE-AGENT-EMBED` Delegation Map block immediately after its MODEL-LANE-GATE block (insertion + anchor rules in lane-delegation.md § The Delegation Map; never inside/before/reordering an immutable block; the workflow body stays byte-identical).
    6. REVAMP removals: strip a legacy mid-workflow switch instruction ONLY if it is machine-generated / `modifiable: true` content; user-authored prose stays flagged, never edited.
    7. Verify: frontmatter parses (including `lane-pinned:`, `generated-by:`, `excursion-skill:`, `model:`), the map block appears exactly once, every anchor matches exactly once, no immutable block was touched. Note that `route embed` (audit's terminal task) keeps the block reconciled from here on.
+4d. **Registration (standard step):** every created agent that a procedure or skill spawns by name (equivalently: any agent with a defined output contract or a `model:` pin) gets a registration symlink `.claude/agents/[name].md` (copy fallback where symlinks are unavailable; report which was used), after a mechanical name-collision check across `.claude/agents/`. Ephemeral panel personas are never registered. Existing consumer-parsed agents that step 3c found unregistered are registered here too. Parent-skill spawn instructions created or updated by these tasks use the canonical pattern from `references/agents.md` § Spawning Agents (Canonical Pattern), never bare `general-purpose` for a registered agent.
 5. **Verify persona uniqueness** — after creating all agents, confirm no two share the same persona
 6. **For agent teams**: verify `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled in `.claude/settings.local.json`
 7. **For agent teams**: always include the mandatory research assistant teammate in the generated team definition. The research assistant gathers reference information using the project's configured search tools. Other teammates reference the research assistant by name when they need research. See `references/agents-teams.md` § "Mandatory Research Assistant Teammate" for full specification.
 8. **For agent teams**: verify research tool permissions are configured. Check `.claude/settings.local.json` for `permissions.allow` including the project's configured search tools. The install script sets these automatically. Additionally, recommend running `/skill-builder hooks --execute` to generate a PreToolUse hook that auto-approves these tools (belt-and-suspenders). See `references/agents-teams.md` § "Permissions" for details.
 9. **Lane-guardrail permission backstop (optional, opt-in):** when the project participates in the lane system, an `Agent(model:…)` deny guardrail can block ad-hoc off-lane subagent spawns. This is NOT authored here — it is owned by `/skill-builder hooks` § Step 3d (detection + opt-in write), because it does not bind the frontmatter-pinned fleet and it is a hard block departing from the advisory-only norm. Point the user there rather than emitting deny rules from `agents`. See `references/lane-delegation.md` § "Lane-Guardrail Permission Rules".
 
-**Grounding:** `references/agents.md`, `references/lane-delegation.md` (step 4d / execute 4b–4c)
+**Grounding:** `references/agents.md` (including § Output Contracts and § Spawning Agents (Canonical Pattern) for step 3c / execute 4 and 4d), `references/lane-delegation.md` (step 4d / execute 4b–4c)

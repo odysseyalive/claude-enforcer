@@ -28,12 +28,14 @@ Main AI weighs all findings → recommendation
 
 **How to invoke individual agents:**
 
-Spawn each agent as a Task with `subagent_type: "general-purpose"`. Launch them in parallel (multiple Task calls in a single message) so they can't influence each other. Each agent reads its AGENT.md for instructions and persona.
+Launch them in parallel (multiple Task calls in a single message) so they can't influence each other. An agent registered under `.claude/agents/` is spawned by its registered name, which honors its `model:` pin, `tools:` grant, and persona (see [agents.md](agents.md) § Spawning Agents (Canonical Pattern)). The `subagent_type: "general-purpose"` pattern below, with the persona and AGENT.md read stated in the prompt, is the fallback for unregistered agents and the correct form for ad-hoc prompt-persona panels.
 
 ```markdown
 ## Invocation Pattern (Individual Agents)
 
-Launch all agents in parallel — a single message with multiple Task tool calls:
+Launch all agents in parallel: a single message with multiple Task tool calls.
+Registered agents: subagent_type: "[agent-name]", prompt carries task inputs only.
+Unregistered or ad-hoc panel agents, per the fallback pattern:
 
 Task tool with subagent_type: "general-purpose"
 Prompt: "You are [Persona A — e.g., 'a senior penetration tester'].
