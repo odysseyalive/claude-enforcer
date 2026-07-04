@@ -268,10 +268,20 @@ current mapping pre-selected as the default. Options per lane, EXACTLY:
 
 1. `claude-opus-4-6`
 2. `claude-opus-4-8`
-3. The **latest released model by official ID** — discovered fresh each audit via the ladder below.
+3. `claude-sonnet-5`
+4. `claude-fable-5`
+5. The **latest released model by official ID** — discovered fresh each audit via the ladder below.
 
 (AskUserQuestion's auto-appended "Other" preserves manual entry; dedupe the "latest" option when it
 equals a static one. Leaving a cell blank disables flagging for that lane, per model-lanes.md.)
+
+**Four-option ceiling.** `AskUserQuestion` allows at most four options per question (plus its
+auto-appended "Other"). After deduping "latest" against the statics, if the four static IDs plus a
+distinct discovered-"latest" would total five, drop the oldest static(s) from the rendered list —
+`claude-opus-4-6` first, then `claude-opus-4-8` — until four options remain. Dropping a static loses
+nothing: it is a known ID the user can still enter via "Other", whereas the discovered-"latest" may
+name a model the user does not know, so it is never the option dropped. Both lanes share this single
+option list, so the ceiling applies identically to the creative and coding questions.
 
 **Latest-model discovery ladder:**
 
