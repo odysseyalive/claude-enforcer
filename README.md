@@ -73,7 +73,7 @@ Then run your first audit.
 
 ### Updating
 
-To pull the latest version, run the installer again or use `/skill-builder update` from inside a session. See [COMMANDS.md § Maintenance](COMMANDS.md#maintenance) for both update paths.
+To check which release you have, run `/skill-builder version` (add `--check` to compare against `main` and see whether an update is available). To pull the latest version, run the installer again or use `/skill-builder update` from inside a session. See [COMMANDS.md § Maintenance](COMMANDS.md#maintenance) for both update paths.
 
 ## Hemispheric Model Delegation
 

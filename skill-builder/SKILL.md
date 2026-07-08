@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, strip, optimize, agents, hooks, verify, inline, ledger, cascade, checksums, convert, shell-safety, route, backup, restore, audit, reconcile, code-eval, model-map, local-mode, update"
+description: "Create, audit, optimize Claude Code skills. Commands: skills, list, new, strip, optimize, agents, hooks, verify, inline, ledger, cascade, checksums, convert, shell-safety, route, backup, restore, audit, reconcile, code-eval, model-map, local-mode, update, version"
 when_to_use: "When creating, auditing, or optimizing Claude Code skills, or when working with SKILL.md files, hooks, or agents"
 argument-hint: "[command] [skill] [--execute]"
 version: "1.5"
@@ -405,6 +405,7 @@ Before executing any command, read its procedure file from `references/procedure
 | `model-map` | [model-map.md](references/procedures/model-map.md) | Choose the creative + coding/everything-else model + global advisor (Lane→Model picker + fleet rewrite), no audit |
 | `local-mode [--execute]` | [local-mode.md](references/procedures/local-mode.md) | Audit project for local LLM compatibility (classify skills, trim, install local infrastructure) |
 | `update` | [update.md](references/procedures/update.md) | Update to latest version |
+| `version` | [version.md](references/procedures/version.md) | Print the installed version (`--check` compares against `main`) |
 <!-- /origin -->
 
 ---
@@ -428,7 +429,7 @@ Before executing any command, read its procedure file from `references/procedure
    - YES → `dev_mode = true`; strip `dev` from the argument list; continue.
    - NO  → `dev_mode = false`.
 2. Extract the first remaining positional argument as `first_arg`.
-3. Define the known-command set: `{ audit, optimize, agents, hooks, new, strip, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, model-map, local-mode, backup, restore, update }`.
+3. Define the known-command set: `{ audit, optimize, agents, hooks, new, strip, inline, skills, list, verify, ledger, cascade, reconcile, checksums, convert, shell-safety, route, code-eval, model-map, local-mode, backup, restore, update, version }`.
 4. IF `first_arg` is empty (no arguments remaining) → dispatch to the default full-audit flow per § Quick Commands. Do NOT invoke the intent router. STOP this CHECKPOINT.
 5. IF `first_arg` is in the known-command set → treat it as the command name. Determine whether a skill target was specified in the remaining arguments. CONTINUE to step 7.
 6. IF `first_arg` is NOT in the known-command set AND the remaining argument string is non-empty →
@@ -462,7 +463,7 @@ This CHECKPOINT fires every invocation. Procedure files repeat it in their own p
 
 | Risk | Commands | Default Mode |
 |------|----------|-------------|
-| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync`, `model-map`, `backup` | **Execute directly** |
+| **Low-risk** (additive, non-destructive) | `new`, `inline`, `skills`, `list`, `verify`, `version`, `ledger`, `checksums`, `route index`, `route lane-status`, `code-eval create`, `code-eval sync`, `model-map`, `backup` | **Execute directly** |
 | **Single-consent auto** (2026-06-06 Audit Autonomy Gate) | `audit`, `audit --quick` | **Scan + report, then auto-execute** under the Step 0 disclaimer consent; `--review`/`--dry-run` = report-only; `--execute` = harmless no-op |
 | **High-risk** (restructuring, modifying) | `optimize`, `agents`, `hooks`, `cascade`, `reconcile`, `convert`, `route embed`, `code-eval review`, `code-eval sweep`, `code-eval enforce`, `local-mode` | **Display mode** (requires `--execute`) *when invoked standalone; under audit they run in the auto-execution phase* |
 | **Destructive** (deletes files irreversibly) | `strip` | **Display mode** (requires `--execute`; `--confirm-breaking` if dependents exist) — NEVER auto-fired by audit (DEFER tier) |

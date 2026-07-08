@@ -32,6 +32,7 @@ skill-builder/references/principles.md
 skill-builder/references/templates.md
 skill-builder/references/temporal-validation.md
 skill-builder/references/token-efficiency.md
+skill-builder/references/version.md
 
 # model-lanes.md is a USER-EDITABLE mapping (lane to preferred model, skill to lane).
 # `keep` so `/skill-builder update` never clobbers a user's edited mapping.
@@ -67,6 +68,7 @@ skill-builder/references/procedures/code-eval.md
 skill-builder/references/procedures/model-map.md
 skill-builder/references/procedures/update.md
 skill-builder/references/procedures/local-mode.md
+skill-builder/references/procedures/version.md
 
 # Shell-safety rule set
 skill-builder/references/shell-safety/rules.md
