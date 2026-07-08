@@ -46,6 +46,7 @@ Use the **normalized exact model ID** form: `claude-<family>-<major>-<minor>`
 ## Skill → Lane  (DECLARE YOUR SKILLS HERE)
 
 <!-- model-lane-setup: unset -->
+<!-- advisor-setup: unset -->
 
 Only skills listed here (or self-declaring `lane:` in their own SKILL.md frontmatter) participate
 in model-mismatch flagging. **On a fresh install this table is empty of real assignments** — the
@@ -110,6 +111,18 @@ present, a headless audit prints the disclaimer into its report and proceeds; wi
 refuses ("Audit disclaimer not yet accepted — run one interactive audit first"). Interactive audits
 always re-ask regardless of the marker. Delete the marker by hand to force headless runs to block
 again.
+
+**Advisor-setup marker (2026-07-08).** A third per-project marker lives beside `model-lane-setup`:
+`<!-- advisor-setup: unset|configured|declined -->`. It tracks whether the Lane→Model picker's
+global-advisor question has been answered: `unset` (or missing) → ask; `configured` → ask with the
+current value pre-selected; `declined` → suppress the advisor question only (the lane questions
+still run). The chosen model itself is NEVER stored in this file — it lives in Claude Code
+settings (`advisorModel`, written host-locally to `.claude/settings.local.json`); this marker
+records setup state only, so the two can never drift. Normative spec:
+[lane-delegation.md](lane-delegation.md) § Global Advisor Model. This file is install-if-absent —
+existing installs won't have this marker or this paragraph; the procedures treat a missing marker
+as `unset` and insert the marker line surgically on first configure (never a wholesale rewrite).
+To re-enable the question after declining, set the marker back to `unset`.
 
 **2026-06-06 semantics change.** `configured` no longer means never-ask-again for the *mapping*:
 every full interactive audit re-confirms the Lane→Model choices via the picker (one click when

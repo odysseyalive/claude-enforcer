@@ -298,7 +298,65 @@ option list, so the ceiling applies identically to the creative and coding quest
 
 A changed answer → the consented Lane→Model write into model-lanes.md (same single-write discipline
 as audit's 4f-setup), then the Fleet Rewrite below. The picker never writes the
-`model-lane-setup` marker and never switches the session model.
+`model-lane-setup` marker and never switches the session model. The same batched call carries a
+third question object — the global advisor model. See § Global Advisor Model below.
+
+---
+
+## Global Advisor Model (third picker question — consumed by the same callers)
+
+Claude Code v2.1.98+ ships an experimental **advisor tool**: the main model consults a second,
+at-least-as-capable model at decision points (before committing to an approach, on recurring
+errors, before declaring done), configured via the `advisorModel` settings key or the `/advisor`
+command. skill-builder configures it as a THIRD question object inside the SAME batched picker
+call — additional objects in one call are still ONE prompt screen and ONE sanctioned question slot
+(the companion-gate precedent), so audit's five-question count is unchanged. The advisor is ONE
+GLOBAL choice, orthogonal to the two lanes — never per-lane, never touched by the Fleet Rewrite.
+
+**Question shape.** Header **"Advisor model (global)"**. Options are ALIASES, deliberately —
+Claude Code resolves `fable` / `opus` / `sonnet` to the latest release of each family, so the
+pairing tracks new models without editing this list (AskUserQuestion's auto-appended "Other"
+preserves full-ID entry). Filter against the DETECTED main model (model-lanes.md § Active-Model
+Detection): `fable` always offered; `opus` unless the main is Fable-family; `sonnet` only for
+Sonnet- or Haiku-family mains; plus a literal **"No advisor"** option. Never more than four
+options (a Fable main renders just `fable` + `No advisor`). Pre-selected default: the current
+`advisorModel` from a merged read of `.claude/settings.local.json` → `.claude/settings.json` →
+`~/.claude/settings.json` (read-only), or "No advisor" when none is set. The question object is
+suppressed entirely when the `advisor-setup` marker is `declined` (the lane questions still run).
+
+**Pairing rule (minimal by design — a full matrix would rot).** The advisor must be at least as
+capable as the main model. Claude Code validates the pairing itself and silently detaches an
+invalid advisor (with a notification), so an over-generous option list fails safe. Two hard facts:
+a Fable-family main accepts ONLY `fable` (and needs Claude Code ≥ 2.1.170); `fable` is a valid
+advisor for every main. Finer detail lives at https://code.claude.com/docs/en/advisor — **never
+fabricate pairing rules from memory** (same philosophy as the stale-ID rule).
+
+**Apply (the answer IS the consent — single-write discipline).** Unchanged → write nothing.
+Changed to a model → set `<!-- advisor-setup: configured -->` beside the `model-lane-setup` marker
+in model-lanes.md (**surgical line edit; a missing marker means `unset` — insert the line, never
+rewrite the file**: model-lanes.md is update-preserved, so existing installs never receive new
+shipped text), write `"advisorModel": "<alias>"` into the project's `.claude/settings.local.json`
+(host-local, preserving every other key — the hooks § Step 3d write precedent), and print:
+"advisor configured — settings apply next session; run `/advisor <alias>` to attach it now."
+(Named-command advisory — informational, never blocking.) "No advisor" → write
+`<!-- advisor-setup: declined -->`, remove any `advisorModel` key this machinery previously wrote
+in `.claude/settings.local.json`, and name `/advisor off`. Re-enable by hand-editing the marker
+back to `unset`. **Never edit `~/.claude/settings.json`** — user-scope settings are the user's
+own property (`/advisor` writes there; this machinery stays project-local).
+
+**Fleet inheritance (documented platform exception — scoped).** Subagents inherit the configured
+advisor, and Claude Code re-validates the pairing against each agent's own `model:` pin at spawn —
+a Sonnet-pinned lane agent can attach an Opus advisor even in a session whose Fable main cannot.
+This is a documented platform mechanism (advisor docs, verified 2026-07-08), NOT the unreliable
+permission-mode inheritance DEC-2026-06-18 warns against — that record's caution stands unchanged
+for permissions. The advisor answer never queues a Fleet Rewrite and never chains `route embed`.
+
+**Requirements & caveats (surface in the report line when relevant):** Claude Code ≥ 2.1.98
+(≥ 2.1.170 for a Fable main); Anthropic API only — on Bedrock / Vertex / Foundry the setting is
+inert (state it; don't try to detect the provider); advisor tokens bill at the advisor model's
+rates; `/advisor off` clears the setting; `CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1` disables the
+feature entirely; toggling `/advisor` mid-session does not invalidate the main model's prompt
+cache.
 
 ---
 

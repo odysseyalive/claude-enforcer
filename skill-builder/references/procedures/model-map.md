@@ -2,14 +2,14 @@
 <!-- Enforcement: HIGH — read before running `/skill-builder model-map`. Reuses the canonical picker + fleet-rewrite spec; never restates it. -->
 
 <!-- Relocated verbatim from SKILL.md (2026-07-01 optimize): this command's always-loaded overview now lives here, one file-read away per the grounding pattern. -->
-<!-- origin: skill-builder | version: 1.5 | modifiable: true -->
+<!-- origin: skill-builder | version: 1.6 | modifiable: true -->
 ## The `model-map` Command
 
 Choose which model runs the **creative** lane and which runs the **coding / everything-else** lane (the 2-brain harness Lane→Model mapping), apply the change, and stop — without running a full `audit`. This is the standalone door to the same Lane→Model Picker + Fleet Rewrite machinery audit reaches at Step 0.4 (the every-audit picker); it is purely a mapping refresh, never a scan.
 
-- `/skill-builder model-map` — run the Lane→Model picker (one batched AskUserQuestion: creative model / coding model), write only the changed cells in `references/model-lanes.md`, then fan the new IDs out to every generated `lane-pinned:` excursion agent (Fleet Rewrite). Executes immediately — the picker answer IS the consent (Display/Execute Rule 1).
+- `/skill-builder model-map` — run the Lane→Model picker (one batched AskUserQuestion: creative model / coding model / global advisor), write only the changed cells in `references/model-lanes.md`, then fan the new IDs out to every generated `lane-pinned:` excursion agent (Fleet Rewrite). Executes immediately — the picker answer IS the consent (Display/Execute Rule 1).
 
-**Scope (deliberately narrow).** This command ONLY chooses lane→model and rewrites generated agents' `model:` lines. It NEVER assigns skills to lanes — Skill→Lane assignment stays declared-never-inferred (use `audit` onboarding or edit `model-lanes.md` by hand) — and NEVER runs an audit scan. On a project with no lanes configured it writes the Lane→Model mapping and marks lanes `configured` (Skill→Lane left empty); on a `declined` project it asks for an explicit opt-in before flipping the marker.
+**Scope (deliberately narrow).** This command ONLY chooses lane→model and rewrites generated agents' `model:` lines. It also configures the ONE global advisor model (never per-lane) — see lane-delegation.md § Global Advisor Model. It NEVER assigns skills to lanes — Skill→Lane assignment stays declared-never-inferred (use `audit` onboarding or edit `model-lanes.md` by hand) — and NEVER runs an audit scan. On a project with no lanes configured it writes the Lane→Model mapping and marks lanes `configured` (Skill→Lane left empty); on a `declined` project it asks for an explicit opt-in before flipping the marker.
 
 **Configuration, not a switch.** The two model questions configure the mapping — they never ask the user to run `/model` and the command never switches the session model (No-Switch-Prompt directive; the Lane→Model picker is the sanctioned configuration carve-out). Suppressed in headless / non-interactive sessions: an interactive picker cannot run with no user, so it refuses cleanly and writes nothing.
 
@@ -30,6 +30,7 @@ never assigns skills to lanes, and never switches the session model.
 - The picker (option list, the latest-model discovery ladder) → [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker.
 - The fleet rewrite (marker-filtered glob, `model:`-line-only edit, verification re-grep) → [lane-delegation.md](../lane-delegation.md) § Fleet Rewrite on Remap.
 - Setup-state semantics, Active-Model Detection, blank-cell-to-disable → [model-lanes.md](../model-lanes.md).
+- The advisor question (alias options, pairing rule, marker + `settings.local.json` apply) → [lane-delegation.md](../lane-delegation.md) § Global Advisor Model.
 
 This single picker implementation is shared with audit; if you change the picker behavior, change it
 in lane-delegation.md so both callers stay in sync (audit § Step 0.4 is the other caller).
@@ -59,7 +60,11 @@ marker-filtered glob) — none involves a guess (Non-Obvious Decision Gate claus
 
 Read the project's `references/model-lanes.md` (relative to the skill-builder install). Parse the
 Lane→Model table, the Skill→Lane table, and the `<!-- model-lane-setup: <state> -->` marker
-(missing = `unset`). See [model-lanes.md](../model-lanes.md) § Setup State.
+(missing = `unset`). See [model-lanes.md](../model-lanes.md) § Setup State. Also parse the
+`<!-- advisor-setup: <state> -->` marker (missing = `unset` — older installs never received it)
+and read the current `advisorModel` from merged settings (`.claude/settings.local.json` →
+`.claude/settings.json` → `~/.claude/settings.json`, read-only) for the advisor question's
+pre-selected default.
 
 ### Step 2 — Headless guard (before any question)
 
@@ -84,6 +89,9 @@ with no user — same suppression the audit picker declares.)
   → continue to Step 4. (`model-map` never runs the per-skill lane-suggestion onboarding — that is
   audit-only. On a fresh `unset` project the picker still runs; Step 5 marks it `configured` with
   the Skill→Lane table left empty, honoring declared-never-inferred.)
+- **`advisor-setup` marker `declined`** (independent of the lane branches above) → suppress the
+  advisor question object only; the lane questions run normally. The lane `declined` opt-in
+  question governs lanes only — advisor state is tracked and asked separately.
 
 ### Step 4 — Build the picker option list
 
@@ -97,10 +105,14 @@ The static IDs plus AskUserQuestion's auto-appended "Other" always survive a dis
 
 ### Step 5 — The picker (one batched AskUserQuestion) and the single consented write
 
-Emit ONE batched `AskUserQuestion` with two questions — **"Creative lane model"** and
-**"Coding (everything-else) lane model"** — each defaulting to the current mapping value
-(confirming is one click; "Other" preserves manual entry; leaving a cell blank disables flagging for
-that lane per [model-lanes.md](../model-lanes.md) § Comparison Rule).
+Emit ONE batched `AskUserQuestion` with up to three questions — **"Creative lane model"**,
+**"Coding (everything-else) lane model"**, and **"Advisor model (global)"** — the lane questions
+each defaulting to the current mapping value (confirming is one click; "Other" preserves manual
+entry; leaving a cell blank disables flagging for that lane per
+[model-lanes.md](../model-lanes.md) § Comparison Rule). The advisor question's shape (alias
+options filtered against the detected main model, "No advisor", pre-selected default, suppression
+on a `declined` advisor marker) is specified at [lane-delegation.md](../lane-delegation.md)
+§ Global Advisor Model — build it EXACTLY per that section.
 
 This is a **configuration** question, not a switch request — it never instructs the user to run
 `/model` and `model-map` never switches the session model (No-Switch-Prompt directive; the picker is
@@ -115,6 +127,11 @@ Apply the answer (the answer IS the consent — single-write discipline):
   `model-lane-setup` marker exactly, EXCEPT the two opt-in cases above (a prior `unset` or the
   `declined`→opt-in path), where you set it to `configured` as the user's affirmative consent.
   Re-read the file once to confirm it parses.
+- **Advisor answer** → apply EXACTLY per [lane-delegation.md](../lane-delegation.md) § Global
+  Advisor Model: unchanged → no write; changed → `advisor-setup` marker (surgical insertion when
+  missing) + `advisorModel` in `.claude/settings.local.json` + the "run `/advisor <alias>` to
+  attach it now" advisory; "No advisor" → `declined` + key removal + name `/advisor off`. The
+  advisor answer NEVER triggers Step 6's Fleet Rewrite and never chains `route embed`.
 
 ### Step 6 — Fleet Rewrite (fan the new IDs out to generated agents)
 
@@ -149,6 +166,9 @@ per [lane-delegation.md](../lane-delegation.md) § Fleet Rewrite on Remap:
 Print a short summary (no terminal question — this is informational prose):
 - Lane→Model result: `confirmed unchanged` / `remapped <lane>: <old> → <new>` / `<lane> disabled` /
   discovery-unavailable notice if it fired.
+- Advisor: `confirmed unchanged` / `configured <alias> (run /advisor <alias> for immediate
+  effect)` / `no advisor (declined)` / `question suppressed (declined marker)` — plus the
+  Anthropic-API-only caveat when a configuration was written.
 - Fleet Rewrite: N agents rewritten, plus any skip/mismatch findings from Step 6's verification.
 - Any `route embed` chain triggered by Step 7.
 
@@ -161,11 +181,13 @@ Print a short summary (no terminal question — this is informational prose):
 | Headless / non-interactive | Refuse cleanly, write nothing (Step 2). |
 | `model-lanes.md` absent | Report + STOP (restore via installer). |
 | marker `declined` | Explicit opt-in question first; never silently overridden. |
+| `advisor-setup` marker `declined` | Advisor question suppressed; lane questions unaffected. |
 | Unchanged picker answer, no blank | Report no-change, no write, no fleet rewrite. |
 | Zero lane-pinned agents | No-op success. |
 
-**Grounding:** [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker + § Fleet Rewrite on
-Remap (canonical picker + fleet mechanics), [model-lanes.md](../model-lanes.md) § Setup State /
+**Grounding:** [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker + § Global Advisor
+Model + § Fleet Rewrite on Remap (canonical picker + advisor + fleet mechanics),
+[model-lanes.md](../model-lanes.md) § Setup State /
 § Active-Model Detection / § Comparison Rule, [audit.md](audit.md) § Step 0.4 (the other
 caller of the same picker), SKILL.md § Directives (No-Switch-Prompt Gate, Audit Agent
 Model-Assignment Gate, Non-Obvious Decision Gate).
