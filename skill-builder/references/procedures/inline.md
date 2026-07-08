@@ -52,6 +52,8 @@ Added directive to /[skill]:
 Location: .claude/skills/[skill]/SKILL.md § Directives
 ```
 
+**Post-capture advisory (report-only):** IF the captured directive is habit-fighting (opposes an automatic model tendency; detection markers in [optimize.md](optimize.md) § Step 4d) or hinges on an abstract multi-word concept with no concrete condition, append one line to the report: prose alone may not hold; recommend `/skill-builder optimize [skill]` (generates the enforcement annotation) or `/skill-builder hooks [skill]` (hard block). `inline` itself NEVER generates annotations (templates.md Rule 7) — it only recommends the command that does. Rationale: [enforcement.md](../enforcement.md) § "Research Grounding".
+
 ### Step 5: Run Post-Action Chain
 
 Run the **Post-Action Chain Procedure** (see [post-action-chain.md](post-action-chain.md)) for the target skill. The chain's hooks display mode will automatically detect enforceable patterns in the new directive and recommend hooks or agents as appropriate.

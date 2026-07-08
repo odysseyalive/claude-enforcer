@@ -7,6 +7,7 @@ When user gives a new rule for an existing skill:
 3. **Add to Directives section** — With date and source, wrapped in provenance markers (`<!-- origin: user | added: [date] | immutable: true -->`)
 4. **Regenerate directive checksums** — After adding the directive, regenerate the `.directives.sha` sidecar following the spec in [checksums.md](checksums.md) § "Execute Mode" step 2.
 5. **Run Post-Action Chain** — Run the **Post-Action Chain Procedure** (see [post-action-chain.md](post-action-chain.md)) for the affected skill. The chain's hooks display mode will detect enforceable patterns and recommend hooks or agents; the user can then choose to execute.
+6. **Post-capture advisory (report-only)** — IF the captured directive is habit-fighting (opposes an automatic model tendency; detection markers in [optimize.md](optimize.md) § Step 4d) or hinges on an abstract multi-word concept with no concrete condition, add one line to the report: prose alone may not hold; recommend `/skill-builder optimize [skill]` (generates the enforcement annotation) or `/skill-builder hooks [skill]` (hard block). NEVER reword, annotate, or otherwise modify the captured directive here. Rationale: [enforcement.md](../enforcement.md) § "Research Grounding".
 
 **Example conversation:**
 

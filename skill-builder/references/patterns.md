@@ -44,3 +44,5 @@
 
 - **Token efficiency is an optimization target** — Optimize doesn't just restructure for context clarity; it also scans for token-intensive patterns introduced by 4.6-era design decisions. Agent hooks doing mechanical checks, `xhigh` effort without a content-creation profile, oversized SKILL.md content, always-spawned validators, missing `strictness` field — each is detectable deterministically and each compounds across invocations. See `references/token-efficiency.md` for the full pattern catalog and detection rules. The scan is on-by-default in `/skill-builder audit` and `/skill-builder optimize [skill]`. (2026-04-22)
 
+- **Habit-fighting directives need more than prose — even when HARD** — Concrete phrasing doesn't rescue a directive that fights an automatic model tendency (em-dash tics, tone reflexes, stock vocabulary). The global-workspace selectivity result explains why: well-practiced behavior bypasses the verbalizable representations that written rules live in. Route these to hooks plus a Principle Restatement annotation, regardless of HARD/SOFT classification. See `references/enforcement.md` § "Research Grounding". (2026-07-08)
+

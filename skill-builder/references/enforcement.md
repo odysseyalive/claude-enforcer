@@ -134,6 +134,22 @@ Rules (`.claude/rules/*.md`) are:
 
 Prefer: Lean CLAUDE.md (~100-150 lines) + on-demand skills + hooks for critical enforcement.
 
+### Research Grounding
+
+The mutability hierarchy above is argued from operational experience (prose drifts, hooks do not). Interpretability research now supplies a mechanistic account of why the same boundaries appear inside the model itself.
+
+Source: Gurnee, Sofroniew, et al. (Anthropic), *Verbalizable Representations Form a Global Workspace in Language Models*, Transformer Circuits, 2026. <https://transformer-circuits.pub/2026/workspace/index.html>. The paper claims functional access only, nothing about subjective experience. Findings verified at capture time (2026-07-08); re-verify against the paper before treating any specific claim as current.
+
+Three findings bear directly on this file's rules:
+
+1. **Verbatim wording is the handle (§2.3, §3.1, §9.1).** A model's silent reasoning routes through a small, privileged set of token-indexed, verbalizable representations (a "global workspace"). The exact tokens of a rule are the handle into that workspace: paraphrase can change which internal directions activate, and a concept with no clean single-token handle may not surface reliably at all. This is the mechanistic footing for the verbatim-preservation rules (directives are sacred; annotation, not rewriting). Preserving the user's exact words preserves the exact handle.
+
+2. **Automatic behavior bypasses the workspace (§3.5, §9.2).** Well-practiced computation does not route through verbalizable representations. A **habit-fighting directive** (one that opposes an automatic model tendency: formatting tics, punctuation reflexes, tone habits, stock vocabulary) may therefore never intersect the circuit producing the behavior, no matter how concretely it is phrased. This is why the enforcement hierarchy escalates habit-fighting rules to hooks and hard blocks instead of trusting prose to self-execute. See [procedures/optimize.md](procedures/optimize.md) § Step 4d (habit-fighting flag) and [templates.md](templates.md) § "Enforcement Annotation Template" (Rule 6 exception).
+
+3. **Articulating the principle shapes silent behavior (§7, §3.2).** Training a model on principle-articulations it would produce *if asked to reflect* measurably improves behavior on tasks where it is never asked (the paper's Counterfactual Reflection Training result). The prompt-time analogue: making the model restate the governing principle at the decision point loads the relevant concepts into the workspace at the moment they matter. This grounds the Principle Restatement annotation step ([templates.md](templates.md) § "Principle Restatement step") and, more broadly, the grounding-read pattern (read the reference before the task).
+
+Lesson digest entry: [patterns.md](patterns.md) § "Habit-fighting directives need more than prose".
+
 ---
 
 ## Behavior Preservation in Optimization

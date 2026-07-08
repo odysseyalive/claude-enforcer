@@ -129,14 +129,22 @@ When running `/skill-builder optimize [skill]`:
      - Conditional language without concrete criteria ("if applicable", "when warranted")
      - Voice/tone/style rules (almost always SOFT on 4.7 — these were 4.6's strength)
 
+   **Habit-fighting flag (orthogonal to HARD/SOFT):** independent of the classification above, flag a directive as habit-fighting when it opposes a known automatic model tendency. Detection markers:
+   - Targets a model output habit: em-dash or emoji tics, sycophantic openers, hedging qualifiers, summary-paragraph endings, stock vocabulary, bullet-list reflexes
+   - The captured phrasing signals repeated failure: "stop doing", "you keep", "again", "every time"
+
+   Routing (see [enforcement.md](../enforcement.md) § "Research Grounding" for why prose alone does not hold here):
+   - **HARD + habit-fighting** → note "annotation recommended — habit-fighting exception (Principle Restatement step)"; if the behavior is pattern-expressible, also recommend a command hook
+   - **SOFT + habit-fighting** → the annotation must include the Principle Restatement step as step 1 ([templates.md](../templates.md) § "Principle Restatement step"); escalate the hook recommendation
+
    For each SOFT directive:
    1. Check whether an existing enforcement annotation is present below the directive (look for `<!-- ENFORCEMENT ANNOTATION — auto-generated` marker and a matching `<!-- Source directive: -->` line). If present and the `Source directive` string matches the current directive verbatim, note "annotation exists, current" — no action needed.
    2. If an annotation exists but the `Source directive` string does NOT match (directive has since been edited), note "annotation stale — regenerate".
    3. If no annotation exists, note "annotation missing — generate".
 
-   For each HARD directive: note "No annotation needed — directive is 4.7-compatible".
+   For each HARD directive: note "No annotation needed — directive is 4.7-compatible" — unless the habit-fighting flag is set (see above), in which case note "annotation recommended — habit-fighting exception".
 
-   Record the classification and annotation status in the audit checklist output under **Annotation Status (Opus 4.7)**. Do NOT generate annotations in display mode — only flag them. Annotations are generated in Execute Mode as tasks.
+   Record the classification and annotation status in the audit checklist output under **Annotation Status (Opus 4.7)**. Record the habit-fighting flag per directive alongside the classification. Do NOT generate annotations in display mode — only flag them. Annotations are generated in Execute Mode as tasks.
 
    Reference format: [templates.md](../templates.md) § "Enforcement Annotation Template".
 
