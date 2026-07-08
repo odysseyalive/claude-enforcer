@@ -129,8 +129,9 @@ Apply the answer (the answer IS the consent — single-write discipline):
   Re-read the file once to confirm it parses.
 - **Advisor answer** → apply EXACTLY per [lane-delegation.md](../lane-delegation.md) § Global
   Advisor Model: unchanged → no write; changed → `advisor-setup` marker (surgical insertion when
-  missing) + `advisorModel` in `.claude/settings.local.json` + the "run `/advisor <alias>` to
-  attach it now" advisory; "No advisor" → `declined` + key removal + name `/advisor off`. The
+  missing) + `advisorModel` (full model ID) in `.claude/settings.local.json` + the "run `/advisor
+  <full-model-id>` to attach it now" advisory; "No advisor" → `declined` + key removal + name
+  `/advisor off`. The
   advisor answer NEVER triggers Step 6's Fleet Rewrite and never chains `route embed`.
 
 ### Step 6 — Fleet Rewrite (fan the new IDs out to generated agents)
@@ -166,8 +167,8 @@ per [lane-delegation.md](../lane-delegation.md) § Fleet Rewrite on Remap:
 Print a short summary (no terminal question — this is informational prose):
 - Lane→Model result: `confirmed unchanged` / `remapped <lane>: <old> → <new>` / `<lane> disabled` /
   discovery-unavailable notice if it fired.
-- Advisor: `confirmed unchanged` / `configured <alias> (run /advisor <alias> for immediate
-  effect)` / `no advisor (declined)` / `question suppressed (declined marker)` — plus the
+- Advisor: `confirmed unchanged` / `configured <full-model-id> (run /advisor <full-model-id> for
+  immediate effect)` / `no advisor (declined)` / `question suppressed (declined marker)` — plus the
   Anthropic-API-only caveat when a configuration was written.
 - Fleet Rewrite: N agents rewritten, plus any skip/mismatch findings from Step 6's verification.
 - Any `route embed` chain triggered by Step 7.

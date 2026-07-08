@@ -313,31 +313,37 @@ call — additional objects in one call are still ONE prompt screen and ONE sanc
 (the companion-gate precedent), so audit's five-question count is unchanged. The advisor is ONE
 GLOBAL choice, orthogonal to the two lanes — never per-lane, never touched by the Fleet Rewrite.
 
-**Question shape.** Header **"Advisor model (global)"**. Options are ALIASES, deliberately —
-Claude Code resolves `fable` / `opus` / `sonnet` to the latest release of each family, so the
-pairing tracks new models without editing this list (AskUserQuestion's auto-appended "Other"
-preserves full-ID entry). Filter against the DETECTED main model (model-lanes.md § Active-Model
-Detection): `fable` always offered; `opus` unless the main is Fable-family; `sonnet` only for
-Sonnet- or Haiku-family mains; plus a literal **"No advisor"** option. Never more than four
-options (a Fable main renders just `fable` + `No advisor`). Pre-selected default: the current
+**Question shape.** Header **"Advisor model (global)"**. Options are FULL OFFICIAL MODEL IDs —
+never the `fable` / `opus` / `sonnet` aliases — drawn from the SAME list the Lane→Model Picker
+builds: the four static IDs `claude-opus-4-6` / `claude-opus-4-8` / `claude-sonnet-5` /
+`claude-fable-5` plus the live-discovered latest released ID, under the same four-option ceiling and
+latest-model discovery ladder (AskUserQuestion's auto-appended "Other" preserves manual full-ID
+entry). Filter that list by the Pairing rule below against the DETECTED main model (model-lanes.md
+§ Active-Model Detection): `claude-fable-5` and the discovered-latest always offered; the
+`claude-opus-*` IDs unless the main is Fable-family; `claude-sonnet-5` only for Sonnet- or
+Haiku-family mains; plus a literal **"No advisor"** option. Never more than four options — within
+the ceiling "No advisor" is never dropped and `claude-fable-5` (valid for every main) outranks an
+oldest static (a Fable-family main renders just `claude-fable-5` + "No advisor"). Pre-selected default: the current
 `advisorModel` from a merged read of `.claude/settings.local.json` → `.claude/settings.json` →
 `~/.claude/settings.json` (read-only), or "No advisor" when none is set. The question object is
 suppressed entirely when the `advisor-setup` marker is `declined` (the lane questions still run).
 
 **Pairing rule (minimal by design — a full matrix would rot).** The advisor must be at least as
 capable as the main model. Claude Code validates the pairing itself and silently detaches an
-invalid advisor (with a notification), so an over-generous option list fails safe. Two hard facts:
-a Fable-family main accepts ONLY `fable` (and needs Claude Code ≥ 2.1.170); `fable` is a valid
-advisor for every main. Finer detail lives at https://code.claude.com/docs/en/advisor — **never
-fabricate pairing rules from memory** (same philosophy as the stale-ID rule).
+invalid advisor (with a notification), so an over-generous option list fails safe. Two hard facts
+(stated as full IDs, never aliases): a Fable-family main accepts ONLY `claude-fable-5` (and needs
+Claude Code ≥ 2.1.170); `claude-fable-5` is a valid advisor for every main. Finer detail lives at
+https://code.claude.com/docs/en/advisor — **never fabricate pairing rules or model IDs from
+memory** (same philosophy as the stale-ID rule).
 
 **Apply (the answer IS the consent — single-write discipline).** Unchanged → write nothing.
 Changed to a model → set `<!-- advisor-setup: configured -->` beside the `model-lane-setup` marker
 in model-lanes.md (**surgical line edit; a missing marker means `unset` — insert the line, never
 rewrite the file**: model-lanes.md is update-preserved, so existing installs never receive new
-shipped text), write `"advisorModel": "<alias>"` into the project's `.claude/settings.local.json`
+shipped text), write `"advisorModel": "<full-model-id>"` — the chosen official ID (e.g.
+`claude-opus-4-8`), never an alias — into the project's `.claude/settings.local.json`
 (host-local, preserving every other key — the hooks § Step 3d write precedent), and print:
-"advisor configured — settings apply next session; run `/advisor <alias>` to attach it now."
+"advisor configured — settings apply next session; run `/advisor <full-model-id>` to attach it now."
 (Named-command advisory — informational, never blocking.) "No advisor" → write
 `<!-- advisor-setup: declined -->`, remove any `advisorModel` key this machinery previously wrote
 in `.claude/settings.local.json`, and name `/advisor off`. Re-enable by hand-editing the marker

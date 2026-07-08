@@ -13,7 +13,7 @@ audit drift-sync of one reference set, this file carries the **semver product
 version** of the entire distribution.
 
 ```
-version: 1.6.0
+version: 1.6.1
 released: 2026-07-08
 ```
 
@@ -22,6 +22,14 @@ BOTH together. See CLAUDE.md "Versioning" for the release ritual.
 
 ## Changelog
 
+- **1.6.1** (2026-07-08). Advisor picker now emits FULL official model IDs
+  instead of the `fable`/`opus`/`sonnet` aliases: options mirror the Lane→Model
+  Picker's static IDs plus the live-discovered latest, the `advisorModel`
+  settings write and the `/advisor` advisory both name the full ID, and the
+  pairing filter is restated in full-ID/family terms. Agent `model:` override
+  examples in `templates.md` switched to full IDs to match. Reverses the
+  deliberate-alias choice in `DEC-2026-07-08-global-advisor-in-picker` (project
+  policy: models are always referenced by full official ID).
 - **1.6.0** (2026-07-08). Added the `version` command (`/skill-builder version`
   prints the installed version and release date; `--check` reports whether `main`
   is newer). Introduced this authoritative shipped version anchor, and corrected

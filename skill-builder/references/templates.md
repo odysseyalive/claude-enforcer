@@ -382,7 +382,7 @@ Reference files:
 | `memory` | Persistent cross-session memory | `project`, `local`, `user` |
 | `background` | Run without blocking parent | `true` |
 | `when_to_use` | Tells Claude when to proactively invoke | Free text |
-| `model` | Model override | `haiku`, `sonnet`, `opus` |
+| `model` | Model override (full official ID, never an alias) | `claude-haiku-4-5-20251001`, `claude-sonnet-5`, `claude-opus-4-8` |
 | `strictness` | Governs how aggressively skill-builder procedures verify this skill. `minimal` runs command hooks only, skips agent panels, and runs precheck-gated diff auditors; token-sensitive projects default here. `standard` is the default: existing behavior after the 4.7 upgrade. `thorough` runs mandatory agent panels, always-spawns the diff auditor, and escalates marginal decisions to agent judgment. See [token-efficiency.md](token-efficiency.md) § P5 for rationale. | `minimal`, `standard`, `thorough` |
 
 ### Conditional Activation (`paths:` Field)
