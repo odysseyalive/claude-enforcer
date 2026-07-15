@@ -13,8 +13,8 @@ audit drift-sync of one reference set, this file carries the **semver product
 version** of the entire distribution.
 
 ```
-version: 1.6.1
-released: 2026-07-08
+version: 1.6.2
+released: 2026-07-15
 ```
 
 `plugin.json`'s `version` field MIRRORS this string for the marketplace. Bump
@@ -22,6 +22,16 @@ BOTH together. See CLAUDE.md "Versioning" for the release ritual.
 
 ## Changelog
 
+- **1.6.2** (2026-07-15). Advisor/lane picker static option list reordered
+  **newest-first** and trimmed to three IDs: `claude-fable-5` /
+  `claude-opus-4-8` / `claude-opus-4-6` (dropped `claude-sonnet-5`, still
+  reachable via "Other"). The advisor question spends one of its four slots on
+  "No advisor", leaving room for three models, so the latest (`claude-fable-5`)
+  now leads and the four-option ceiling only ever peels an oldest static off the
+  tail — the latest model is never the one dropped. The live-latest discovery
+  ladder is unchanged, so a newer release takes the lead slot and `opus-4-6`
+  peels off. Touches `lane-delegation.md`, `procedures/model-map.md`,
+  `procedures/audit.md`.
 - **1.6.1** (2026-07-08). Advisor picker now emits FULL official model IDs
   instead of the `fable`/`opus`/`sonnet` aliases: options mirror the Lane→Model
   Picker's static IDs plus the live-discovered latest, the `advisorModel`

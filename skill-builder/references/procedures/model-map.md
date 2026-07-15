@@ -96,7 +96,7 @@ with no user — same suppression the audit picker declares.)
 ### Step 4 — Build the picker option list
 
 Build the candidate options EXACTLY per [lane-delegation.md](../lane-delegation.md) § Lane→Model
-Picker: `claude-opus-4-6`, `claude-opus-4-8`, `claude-sonnet-5`, `claude-fable-5`, and the latest
+Picker: `claude-fable-5`, `claude-opus-4-8`, `claude-opus-4-6` (newest-first), and the latest
 released model by official ID — discovered fresh via that section's discovery ladder (`GET /v1/models`
 ~10s timeout → models-overview docs fetch → on both failing, OMIT the "latest" option and print the
 one-line notice). **Never fabricate a model ID from memory; never cache.** Dedupe "latest" against the

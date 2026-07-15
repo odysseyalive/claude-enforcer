@@ -266,18 +266,20 @@ On **every full interactive audit** (suppressed: headless/non-interactive, `audi
 `--no-model-prompt`), the user is asked which model handles each lane. ONE batched AskUserQuestion,
 current mapping pre-selected as the default. Options per lane, EXACTLY:
 
-1. `claude-opus-4-6`
+1. `claude-fable-5`
 2. `claude-opus-4-8`
-3. `claude-sonnet-5`
-4. `claude-fable-5`
-5. The **latest released model by official ID** — discovered fresh each audit via the ladder below.
+3. `claude-opus-4-6`
+4. The **latest released model by official ID** — discovered fresh each audit via the ladder below.
+
+The three statics are listed **newest-first** (the current-latest static, `claude-fable-5`, leads),
+so the ceiling below always peels from the oldest tail and the latest model is never the one dropped.
 
 (AskUserQuestion's auto-appended "Other" preserves manual entry; dedupe the "latest" option when it
 equals a static one. Leaving a cell blank disables flagging for that lane, per model-lanes.md.)
 
 **Four-option ceiling.** `AskUserQuestion` allows at most four options per question (plus its
-auto-appended "Other"). After deduping "latest" against the statics, if the four static IDs plus a
-distinct discovered-"latest" would total five, drop the oldest static(s) from the rendered list —
+auto-appended "Other"). After deduping "latest" against the statics, if the three static IDs plus a
+distinct discovered-"latest" would exceed four, drop the oldest static(s) from the rendered list —
 `claude-opus-4-6` first, then `claude-opus-4-8` — until four options remain. Dropping a static loses
 nothing: it is a known ID the user can still enter via "Other", whereas the discovered-"latest" may
 name a model the user does not know, so it is never the option dropped. Both lanes share this single
@@ -315,15 +317,17 @@ GLOBAL choice, orthogonal to the two lanes — never per-lane, never touched by 
 
 **Question shape.** Header **"Advisor model (global)"**. Options are FULL OFFICIAL MODEL IDs —
 never the `fable` / `opus` / `sonnet` aliases — drawn from the SAME list the Lane→Model Picker
-builds: the four static IDs `claude-opus-4-6` / `claude-opus-4-8` / `claude-sonnet-5` /
-`claude-fable-5` plus the live-discovered latest released ID, under the same four-option ceiling and
+builds: the three static IDs `claude-fable-5` / `claude-opus-4-8` / `claude-opus-4-6` (newest-first)
+plus the live-discovered latest released ID, under the same four-option ceiling and
 latest-model discovery ladder (AskUserQuestion's auto-appended "Other" preserves manual full-ID
 entry). Filter that list by the Pairing rule below against the DETECTED main model (model-lanes.md
 § Active-Model Detection): `claude-fable-5` and the discovered-latest always offered; the
-`claude-opus-*` IDs unless the main is Fable-family; `claude-sonnet-5` only for Sonnet- or
-Haiku-family mains; plus a literal **"No advisor"** option. Never more than four options — within
-the ceiling "No advisor" is never dropped and `claude-fable-5` (valid for every main) outranks an
-oldest static (a Fable-family main renders just `claude-fable-5` + "No advisor"). Pre-selected default: the current
+`claude-opus-*` IDs unless the main is Fable-family; plus a literal **"No advisor"** option. Because
+"No advisor" always claims one of the four slots, the question renders at most **three models**, so
+the newest-first order matters: within the ceiling "No advisor" is never dropped and `claude-fable-5`
+(valid for every main) leads and is never dropped, so an oldest static (`claude-opus-4-6` first) peels
+off the tail before the latest ever would (a Fable-family main renders just `claude-fable-5` +
+"No advisor"). Pre-selected default: the current
 `advisorModel` from a merged read of `.claude/settings.local.json` → `.claude/settings.json` →
 `~/.claude/settings.json` (read-only), or "No advisor" when none is set. The question object is
 suppressed entirely when the `advisor-setup` marker is `declined` (the lane questions still run).
