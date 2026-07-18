@@ -13,8 +13,8 @@ audit drift-sync of one reference set, this file carries the **semver product
 version** of the entire distribution.
 
 ```
-version: 1.6.2
-released: 2026-07-15
+version: 1.7.0
+released: 2026-07-17
 ```
 
 `plugin.json`'s `version` field MIRRORS this string for the marketplace. Bump
@@ -22,6 +22,25 @@ BOTH together. See CLAUDE.md "Versioning" for the release ritual.
 
 ## Changelog
 
+- **1.7.0** (2026-07-17). Companion-Skill Selection Gate (audit Step 0.3)
+  reshaped to a natural **install-only** widget per user directive: a checked
+  box installs an absent companion; unchecked means nothing happens; **the gate
+  never uninstalls** — removal is exclusively a manual `/skill-builder strip
+  <name>`. Only absent companions render as options ("(recommended)" restored
+  on `route`/`awareness-ledger`); installed companions are listed
+  informationally with the exact strip command, and their unconditional
+  updates (code-eval sync, catalog propagation, route index/embed) are
+  untouched. The empty default is inert symmetrically: interactive empty
+  submissions and headless marker-absent runs both install nothing (supersedes
+  the install-on-absence fallback); a persisted `<name>=on` still authorizes
+  headless installs, and a prior `off` on a present companion is preserved,
+  never silently flipped. Also unified the model-selection pool: the advisor
+  question everywhere references the ONE Lane→Model Picker pool (fixed stale
+  "alias options" echoes in `procedures/audit.md` § 4f-setup and
+  `procedures/model-map.md`, and the outdated four-static list in SKILL.md
+  Rule 7), so `claude-fable-5` is always offered. Touches `procedures/audit.md`,
+  `procedures/model-map.md`, `model-lanes.md`, `creative-integrity.md`,
+  `SKILL.md`.
 - **1.6.2** (2026-07-15). Advisor/lane picker static option list reordered
   **newest-first** and trimmed to three IDs: `claude-fable-5` /
   `claude-opus-4-8` / `claude-opus-4-6` (dropped `claude-sonnet-5`, still

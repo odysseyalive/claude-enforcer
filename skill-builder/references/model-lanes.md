@@ -133,12 +133,15 @@ of the re-ask. The picker never writes this marker.
 
 ---
 
-## Companion Skills (per-project install/remove selection, managed by audit Step 0.3)
+## Companion Skills (per-project install selection, managed by audit Step 0.3)
 
-Audit force-installs a small set of evaluator/helper **companion skills**. Per the 2026-06-24
-directive, audit's SECOND question (the Companion-Skill Selection Gate, audit.md § Step 0.3) is a
-multi-select checkbox letting you opt in or out of each, so a project with its own intricate
-evaluator set is never force-managed. Your choices are remembered here, per project, in a marker:
+Audit can install a small set of evaluator/helper **companion skills**. Per the 2026-06-24
+directive as reshaped 2026-07-17 ("check the boxes of what people want to install … uninstall can
+happen manually"), audit's THIRD question (the Companion-Skill Selection Gate, audit.md § Step 0.3)
+is a multi-select checkbox of the companions **not yet installed**: check the ones you want and
+they install this run; leave a box unchecked and nothing happens. **The gate never uninstalls** —
+to remove a companion, run `/skill-builder strip <name> --execute` yourself, any time. Your
+choices are remembered here, per project, in a marker:
 
 ```
 <!-- companion-skills: text-eval=on|off, code-evaluator=on|off, route=on|off, awareness-ledger=on|off -->
@@ -147,50 +150,47 @@ evaluator set is never force-managed. Your choices are remembered here, per proj
 (The `on|off` above is a template; the active marker — written beside `model-lane-setup` with each
 key resolved to a single `on` or `off` — is what audit reads. Audit ignores this fenced example.)
 
-The gate renders as **two grouped multi-selects in one `AskUserQuestion` call** (still one question
-slot): **Evaluators** (`text-eval`, `code-evaluator`) and **Helpers** (`route`, `awareness-ledger`)
-— the sanctioned-question count is unchanged.
+The gate renders as **up to two grouped multi-selects in one `AskUserQuestion` call** (still one
+question slot): **Evaluators** (`text-eval`, `code-evaluator`) and **Helpers** (`route`,
+`awareness-ledger`) — each group showing only its ABSENT members; when all four are installed the
+gate is a one-line informational notice instead of a question.
 
-| Key | Companion | Install on absence? | `on` | `off` |
-|-----|-----------|---------------------|------|-------|
-| `text-eval` | text AI-tells evaluator | yes | install-on-absence scaffold authorized | scaffold suppressed; if present + skill-builder-scaffolded, removal DEFERS to `strip` |
-| `code-evaluator` | code-quality evaluator | yes | `code-eval create` authorized | create suppressed; removal DEFERS to `strip` |
-| `route` | the `/route` dispatcher | yes | `route index`/embed terminal tasks run | bootstrap suppressed when absent; removal DEFERS to `strip --confirm-breaking` when present |
-| `awareness-ledger` | institutional-memory ledger | yes | `ledger --execute` authorized | install suppressed; removal DEFERS to `strip` |
+| Key | Companion | Label | `on` | `off` |
+|-----|-----------|-------|------|-------|
+| `text-eval` | text AI-tells evaluator | — | installed / evaluator scaffold authorized | not installed; scaffold suppressed while absent |
+| `code-evaluator` | code-quality evaluator | — | installed / `code-eval create` authorized | not installed; create suppressed while absent |
+| `route` | the `/route` dispatcher | (recommended) | installed / `route index` bootstrap authorized | not installed; bootstrap suppressed while absent |
+| `awareness-ledger` | institutional-memory ledger | (recommended) | installed / `ledger --execute` authorized | not installed; install suppressed while absent |
 
-**How the gate uses this marker (INVERTED widget — a check means *opt out*):**
+**How the gate uses this marker (NATURAL widget, 2026-07-17 — a check means *install*):**
 
-`AskUserQuestion` cannot pre-check boxes (it has no `selected`/`default` field), so the gate **inverts**
-the checkbox meaning rather than rendering a checkmark: an **unchecked** box keeps/installs the
-companion, a **checked** box opts it out. Presence is computed by a **signal-based** test (a skill
-performing the function counts under any directory name) and shown in each row's label as
-**PRESENT/ABSENT** — never as a pre-check. Leaving every box unchecked is the safe default: keep all
-present companions, install the absent **install-on-absence** ones — all four (`route`,
-`awareness-ledger`, `text-eval`, `code-evaluator`). **No "(recommended)" wording is shown** — that
-mechanic is superseded (2026-06-24) because a "(recommended)" tag next to a remove-checkbox reads as
-"recommended to remove"; `route` and `awareness-ledger` are simply install-on-absence defaults like
-the rest, kept unless checked out.
+- **Checked (absent)** → the companion's install task is authorized this run; marker `=on`.
+- **Unchecked (absent)** → not installed; marker `=off`. Re-run `/skill-builder audit` and check
+  the box whenever you want it.
+- **Installed (not rendered)** → untouched. Its existing marker value is PRESERVED (a hand-set
+  `=off` is never silently flipped); a missing key resolves `=on`. Installed companions keep
+  receiving their normal unconditional maintenance (code-eval `sync`, catalog propagation, the
+  terminal `route index`/embed) — and are never removed by any audit step. Uninstall manually:
+  `/skill-builder strip <name> --execute` (strip does the complete cross-reference disconnection
+  plus the `route index`/embed refresh).
+- A skill of your own that already serves a companion's function is detected as present
+  (signal-based test — a skill performing the function counts under any directory name): no
+  duplicate is offered, and skill-builder never modifies or removes it.
 
-- **Unchecked + present** → kept; marker `=on`; no action.
-- **Unchecked + absent** → the companion's install task is authorized (it does NOT run
-  unconditionally anymore — the empty box is its authorization); marker `=on`. All four companions
-  are install-on-absence: yes.
-- **Checked + absent** → install suppressed (the opt-out); marker `=off` — uniform across all four.
-- **Checked + present + skill-builder-scaffolded** → removal is **DEFERRED** to a ready-to-run
-  `/skill-builder strip <key> --execute` command (audit never auto-deletes; "Always defer to
-  strip"). Strip performs the complete cross-reference disconnection plus the `route index`/embed
-  refresh; marker `=off`.
-- **Checked + present + your own hand-authored skill** → never removed (provenance guard); the
-  gate only notes that your own skill serves the function; marker `=off`.
+`=off` means exactly "do not auto-install while absent" — never "remove". The "(recommended)"
+labels on `route`/`awareness-ledger` are the original 2026-06-24 wording, restored 2026-07-17 now
+that a check means install again.
 
 **Back-compat.** A legacy `<!-- creative-scrub-build: off -->` marker (the 2026-06-12 text-eval
 build opt-out) reads as `text-eval=off` for the purpose of suppressing the text-eval scaffold.
 
 **Suppression.** The gate is interactive-only: headless / non-interactive runs and `audit --quick`
-render no checkbox, write no marker, and **remove nothing** — they honor an existing marker, or, with
-no marker, fall back to the pre-2026-06-24 install-on-absence defaults. Absence of an answer never
-means remove. A missing marker means "never configured" — the first full interactive audit asks and
-writes it. Hand-edit the marker any time to change your selection; delete it to be re-asked fresh.
+render no checkbox and write no marker — they honor an existing marker (`=on` + absent → install;
+`=off` → skip), and with **no marker install nothing** (2026-07-17: the old install-on-absence
+fallback is superseded, so headless and an interactive empty submission agree — no expressed
+consent, no install). Nothing is ever removed in any mode. A missing marker means "never
+configured" — the first full interactive audit asks and writes it. Hand-edit the marker any time
+to change your selection; delete it to be re-asked fresh.
 
 ---
 

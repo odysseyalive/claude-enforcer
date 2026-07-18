@@ -30,7 +30,7 @@ never assigns skills to lanes, and never switches the session model.
 - The picker (option list, the latest-model discovery ladder) → [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker.
 - The fleet rewrite (marker-filtered glob, `model:`-line-only edit, verification re-grep) → [lane-delegation.md](../lane-delegation.md) § Fleet Rewrite on Remap.
 - Setup-state semantics, Active-Model Detection, blank-cell-to-disable → [model-lanes.md](../model-lanes.md).
-- The advisor question (alias options, pairing rule, marker + `settings.local.json` apply) → [lane-delegation.md](../lane-delegation.md) § Global Advisor Model.
+- The advisor question (full-model-ID options from the SAME pool as the lane questions, pairing rule, marker + `settings.local.json` apply) → [lane-delegation.md](../lane-delegation.md) § Global Advisor Model.
 
 This single picker implementation is shared with audit; if you change the picker behavior, change it
 in lane-delegation.md so both callers stay in sync (audit § Step 0.4 is the other caller).
@@ -109,9 +109,11 @@ Emit ONE batched `AskUserQuestion` with up to three questions — **"Creative la
 **"Coding (everything-else) lane model"**, and **"Advisor model (global)"** — the lane questions
 each defaulting to the current mapping value (confirming is one click; "Other" preserves manual
 entry; leaving a cell blank disables flagging for that lane per
-[model-lanes.md](../model-lanes.md) § Comparison Rule). The advisor question's shape (alias
-options filtered against the detected main model, "No advisor", pre-selected default, suppression
-on a `declined` advisor marker) is specified at [lane-delegation.md](../lane-delegation.md)
+[model-lanes.md](../model-lanes.md) § Comparison Rule). The advisor question's shape (FULL
+official model IDs drawn from the SAME pool the two lane questions use — the picker statics plus
+the discovered latest, `claude-fable-5` always offered and never dropped — pairing-filtered
+against the detected main model, "No advisor", pre-selected default, suppression on a `declined`
+advisor marker) is specified at [lane-delegation.md](../lane-delegation.md)
 § Global Advisor Model — build it EXACTLY per that section.
 
 This is a **configuration** question, not a switch request — it never instructs the user to run
