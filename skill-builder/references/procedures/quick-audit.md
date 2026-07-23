@@ -50,8 +50,8 @@ List only HIGH-priority issues in a numbered list:
 Per the 2026-06-06 streamlined-audit directive there is no per-item question. Under the Step 0 disclaimer consent:
 
 - **AUTO:** wire orphaned-but-existing hooks into settings; reflow multi-line frontmatter descriptions to one line (**never truncate or shorten — preserve every word**); other deterministic frontmatter fixes.
-- **DEFER (listed with commands, never asked):** over-line-target findings (the fix is `optimize`, which quick never scanned for — list `/skill-builder optimize <skill> --execute`); bad-frontmatter/quarantine repairs (hand-authored files — repair instructions per templates.md § frontmatter).
+- **Listed (not auto-applied — quick lacks the prerequisite scans):** over-line-target findings (the fix is `optimize`, which quick never scanned for — list `/skill-builder optimize <skill> --execute`); bad-frontmatter/quarantine repairs (hand-authored files — repair instructions per templates.md § frontmatter).
 
-No sub-command display-mode pass. No structural invariant scanning. No narrative report. Just findings, auto-applied mechanical fixes, and a deferred list. `audit --quick --review` reports only.
+No sub-command display-mode pass. No structural invariant scanning. No narrative report. Just findings, auto-applied mechanical fixes, and a listed-items section for findings that need the full audit's prerequisite scans. `audit --quick --review` reports only.
 
 **Excluded from quick audit:** the Model Lane Check (full audit Step 4f) does NOT run here — it is a structural/narrative scan plus an interactive prompt, both outside the quick path's contract. Model-aware routing is surfaced only by the full `audit`.

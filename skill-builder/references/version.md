@@ -13,8 +13,8 @@ audit drift-sync of one reference set, this file carries the **semver product
 version** of the entire distribution.
 
 ```
-version: 1.7.0
-released: 2026-07-17
+version: 1.8.0
+released: 2026-07-22
 ```
 
 `plugin.json`'s `version` field MIRRORS this string for the marketplace. Bump
@@ -22,6 +22,25 @@ BOTH together. See CLAUDE.md "Versioning" for the release ritual.
 
 ## Changelog
 
+- **1.8.0** (2026-07-22). DEFER tier eliminated from audit's AUTO/DEFER
+  classification per user directive: every item that previously deferred to a
+  manual follow-up command now auto-executes under the Step 0 disclaimer consent.
+  Agent panels provide judgment where procedures demand it; the Step 0.2 backup
+  is the recovery mechanism; failed tasks land as checkmark-X items in the
+  Execution Summary, never as deferred commands. The "Deferred Items" report
+  section becomes "Advisory Notes" (informational, no runnable commands). 12
+  source files updated across SKILL.md, creative-integrity, lane-delegation,
+  audit, backup, code-eval, hooks, optimize, post-action-chain, quick-audit,
+  reconcile, and verify procedures. Follow-up pass (same directive): the three
+  SCAN-phase panel suppressions that still handed work back as commands now
+  queue into Step 6 instead — reconcile judgment-class adjudication, the
+  creative-integrity classification panel, and excursion coverage
+  (`agents --execute`) — and a new Audit Autonomy Gate clause 4a forbids ANY
+  report line from naming a skill-builder command as work the user must run
+  (exceptions: user-initiated `strip`, `restore`, and a companion the user
+  declined at Step 0.3). `route embed` and `reconcile` suppress their standalone
+  recommendation lines under audit; `principles.md` rule 3 drops its reference
+  to the abolished execution menu.
 - **1.7.0** (2026-07-17). Companion-Skill Selection Gate (audit Step 0.3)
   reshaped to a natural **install-only** widget per user directive: a checked
   box installs an absent companion; unchecked means nothing happens; **the gate

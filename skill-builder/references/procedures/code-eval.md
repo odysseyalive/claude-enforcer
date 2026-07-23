@@ -16,9 +16,9 @@ Subcommands of `code-eval`:
 - `/skill-builder code-eval review [path]` — post-write evaluation (high-risk; display default, `--execute` to apply HIGH-tier fixes).
 - `/skill-builder code-eval sweep` — full-codebase report (high-risk; display default).
 - `/skill-builder code-eval sync` — refresh a user's `code-evaluator` references from skill-builder's shipped versions when the shipped `code-eval-ref-version` is newer (block-aware; preserves user-origin seams).
-- `/skill-builder code-eval enforce` — host-generate the always-on enforcement hooks (high-risk; display default, `--execute` to wire). Three write-keyed phases — **before write** (PreToolUse hard block until the design-advisor gave direction), **at write** (PostToolUse review reminder), and a **commit gate** (PreToolUse hard block on `git commit`/`push` until the tree matches the last clean review — catches Bash-written code too). Closes the "code written with no skill loaded" gap that the shipped `CODE-EVAL-EMBED` gate cannot reach. Host-generated, NEVER shipped (No-Distribute-Hooks Gate); atomic generate-and-wire; fail-open; audit DEFER-recommends it but never auto-wires (DEC-2026-06-08, deliberate host act). "No exceptions" is the strongest honest backstop, not a literal guarantee — a hook nudges/blocks the model but cannot itself call a skill.
+- `/skill-builder code-eval enforce` — host-generate the always-on enforcement hooks (high-risk; display default, `--execute` to wire). Three write-keyed phases — **before write** (PreToolUse hard block until the design-advisor gave direction), **at write** (PostToolUse review reminder), and a **commit gate** (PreToolUse hard block on `git commit`/`push` until the tree matches the last clean review — catches Bash-written code too). Closes the "code written with no skill loaded" gap that the shipped `CODE-EVAL-EMBED` gate cannot reach. Host-generated, NEVER shipped (No-Distribute-Hooks Gate); atomic generate-and-wire; fail-open; audit auto-wires it under the Step 0 consent (2026-07-22 no-deferrals directive, superseding DEC-2026-06-08 deliberate-host-act floor). "No exceptions" is the strongest honest backstop, not a literal guarantee — a hook nudges/blocks the model but cannot itself call a skill.
 
-**Audit integration:** `audit` automatically ensures `code-evaluator` exists (creating it if absent) and runs `code-eval sync` to keep its references current, before the route terminal tasks; it also DEFER-recommends `code-eval enforce` when the evaluator is installed but the enforcement hooks are not wired. See [audit.md](references/procedures/audit.md) § Step 4a-bis.
+**Audit integration:** `audit` automatically ensures `code-evaluator` exists (creating it if absent) and runs `code-eval sync` to keep its references current, before the route terminal tasks; it also auto-wires `code-eval enforce` when the evaluator is installed but the enforcement hooks are not wired. See [audit.md](references/procedures/audit.md) § Step 4a-bis.
 
 **Grounding:** Read [references/procedures/code-eval.md](references/procedures/code-eval.md) for the full procedure (create / review / sweep / sync), [references/code-evaluator/skill-template.md](references/code-evaluator/skill-template.md) for the generated SKILL.md + advisor/reviewer agent templates, and [references/code-evaluator/cross-file-detection.md](references/code-evaluator/cross-file-detection.md) + [guards.md](references/code-evaluator/guards.md) for the detection method and false-positive guards.
 <!-- /origin -->
@@ -259,8 +259,8 @@ Drift is a one-way, host-only refresh:
   pre-versioning install).
 - `recorded >= shipped` → current. `recorded < shipped` → **stale**: the wired
   scripts predate the current signal/gate logic. `audit` Step 4a-bis and `verify`
-  Step 3a DEFER-recommend a re-run of `/skill-builder code-eval enforce --execute`
-  (never auto-run — re-wiring is a deliberate host act, exactly like initial wiring).
+  Step 3a auto-trigger a re-run of `/skill-builder code-eval enforce --execute`
+  under the Step 0 consent (2026-07-22 no-deferrals directive; No-Distribute-Hooks Gate still applies — host-generated, never shipped).
   Re-running regenerates every variant at the current version.
 
 **Changelog:**
@@ -273,7 +273,7 @@ Drift is a one-way, host-only refresh:
   registration and forbids fabricating a substitute agent, instead of leaving the
   model to invent a bypass. Paired with the new registration step in `create`/`sync`
   (the agent is now actually spawnable). Wired pre-v2 hosts report `recorded(1) <
-  shipped(2)` → stale → DEFER re-run.
+  shipped(2)` → stale → auto-refresh re-run.
 
 ### The three enforcement phases
 
@@ -524,14 +524,13 @@ The before-write protocol (consult advisor → `touch .code-eval-advised` →
 re-attempt) is named in Phase 1's block message and documented in that block.
 
 ### Audit & legibility integration
-- **Audit (DEFER only, never auto-wire).** Audit Step 4a-bis detects "installed
-  but enforcement unwired" → DEFERs `/skill-builder code-eval enforce --execute`,
+- **Audit (auto-wire under Step 0 consent, 2026-07-22 no-deferrals directive).** Audit Step 4a-bis detects "installed
+  but enforcement unwired" → auto-wires `/skill-builder code-eval enforce --execute`,
   AND "wired but stale" (`recorded < shipped` per § Enforce script versioning &
-  drift) → DEFERs the same re-run with a "scripts predate the current procedure"
-  reason. Both carry the honest-scope note. Audit must NEVER auto-wire OR auto-refresh
-  these hooks — wiring/re-wiring is a deliberate host act (DEC-2026-06-08; SKILL.md
-  § Directives → No-Distribute-Hooks Gate). They are not in the Audit Autonomy Gate's
-  AUTO tier.
+  drift) → auto-refreshes with the same re-run. Both carry the honest-scope note. Wiring/re-wiring
+  runs as an agent-panel task under the Step 0 consent (superseding DEC-2026-06-08's
+  deliberate-host-act floor; No-Distribute-Hooks Gate still applies — scripts are
+  host-generated, never shipped). Failed wiring appears as ✗ in the Execution Summary.
 - **verify** reports a `Code-eval enforcement` WIRED / WIRED-STALE / UNWIRED row
   (staleness = wired scripts older than the shipped `code-eval-enforce-version`).
 - The `CODE-EVAL-EMBED` block (route.md § Step 7d) surfaces enforcement status so a
@@ -546,5 +545,5 @@ re-attempt) is named in Phase 1's block message and documented in that block.
 - [../code-evaluator/cross-file-detection.md](../code-evaluator/cross-file-detection.md), [guards.md](../code-evaluator/guards.md), [mistake-taxonomy.md](../code-evaluator/mistake-taxonomy.md), [native-tool-map.md](../code-evaluator/native-tool-map.md), [gotchas.md](../code-evaluator/gotchas.md) — the shipped intel set
 - [new.md](new.md) — scaffolding contract `create` mirrors
 - [route.md](route.md) — the embed gates that wire the advisor/reviewer into code-touching skills
-- [audit.md](audit.md) — automatic ensure-exists + sync integration; Step 4a-bis DEFERs `enforce` when unwired
+- [audit.md](audit.md) — automatic ensure-exists + sync integration; Step 4a-bis auto-wires `enforce` when unwired (2026-07-22)
 - [shell-safety.md](shell-safety.md) — `shell-safety write`/`lint` generate and validate the `enforce` hook scripts (fail-open, R1–R9)

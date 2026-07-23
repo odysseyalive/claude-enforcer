@@ -129,8 +129,8 @@ Contract` section with two halves:
   `AMBIGUOUS: <question>` (an agent with every REQUIRES item present but two or more valid
   interpretations hands the decision back — **a minion never guesses**; sacred directive,
   2026-06-06). On an `AMBIGUOUS:` return, the ORCHESTRATOR owns the resolution (subagents cannot
-  prompt the user): under `audit`, resolve via agent panel → conservative alternative, or DEFER to
-  the report — never a mid-run user question (Audit Autonomy Gate); outside audit, AskUserQuestion
+  prompt the user): under `audit`, resolve via agent panel → conservative alternative → auto-execute
+  (2026-07-22 no-deferrals directive) — never a mid-run user question; outside audit, AskUserQuestion
   per Rule 8. Either way, re-spawn with the answer serialized — this counts as the single
   permitted retry.
 

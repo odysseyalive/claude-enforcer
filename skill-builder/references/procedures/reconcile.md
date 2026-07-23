@@ -14,7 +14,7 @@ Governed by the sacred integrity-over-performance directive (§ Directives, 2026
 
 High-risk command — defaults to display mode, requires `--execute`. `--execute` never edits `origin: user | immutable: true` content, never rewords descriptions or personas, and never deletes a skill directly.
 
-**Audit integration:** `reconcile` runs as audit **Step 4d-bis** (between cascade and the priority panel), display-only with its agent panels suppressed; completion-breaking findings elevate into Priority Fixes. Skipped in `audit --quick`. See [audit.md](references/procedures/audit.md) § Step 4d-bis.
+**Audit integration:** `reconcile` runs as audit **Step 4d-bis** (between cascade and the priority panel), display-only during the scan — its agent panels fire in audit's Step 6 execution phase, never as a "run `reconcile` standalone" hand-off (2026-07-22 no-deferrals directive); completion-breaking findings elevate into Priority Fixes. Skipped in `audit --quick`. See [audit.md](references/procedures/audit.md) § Step 4d-bis.
 
 **Grounding:** Read [references/procedures/reconcile.md](references/procedures/reconcile.md) for the full procedure — the collision-class table with reliability tiers, the conflicts-only filter and complementary-overlap allow-list, the remediation ladder with the directive-touch hard floor, the mandatory agent adjudication for judgment-class findings, and the `strip` hand-off.
 <!-- /origin -->
@@ -168,7 +168,7 @@ Apply the **absence-vs-gap** rule: a class with zero findings is omitted entirel
 
 ## Audit integration
 
-`reconcile` runs as **audit Step 4d-bis** (between cascade 4d and the priority panel 4e), in display mode, panels suppressed. Findings feed the aggregate report's "Cross-Skill Reconciliation" section; R1/R4/R6/R7/R8 (completion-breaking) elevate into Priority Fixes. **Skipped in `audit --quick`** (structural scan, not a checklist item). R2/R3 mechanical auto-fixes run in audit's auto-execution phase (AUTO tier — machine-owned bytes only); confirmed R7 deletions DEFER into the audit's Deferred Items table as `/skill-builder strip <skill>` (Audit Autonomy Gate, 2026-06-06). See audit.md § Step 4d-bis.
+`reconcile` runs as **audit Step 4d-bis** (between cascade 4d and the priority panel 4e), in display mode during the scan; its judgment-class panels fire in audit's Step 6 execution phase (agent-budget rule), never handed back to the user as a follow-up command. Findings feed the aggregate report's "Cross-Skill Reconciliation" section; R1/R4/R6/R7/R8 (completion-breaking) elevate into Priority Fixes. **Skipped in `audit --quick`** (structural scan, not a checklist item). R2/R3 mechanical auto-fixes run in audit's auto-execution phase (AUTO tier — machine-owned bytes only); confirmed R7 deletions auto-execute via strip with agent-panel-confirmed redundancy (2026-07-22 no-deferrals directive). See audit.md § Step 4d-bis.
 
 ---
 

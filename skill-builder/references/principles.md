@@ -69,7 +69,7 @@ When a user gives you a rule, store it unchanged in a `## Directives` section wi
 
 1. **Own-skill actions** (optimize, agents, hooks, ledger for skills managed by skill-builder): Always cascade into the current execution flow via AskUserQuestion + TaskCreate. Never present as standalone slash commands for manual invocation.
 2. **Cross-skill actions** (commands belonging to other skills like `/awareness-ledger`): Present in a clearly separated "Related Suggestions" footer, labeled as informational. Never mix into execution menus.
-3. **Informational recommendations** in conditional notes (e.g., "Run X to fix this"): Reframe as what the *current procedure* will do, or defer to the execution menu. Example: instead of "Run `/skill-builder optimize` to add eval protocol", say "Missing runtime eval protocol — flagged for optimization."
+3. **Informational recommendations** in conditional notes (e.g., "Run X to fix this"): Reframe as what the *current procedure* will do, or queue it as a task in the current run. Example: instead of "Run `/skill-builder optimize` to add eval protocol", say "Missing runtime eval protocol — queued for optimization". **Under `audit` this is absolute** (2026-07-22 no-deferrals directive, audit.md § Audit Autonomy Gate clause 4a): no report line may name a skill-builder command as work the user must run — it is queued and executed in the same run.
 4. **Anti-pattern**: Never end any procedure output with a list of slash commands the user must copy-paste and run manually. If an action is worth recommending, it's worth cascading.
 <!-- /origin -->
 

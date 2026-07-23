@@ -160,9 +160,9 @@ measurably degrades quality (§ Research Digest). The loop's target is the human
 Per the 2026-06-11 second clause ("build new skills or funciton within existing skills of the
 project to facilitate all these points"), audit BUILDS missing scrub machinery instead of only
 deferring it. The build tier is premortem-hardened: every build is strictly additive, and
-everything inferential, behavioral, or uncertain stays DEFER. Amended by the 2026-06-12
+everything inferential, behavioral, or uncertain is agent-panel-adjudicated or reported as ✗ (2026-07-22 no-deferrals directive). Amended by the 2026-06-12
 install-on-absence directive (SKILL.md § Directives): the new-skill scaffold fires on absence
-alone (tier 2 below), and pattern-library gap appends are APPLIED rather than deferred
+alone (tier 2 below), and pattern-library gap appends are AUTO-APPLIED
 (§ Pattern-Library Gap Check tier 4).
 
 **Hard floors (unchanged by the build tier):**
@@ -182,7 +182,7 @@ alone (tier 2 below), and pattern-library gap appends are APPLIED rather than de
    absent** — a true N/A→absent confirmed by a design panel that read the FULL skill (workflow
    preservation is the highest priority, per the Bespoke Excursion-Agent Gate precedent) — never
    merely when equivalence detection returned negative. **Equivalence-uncertain degrades to
-   DEFER, never to BUILD** (a missed equivalence must cost one ignorable row, never a competing
+   ✗ report item, never to BUILD** (a missed equivalence must cost one Execution Summary note, never a competing
    chain). The build writes: a scrub-chain reference file adapted per skill from § Build
    Scaffolds, plus ONE `CREATIVE-SCRUB-EMBED` pointer region (format below) — a grounding link,
    behaviorally inert until the user or dispatcher invokes the scrub function.
@@ -207,8 +207,8 @@ alone (tier 2 below), and pattern-library gap appends are APPLIED rather than de
    aborts, or reverts on its own (generic English-prose markers misjudge non-English and
    technical content; evidence, not proof, in both directions — § Research Digest).
 4. **Atomic-or-absent.** A build that cannot complete its panel/anchor checks writes NOTHING —
-   no orphan skill, no half-block — and becomes a DEFER row (matching optimize's
-   FAIL→revert→Deferred discipline).
+   no orphan skill, no half-block — and becomes an Execution Summary ✗ item (matching optimize's
+   FAIL→revert→report discipline).
 5. **Reconciliation & opt-out.** On later audits, 4c-bis reconciles only its own
    `origin: skill-builder | modifiable: true` regions and scaffold machine bytes — never a
    user-edited seam, never a whole scaffolded skill file (code-eval-grade seam discipline).
@@ -217,7 +217,7 @@ alone (tier 2 below), and pattern-library gap appends are APPLIED rather than de
 **Still AUTO (machine-owned bytes):** grounding-link insertion, enforcement-annotation generation
 beneath existing directives, and reference-sync of this file itself.
 
-**Still DEFER:** equivalence-uncertain legs; anything requiring the user's wording; behavioral
+**Reported as ✗ in the Execution Summary (2026-07-22 no-deferrals directive; safety floors unchanged):** equivalence-uncertain legs; anything requiring the user's wording; behavioral
 changes to hand-authored workflows; incomplete builds; gap appends whose structural-fit or
 live-grounding guard fails (§ Pattern-Library Gap Check tier 4).
 
@@ -258,15 +258,15 @@ the missing pieces — additively, legibly, and once.
      (`origin: skill-builder | modifiable: true`) appendix region at the END of the library
      file — existing bytes never modified, never reworded, never re-tiered; the hand-authored
      rows remain the authority and the appendix is additive candidates only. Three guards,
-     each degrading to a paste-ready DEFER row (one per skill, quoting the exact proposed
+     each degrading to an Execution Summary ✗ item (one per skill, quoting the exact proposed
      additions) — never a question, never a silent skip:
      - **(a) structural fit:** the appendix must match the library's own structure (same
        table shape, or a clearly delimited section in a prose library); no parseable fit →
-       DEFER (atomic-or-absent applies to appends too).
+       ✗ report item (atomic-or-absent applies to appends too).
      - **(b) live grounding:** the skill's evaluator must demonstrably ground against the
        full library file, so the appendix is read rather than an inert supplement (the
        inert-sidecar lesson, DEC-2026-06-08); an evaluator grounding against a fixed
-       structure that excludes the appendix → DEFER.
+       structure that excludes the appendix → ✗ report item.
      - **(c) sole dedup authority:** `.scrub-gaps.acked` governs — an acked slug is never
        re-appended, even when mechanism-equivalence misses a user-moved or user-renamed row
        (re-append loops would inflate cluster density, the exact harm principle 1 guards
@@ -297,7 +297,7 @@ the missing pieces — additively, legibly, and once.
    machine bytes refresh, user-edited seams preserved). The ack sidecar suppresses ONLY slugs
    whose shipped entry is unchanged — a new sign is never acked, so it always lands; a
    materially-changed acked entry re-surfaces per tier 5. The three guards of tier 4 still
-   apply per append; a guard failure still degrades to a paste-ready DEFER row, refreshed with
+   apply per append; a guard failure still degrades to an Execution Summary ✗ item, refreshed with
    the new catalog content.
 
 ## Build Scaffolds (used by the BUILD tier; panel-adapted per skill, never copied blind)
@@ -373,7 +373,7 @@ exists" eligibility test is **signal-based, never name-based** — any skill tri
 signal (evaluator agents, AI-tells pattern library, scrub/finishing-chain machinery) counts as
 the project's evaluator regardless of its name, and suppresses the build; (b) **name-collision
 guard** — if a skill directory named `text-eval` already exists, never build; the project
-already has one, so the finding degrades to a DEFER row, never a second skill (duplicate skill
+already has one, so the finding degrades to an Execution Summary ✗ item, never a second skill (duplicate skill
 names are a completion-breaking conflict per reconcile's collision table); (c) **project
 opt-out** — a `<!-- creative-scrub-build: off -->` marker in `references/model-lanes.md` (the
 same update-preserved, per-project mechanism as the setup-state markers) silently suppresses
