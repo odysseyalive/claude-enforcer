@@ -27,10 +27,10 @@ running a full `audit`**. It is the standalone door to the same machinery audit 
 never assigns skills to lanes, and never switches the session model.
 
 **This procedure reuses canonical specs by pointer — do NOT duplicate them here:**
-- The picker (option list, the latest-model discovery ladder) → [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker.
+- The picker (option list, manual entry via "Other") → [lane-delegation.md](../lane-delegation.md) § Lane→Model Picker.
 - The fleet rewrite (marker-filtered glob, `model:`-line-only edit, verification re-grep) → [lane-delegation.md](../lane-delegation.md) § Fleet Rewrite on Remap.
 - Setup-state semantics, Active-Model Detection, blank-cell-to-disable → [model-lanes.md](../model-lanes.md).
-- The advisor question (full-model-ID options from the SAME pool as the lane questions, pairing rule, marker + `settings.local.json` apply) → [lane-delegation.md](../lane-delegation.md) § Global Advisor Model.
+- The advisor question (full-model-ID options from the SAME pool as the lane questions, no capability filter, marker + `settings.local.json` apply) → [lane-delegation.md](../lane-delegation.md) § Global Advisor Model.
 
 This single picker implementation is shared with audit; if you change the picker behavior, change it
 in lane-delegation.md so both callers stay in sync (audit § Step 0.4 is the other caller).
@@ -89,31 +89,37 @@ with no user — same suppression the audit picker declares.)
   → continue to Step 4. (`model-map` never runs the per-skill lane-suggestion onboarding — that is
   audit-only. On a fresh `unset` project the picker still runs; Step 5 marks it `configured` with
   the Skill→Lane table left empty, honoring declared-never-inferred.)
-- **`advisor-setup` marker `declined`** (independent of the lane branches above) → suppress the
-  advisor question object only; the lane questions run normally. The lane `declined` opt-in
-  question governs lanes only — advisor state is tracked and asked separately.
+- **`advisor-setup` marker `declined`** (independent of the lane branches above) → **NOT a
+  suppression** (2026-07-24 no-skipped-questions directive). The advisor question still renders as
+  the third object of Step 5's call; the marker only forces "No advisor" as its pre-selected
+  default, and re-confirming that writes nothing. The lane `declined` opt-in question governs lanes
+  only — advisor state is tracked separately, and it is asked on every run of this command.
 
 ### Step 4 — Build the picker option list
 
 Build the candidate options EXACTLY per [lane-delegation.md](../lane-delegation.md) § Lane→Model
-Picker: `claude-fable-5`, `claude-opus-4-8`, `claude-opus-4-6` (newest-first), and the latest
-released model by official ID — discovered fresh via that section's discovery ladder (`GET /v1/models`
-~10s timeout → models-overview docs fetch → on both failing, OMIT the "latest" option and print the
-one-line notice). **Never fabricate a model ID from memory; never cache.** Dedupe "latest" against the
-static IDs, then apply the four-option ceiling (drop the oldest static on overflow — see that section).
-The static IDs plus AskUserQuestion's auto-appended "Other" always survive a discovery failure.
+Picker: `claude-fable-5`, `claude-opus-5`, `claude-opus-4-6` (newest-first), plus **manual entry via
+AskUserQuestion's auto-appended "Other"** — announce it in the question copy ("…or choose Other to
+type any model ID"). **Never fabricate a model ID from memory:** these three statics are the only IDs
+this command proposes; anything else is typed by the user and taken verbatim (normalize only per
+model-lanes.md § Active-Model Detection). No network discovery runs — the 2026-07-24 directive
+retired the latest-model discovery ladder in favor of manual entry. Nothing is dropped: three
+statics fit the four-option ceiling on the lane questions, and exactly fill it on the advisor
+question once "No advisor" is added.
 
 ### Step 5 — The picker (one batched AskUserQuestion) and the single consented write
 
-Emit ONE batched `AskUserQuestion` with up to three questions — **"Creative lane model"**,
-**"Coding (everything-else) lane model"**, and **"Advisor model (global)"** — the lane questions
+Emit ONE batched `AskUserQuestion` with **all three** questions — **"Creative lane model"**,
+**"Coding (everything-else) lane model"**, and **"Advisor model (global)"**. All three objects
+always render; no marker may drop one (2026-07-24 no-skipped-questions directive — the audit-side
+Question-Object Completeness Gate in [audit.md](audit.md) applies to this caller too). The lane questions
 each defaulting to the current mapping value (confirming is one click; "Other" preserves manual
 entry; leaving a cell blank disables flagging for that lane per
 [model-lanes.md](../model-lanes.md) § Comparison Rule). The advisor question's shape (FULL
 official model IDs drawn from the SAME pool the two lane questions use — the picker statics plus
-the discovered latest, `claude-fable-5` always offered and never dropped — pairing-filtered
-against the detected main model, "No advisor", pre-selected default, suppression on a `declined`
-advisor marker) is specified at [lane-delegation.md](../lane-delegation.md)
+manual entry via "Other", nothing ever dropped — never capability-filtered
+and never annotated with a capability caveat, "No advisor", and the pre-selected default a `declined`
+advisor marker forces) is specified at [lane-delegation.md](../lane-delegation.md)
 § Global Advisor Model — build it EXACTLY per that section.
 
 This is a **configuration** question, not a switch request — it never instructs the user to run
@@ -133,7 +139,8 @@ Apply the answer (the answer IS the consent — single-write discipline):
   Advisor Model: unchanged → no write; changed → `advisor-setup` marker (surgical insertion when
   missing) + `advisorModel` (full model ID) in `.claude/settings.local.json` + the "run `/advisor
   <full-model-id>` to attach it now" advisory; "No advisor" → `declined` + key removal + name
-  `/advisor off`. The
+  `/advisor off`, EXCEPT when the project is ALREADY `declined` with no key present — that is an
+  unchanged answer and writes nothing at all. The
   advisor answer NEVER triggers Step 6's Fleet Rewrite and never chains `route embed`.
 
 ### Step 6 — Fleet Rewrite (fan the new IDs out to generated agents)
@@ -167,11 +174,11 @@ per [lane-delegation.md](../lane-delegation.md) § Fleet Rewrite on Remap:
 ### Step 8 — Report
 
 Print a short summary (no terminal question — this is informational prose):
-- Lane→Model result: `confirmed unchanged` / `remapped <lane>: <old> → <new>` / `<lane> disabled` /
-  discovery-unavailable notice if it fired.
+- Lane→Model result: `confirmed unchanged` / `remapped <lane>: <old> → <new>` / `<lane> disabled`
+  (noting `(manual entry)` when the value came from "Other").
 - Advisor: `confirmed unchanged` / `configured <full-model-id> (run /advisor <full-model-id> for
-  immediate effect)` / `no advisor (declined)` / `question suppressed (declined marker)` — plus the
-  Anthropic-API-only caveat when a configuration was written.
+  immediate effect)` / `no advisor (declined)` — plus the Anthropic-API-only caveat when a
+  configuration was written. (There is no "suppressed" outcome: the advisor question always renders.)
 - Fleet Rewrite: N agents rewritten, plus any skip/mismatch findings from Step 6's verification.
 - Any `route embed` chain triggered by Step 7.
 
@@ -184,7 +191,7 @@ Print a short summary (no terminal question — this is informational prose):
 | Headless / non-interactive | Refuse cleanly, write nothing (Step 2). |
 | `model-lanes.md` absent | Report + STOP (restore via installer). |
 | marker `declined` | Explicit opt-in question first; never silently overridden. |
-| `advisor-setup` marker `declined` | Advisor question suppressed; lane questions unaffected. |
+| `advisor-setup` marker `declined` | **Not a suppression** — the advisor question still renders with "No advisor" pre-selected; re-confirming writes nothing. |
 | Unchanged picker answer, no blank | Report no-change, no write, no fleet rewrite. |
 | Zero lane-pinned agents | No-op success. |
 

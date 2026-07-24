@@ -175,7 +175,7 @@ Lane-pinned agents are generated on the host, never shipped.
 name: [skill]-[direction-or-excursion-slug]
 description: "Lane-pinned excursion agent for /[skill]: [one-line purpose]"
 persona: "[unique persona — composed scheme, verified via the Persona Assignment Gate before write]"
-model: [FULL official model ID of the OTHER lane's preferred model, e.g. claude-opus-4-8]
+model: [FULL official model ID of the OTHER lane's preferred model, e.g. claude-opus-5]
 lane-pinned: [coding|creative]        # fleet-membership marker — Fleet Rewrite targets this
 generated-by: skill-builder lane-excursion
 excursion-skill: [skill]              # must equal the containing skill directory
@@ -267,36 +267,33 @@ On **every full interactive audit** (suppressed: headless/non-interactive, `audi
 current mapping pre-selected as the default. Options per lane, EXACTLY:
 
 1. `claude-fable-5`
-2. `claude-opus-4-8`
+2. `claude-opus-5`
 3. `claude-opus-4-6`
-4. The **latest released model by official ID** — discovered fresh each audit via the ladder below.
+4. **Manual entry** — AskUserQuestion's auto-appended **"Other"**, where the user types any model ID
+   they want (2026-07-24 user directive, replacing the former live-discovery slot).
 
-The three statics are listed **newest-first** (the current-latest static, `claude-fable-5`, leads),
-so the ceiling below always peels from the oldest tail and the latest model is never the one dropped.
+The three statics are listed **newest-first**. Leaving a cell blank disables flagging for that lane,
+per model-lanes.md.
 
-(AskUserQuestion's auto-appended "Other" preserves manual entry; dedupe the "latest" option when it
-equals a static one. Leaving a cell blank disables flagging for that lane, per model-lanes.md.)
+**Manual entry is the fourth option, and the question copy must say so.** There is no fifth slot to
+build and no discovery to run: "Other" IS the manual-entry mechanism, and every question that renders
+this pool states it plainly — e.g. *"…or choose Other to type any model ID."* Announcing it matters,
+because the statics go stale between releases and "Other" is the only path to a model this file has
+not been updated to name. Whatever the user types is taken **verbatim** as the full official ID (no
+alias translation, no capability judgement — § No capability filter); normalize only per
+model-lanes.md § Active-Model Detection (strip a `[1m]` / `[200k]` suffix).
 
-**Four-option ceiling.** `AskUserQuestion` allows at most four options per question (plus its
-auto-appended "Other"). After deduping "latest" against the statics, if the three static IDs plus a
-distinct discovered-"latest" would exceed four, drop the oldest static(s) from the rendered list —
-`claude-opus-4-6` first, then `claude-opus-4-8` — until four options remain. Dropping a static loses
-nothing: it is a known ID the user can still enter via "Other", whereas the discovered-"latest" may
-name a model the user does not know, so it is never the option dropped. Both lanes share this single
-option list, so the ceiling applies identically to the creative and coding questions.
+**Never fabricate a model ID from memory.** The statics above are the only IDs skill-builder itself
+may propose. A model the user wants that is not listed arrives through manual entry — typed by the
+user, never guessed by the assistant. (This rule is why the removed discovery ladder existed; manual
+entry satisfies it the same way, without a network call that could fail.)
 
-**Latest-model discovery ladder:**
-
-1. `GET https://api.anthropic.com/v1/models` with headers `x-api-key: $ANTHROPIC_API_KEY` and
-   `anthropic-version: 2023-06-01`, hard timeout ~10s. Most recently released is listed first →
-   take the first `id`, normalize per model-lanes.md § Active-Model Detection.
-2. On any failure (no key, offline, non-200, unparseable) → fetch the official Anthropic
-   models-overview docs page via available web tools and take the newest model's official ID.
-3. Both fail → OMIT the "latest released" option entirely and print one line: "latest-model
-   discovery unavailable (offline / no API key); choose from known IDs or edit model-lanes.md by
-   hand." **Never fabricate a model ID from memory** — the same philosophy as the stale-ID rule.
-4. Discovery results are never cached or persisted — re-discover each audit. Discovery failure
-   never blocks or degrades the rest of Step 4f; it only narrows the option list.
+**Four-option ceiling.** `AskUserQuestion` allows at most four options per question, plus its
+auto-appended "Other". Three statics fit with room to spare on the lane questions, and exactly fill
+the ceiling on the advisor question once its literal "No advisor" option is added (3 + 1 = 4). No
+option is ever dropped. IF a future change would push a rendered list past four → STOP and report the
+ceiling conflict rather than silently peeling an option (Question-Object Completeness Gate, clause 6).
+Both lanes share this single option list.
 
 A changed answer → the consented Lane→Model write into model-lanes.md (same single-write discipline
 as audit's 4f-setup), then the Fleet Rewrite below. The picker never writes the
@@ -307,9 +304,8 @@ third question object — the global advisor model. See § Global Advisor Model 
 
 ## Global Advisor Model (third picker question — consumed by the same callers)
 
-Claude Code v2.1.98+ ships an experimental **advisor tool**: the main model consults a second,
-at-least-as-capable model at decision points (before committing to an approach, on recurring
-errors, before declaring done), configured via the `advisorModel` settings key or the `/advisor`
+Claude Code v2.1.98+ ships an experimental **advisor tool**: the main model consults a second model
+at decision points (before committing to an approach, on recurring errors, before declaring done), configured via the `advisorModel` settings key or the `/advisor`
 command. skill-builder configures it as a THIRD question object inside the SAME batched picker
 call — additional objects in one call are still ONE prompt screen and ONE sanctioned question slot
 (the companion-gate precedent), so audit's five-question count is unchanged. The advisor is ONE
@@ -317,47 +313,68 @@ GLOBAL choice, orthogonal to the two lanes — never per-lane, never touched by 
 
 **Question shape.** Header **"Advisor model (global)"**. Options are FULL OFFICIAL MODEL IDs —
 never the `fable` / `opus` / `sonnet` aliases — drawn from the SAME list the Lane→Model Picker
-builds: the three static IDs `claude-fable-5` / `claude-opus-4-8` / `claude-opus-4-6` (newest-first)
-plus the live-discovered latest released ID, under the same four-option ceiling and
-latest-model discovery ladder (AskUserQuestion's auto-appended "Other" preserves manual full-ID
-entry). Filter that list by the Pairing rule below against the DETECTED main model (model-lanes.md
-§ Active-Model Detection): `claude-fable-5` and the discovered-latest always offered; the
-`claude-opus-*` IDs unless the main is Fable-family; plus a literal **"No advisor"** option. Because
-"No advisor" always claims one of the four slots, the question renders at most **three models**, so
-the newest-first order matters: within the ceiling "No advisor" is never dropped and `claude-fable-5`
-(valid for every main) leads and is never dropped, so an oldest static (`claude-opus-4-6` first) peels
-off the tail before the latest ever would (a Fable-family main renders just `claude-fable-5` +
-"No advisor"). Pre-selected default: the current
+builds: the three static IDs `claude-fable-5` / `claude-opus-5` / `claude-opus-4-6` (newest-first),
+with manual entry available through AskUserQuestion's auto-appended "Other" (state that in the
+question copy). The list is **NOT filtered by capability** — see § No capability filter below — plus
+a literal **"No advisor"** option. Three statics + "No advisor" is exactly four, so this question
+sits at the ceiling with nothing dropped: every static renders, every run.
+Pre-selected default: the current
 `advisorModel` from a merged read of `.claude/settings.local.json` → `.claude/settings.json` →
-`~/.claude/settings.json` (read-only), or "No advisor" when none is set. The question object is
-suppressed entirely when the `advisor-setup` marker is `declined` (the lane questions still run).
+`~/.claude/settings.json` (read-only), or "No advisor" when none is set.
 
-**Pairing rule (minimal by design — a full matrix would rot).** The advisor must be at least as
-capable as the main model. Claude Code validates the pairing itself and silently detaches an
-invalid advisor (with a notification), so an over-generous option list fails safe. Two hard facts
-(stated as full IDs, never aliases): a Fable-family main accepts ONLY `claude-fable-5` (and needs
-Claude Code ≥ 2.1.170); `claude-fable-5` is a valid advisor for every main. Finer detail lives at
-https://code.claude.com/docs/en/advisor — **never fabricate pairing rules or model IDs from
-memory** (same philosophy as the stale-ID rule).
+**ALWAYS RENDERED — never suppressed (2026-07-24 no-skipped-questions directive, superseding
+newest-wins the earlier "`declined` → suppress the advisor question only" mechanic).** Whenever this
+batched picker call renders, it carries ALL THREE question objects; no marker may drop one. The
+`advisor-setup` marker is a **state record**, not a suppression switch:
+
+| Marker | Question | Pre-selected default |
+|--------|----------|----------------------|
+| missing / `unset` | renders | the merged-read `advisorModel`, else "No advisor" |
+| `configured` | renders | the merged-read `advisorModel` |
+| `declined` | renders | **"No advisor"**, forced — regardless of any user-scope `advisorModel` that a merged read might surface (strict decline-persistence) |
+
+Declining therefore stays exactly one click (the literal "No advisor" option, pre-selected), and it
+is never a skip. Re-confirming an already-`declined` project's "No advisor" is an UNCHANGED answer:
+write nothing — no marker rewrite, no settings-key touch (see § Apply below; model-lanes.md is a
+surgical-edit-only file per INC-2026-07-01). This clause is object-level only: it can never force a
+question past a suppression of the CALL itself — headless / non-interactive / `audit --quick` runs
+still render no picker at all.
+
+**No capability filter (2026-07-24 user directive — supersedes the earlier pairing-filter mechanic
+newest-wins).** The advisor question offers the WHOLE pool. Never filter an option out on capability
+grounds, and never warn, caution, or annotate that a chosen advisor is older or less capable than the
+main model — **the user's choice of advisor is theirs to make, including a deliberately smaller or
+cheaper one.** No option carries a "not recommended"-style label; no report line, advisory, or
+question copy comments on the capability relationship. The pool is built by the § Lane→Model Picker
+rules and the four-option ceiling ALONE, then "No advisor" is appended.
+
+Claude Code performs its own pairing validation at attach time and silently detaches an advisor it
+rejects (with its own notification). That is stated here as implementation rationale — an unfiltered
+option list fails safe because the platform is the backstop — **not** as something to surface to the
+user. Platform detail lives at https://code.claude.com/docs/en/advisor; **never fabricate model IDs
+from memory** (same philosophy as the stale-ID rule).
 
 **Apply (the answer IS the consent — single-write discipline).** Unchanged → write nothing.
 Changed to a model → set `<!-- advisor-setup: configured -->` beside the `model-lane-setup` marker
 in model-lanes.md (**surgical line edit; a missing marker means `unset` — insert the line, never
 rewrite the file**: model-lanes.md is update-preserved, so existing installs never receive new
 shipped text), write `"advisorModel": "<full-model-id>"` — the chosen official ID (e.g.
-`claude-opus-4-8`), never an alias — into the project's `.claude/settings.local.json`
+`claude-opus-5`), never an alias — into the project's `.claude/settings.local.json`
 (host-local, preserving every other key — the hooks § Step 3d write precedent), and print:
 "advisor configured — settings apply next session; run `/advisor <full-model-id>` to attach it now."
-(Named-command advisory — informational, never blocking.) "No advisor" → write
-`<!-- advisor-setup: declined -->`, remove any `advisorModel` key this machinery previously wrote
-in `.claude/settings.local.json`, and name `/advisor off`. Re-enable by hand-editing the marker
-back to `unset`. **Never edit `~/.claude/settings.json`** — user-scope settings are the user's
+(Named-command advisory — informational, never blocking.) "No advisor" → IF the marker is ALREADY
+`declined` and no `advisorModel` key is present, this is an UNCHANGED answer: **write nothing, touch
+no file** (the every-audit re-ask must never churn `model-lanes.md` or `settings.local.json`).
+Otherwise write `<!-- advisor-setup: declined -->`, remove any `advisorModel` key this machinery
+previously wrote in `.claude/settings.local.json`, and name `/advisor off`. Hand-editing the marker
+back to `unset` no longer "re-enables" anything — the question always renders (see § ALWAYS RENDERED
+above); it only changes which value is pre-selected. **Never edit `~/.claude/settings.json`** — user-scope settings are the user's
 own property (`/advisor` writes there; this machinery stays project-local).
 
 **Fleet inheritance (documented platform exception — scoped).** Subagents inherit the configured
-advisor, and Claude Code re-validates the pairing against each agent's own `model:` pin at spawn —
-a Sonnet-pinned lane agent can attach an Opus advisor even in a session whose Fable main cannot.
-This is a documented platform mechanism (advisor docs, verified 2026-07-08), NOT the unreliable
+advisor, and Claude Code re-validates it against each agent's own `model:` pin at spawn, entirely on
+its own. skill-builder neither performs nor reports that validation (§ No capability filter). This is
+a documented platform mechanism (advisor docs, verified 2026-07-08), NOT the unreliable
 permission-mode inheritance DEC-2026-06-18 warns against — that record's caution stands unchanged
 for permissions. The advisor answer never queues a Fleet Rewrite and never chains `route embed`.
 

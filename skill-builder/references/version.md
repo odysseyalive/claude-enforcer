@@ -13,14 +13,76 @@ audit drift-sync of one reference set, this file carries the **semver product
 version** of the entire distribution.
 
 ```
-version: 1.8.0
-released: 2026-07-22
+version: 1.8.3
+released: 2026-07-24
 ```
 
 `plugin.json`'s `version` field MIRRORS this string for the marketplace. Bump
 BOTH together. See CLAUDE.md "Versioning" for the release ritual.
 
 ## Changelog
+
+- **1.8.3** (2026-07-24). Picker option 4 changes from live discovery to manual
+  entry, per user directive. The latest-model discovery ladder is retired
+  entirely — the `GET /v1/models` call, the models-overview docs fallback, the
+  omit-with-notice failure branch, the dedupe-against-statics step, and the
+  never-cache rule all go. The fourth option is AskUserQuestion's auto-appended
+  "Other", where the user types any model ID; every question rendering the pool
+  must announce it in its copy, since an unannounced "Other" is not a usable
+  option. Typed values are taken verbatim (no alias translation, no capability
+  judgement), normalized only by stripping a `[1m]`/`[200k]` suffix. The
+  never-fabricate rule is unchanged and now load-bearing: the three shipped
+  statics are the only IDs skill-builder may propose. Knock-on simplification —
+  with no discovered fourth option, nothing is ever dropped: the lane questions
+  sit under the four-option ceiling and the advisor question exactly fills it
+  once "No advisor" is added, so the peel-the-oldest-static mechanic is retired
+  too, and an overflow now STOPS and reports instead. Supersedes newest-wins only
+  the fourth-option/discovery mechanics of the 2026-07-04 and 2026-07-15 picker
+  designs. 5 source files: SKILL.md, lane-delegation.md, audit.md, model-map.md,
+  version.md.
+
+- **1.8.2** (2026-07-24). Two user-directed changes to model selection. (1) Pool
+  refresh: `claude-opus-4-8` swapped for `claude-opus-5` in the ONE shared static
+  pool every model question draws from, so the list reads `claude-fable-5` /
+  `claude-opus-5` / `claude-opus-4-6` (newest-first) plus the live-discovered
+  latest. The ceiling's peel order follows (`claude-opus-4-6` first, then
+  `claude-opus-5`), and the shipped default `coding` lane cell moves to
+  `claude-opus-5`. (2) New sacred directive: the advisor question is **never
+  capability-filtered and never carries a capability caveat** — no option is
+  withheld because it is older or less capable than the main model, and no label,
+  question copy, report line, or advisory comments on the relationship. Replaces
+  lane-delegation.md's "Pairing rule" section with "No capability filter";
+  Claude Code's own attach-time validation is retained as implementation
+  rationale for why an unfiltered list fails safe, never surfaced as a warning.
+  Supersedes newest-wins only the option-filtering and capability-caveat
+  mechanics of the 2026-07-08 global-advisor design; the marker, full-official-ID
+  rule, four-option ceiling, always-renders rule (1.8.1), and factual platform
+  version/provider caveats are unchanged. 6 source files: SKILL.md,
+  lane-delegation.md, model-lanes.md, audit.md, model-map.md, version.md.
+
+- **1.8.1** (2026-07-24). Setup questions are never skipped, at OBJECT level, per
+  user directive. A field-reported run fired the Step 0.4 Lane→Model picker with
+  two question objects instead of three. The drop turned out to be an executor
+  omission, not a spec branch (the reporting project has no `advisor-setup`
+  marker at all, and a missing marker reads `unset` → ask) — so the load-bearing
+  fix is a structural completeness check, with the marker demotion closing the one
+  remaining sanctioned path to the same skip. That marker is demoted from a
+  suppression switch to a STATE RECORD: the batched picker now always carries all
+  three objects (creative lane / coding lane / advisor), and `declined` merely
+  forces "No advisor" as the pre-selected default — declining stays one click,
+  strict against a user-scope `advisorModel` leak, and re-confirming it writes
+  nothing (no marker or settings churn). New Question-Object Completeness Gate in
+  audit.md; the Step 6 pre-execution picker assertion is hardened from
+  picker-level to object-level (a two-object picker now fails it exactly as a
+  never-fired one). Applies to both picker callers — `audit` and standalone
+  `model-map`. Deliberately NOT changed: `model-lane-setup: declined` remains a
+  real per-project opt-out, headless/`--quick` still render no picker at all, the
+  4f-setup onboarding stays one-time, and the Step 0.3 companion gate stays
+  absent-only. Zero questions added — a question OBJECT was restored, so the FIVE
+  sanctioned audit questions are unchanged. Supersedes newest-wins only the
+  "`declined` → suppress the advisor question" clause of the 2026-07-08
+  global-advisor design. 6 source files: SKILL.md, lane-delegation.md,
+  model-lanes.md, audit.md, model-map.md, version.md.
 
 - **1.8.0** (2026-07-22). DEFER tier eliminated from audit's AUTO/DEFER
   classification per user directive: every item that previously deferred to a

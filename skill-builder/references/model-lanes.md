@@ -28,7 +28,7 @@ Use the **normalized exact model ID** form: `claude-<family>-<major>-<minor>`
 | Lane       | Preferred Model     |
 |------------|---------------------|
 | `creative` | `claude-opus-4-6`   |
-| `coding`   | `claude-opus-4-8`   |
+| `coding`   | `claude-opus-5`     |
 
 - `coding` is the **default / everything-else** lane (includes testing **and research**).
 - `creative` covers image generation, content generation, and design generation — plus
@@ -114,15 +114,19 @@ again.
 
 **Advisor-setup marker (2026-07-08).** A third per-project marker lives beside `model-lane-setup`:
 `<!-- advisor-setup: unset|configured|declined -->`. It tracks whether the Lane→Model picker's
-global-advisor question has been answered: `unset` (or missing) → ask; `configured` → ask with the
-current value pre-selected; `declined` → suppress the advisor question only (the lane questions
-still run). The chosen model itself is NEVER stored in this file — it lives in Claude Code
+global-advisor question has been answered. **It is a state record, never a suppression switch
+(2026-07-24 no-skipped-questions directive):** the advisor question renders in EVERY picker call
+alongside the two lane questions, and the marker only decides which value arrives pre-selected —
+`unset` (or missing) → the current `advisorModel` if any, else "No advisor"; `configured` → the
+current value; `declined` → **"No advisor", forced**. Declining is one click on a pre-selected
+option, and re-confirming it writes nothing. The chosen model itself is NEVER stored in this file — it lives in Claude Code
 settings (`advisorModel`, written host-locally to `.claude/settings.local.json`); this marker
 records setup state only, so the two can never drift. Normative spec:
 [lane-delegation.md](lane-delegation.md) § Global Advisor Model. This file is install-if-absent —
 existing installs won't have this marker or this paragraph; the procedures treat a missing marker
 as `unset` and insert the marker line surgically on first configure (never a wholesale rewrite).
-To re-enable the question after declining, set the marker back to `unset`.
+There is nothing to "re-enable" after declining — the question is always asked; setting the marker
+back to `unset` by hand only changes which option is pre-selected.
 
 **2026-06-06 semantics change.** `configured` no longer means never-ask-again for the *mapping*:
 every full interactive audit re-confirms the Lane→Model choices via the picker (one click when
