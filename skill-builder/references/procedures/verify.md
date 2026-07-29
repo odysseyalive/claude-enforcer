@@ -37,11 +37,14 @@ For each skill found in Step 1, check for directive protection:
 ```
 
 **If `.directives.sha` exists:**
-1. Extract all `<!-- origin: user ... immutable: true -->` blocks from the skill's SKILL.md
+1. Extract all `<!-- origin: user ... immutable: true -->` blocks from the skill's SKILL.md. Call this count **B**
 2. Compute SHA-256 checksums using the same normalization as `generate-checksums.sh` (strip markers, trim whitespace, collapse blank lines)
-3. Compare against stored checksums in `.directives.sha`
-4. **Match** → PASS
-5. **Mismatch** → FAIL — "Directive fingerprint mismatch: directives may have been modified since last checksum. Run `/skill-builder checksums [skill] --execute` to investigate."
+3. Parse the sidecar with the **§ Canonical Sidecar Parse Regex** in [checksums.md](checksums.md). Call the count of rows that parse **R**. **Do not re-derive a stricter regex from the sidecar format template** — a reader that requires the preview's trailing `...` silently drops legitimate rows and then reports an understated "R of B protected" with total confidence. That blind spot is how a real audit reported "5 of 12" against a fully populated sidecar
+4. Compare parsed rows against the recomputed checksums, positionally by `directive:N`
+5. **`R == B`, every row parses, every hash matches** → PASS
+6. **Hash mismatch on a parsed row** → FAIL — "Directive fingerprint mismatch: directives may have been modified since last checksum. Run `/skill-builder checksums [skill] --execute` to investigate."
+7. **`R < B`, or any non-blank non-`#` line fails to parse** → **PARTIAL** — "Directive protection is incomplete: [R] of [B] blocks covered. Unprotected: directive:[list]. Malformed rows: [line numbers]. Run `/skill-builder checksums [skill] --execute` to regenerate." A partially-covered sidecar is not a pass; the uncovered blocks are entirely unexamined by the `protect-directives` hook
+8. **Sidecar has data lines but `R == 0`** → **UNREADABLE** — "Sidecar exists but no row is parseable. NONE of the [B] directive blocks are verified. This is an unprotected state, not a pass. Run `/skill-builder checksums [skill] --execute` to regenerate." Never report a skill in this state as protected
 
 **If `.directives.sha` does not exist but skill has `<!-- origin: user ... immutable: true -->` blocks:**
 - WARN — "Directives found without checksum protection. Run `/skill-builder checksums [skill] --execute` to generate."

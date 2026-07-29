@@ -387,14 +387,22 @@ Surface skills whose `origin: user | immutable: true` directive blocks lack chec
 
 For each audited skill, resolve its directive-protection state (same logic as [verify.md](verify.md) § Step 2b):
 
-1. Extract the skill's `<!-- origin: user … immutable: true -->` blocks. **No immutable blocks → N/A** (nothing to protect — not a finding).
+1. Extract the skill's `<!-- origin: user … immutable: true -->` blocks. Call this count **B**. **No immutable blocks → N/A** (nothing to protect — not a finding).
 2. **No `.directives.sha` sidecar → MISSING.**
-3. **Sidecar present → recompute** each block's SHA-256 with the canonical normalization (strip markers, trim trailing whitespace per line, collapse 3+ blank lines to 2 — byte-identical to `protect-directives.sh`) and compare. All match → PROTECTED; any differ → MISMATCH.
+3. **Sidecar present → parse it with the § Canonical Sidecar Parse Regex in [checksums.md](checksums.md)**, giving **R** parsed rows. **Never re-derive a stricter regex from the sidecar format template.** A reader that requires the preview's trailing `...` silently drops legitimate rows, and this step then reports an understated "R of B protected" with full confidence. A real audit reported "5 of 12" against a fully populated sidecar for exactly this reason: the scan inherited the same blind spot as the hook it was auditing.
+4. **Recompute** each block's SHA-256 with the canonical normalization (strip markers, trim trailing whitespace per line, collapse 3+ blank lines to 2 — byte-identical to `protect-directives.sh`) and compare positionally by `directive:N`. Resolve to one state:
+   - `R == B`, all rows parse, all hashes match → **PROTECTED**
+   - any parsed row's hash differs → **MISMATCH**
+   - `R < B`, or any non-blank non-`#` line fails to parse → **PARTIAL** (name the uncovered `directive:N` indices and the malformed line numbers)
+   - sidecar has data lines but `R == 0` → **UNREADABLE**
+5. **PARTIAL and UNREADABLE are UNPROTECTED states, never a pass.** The `protect-directives` hook iterates sidecar rows, so any block without a row is never examined and produces no output at all. Reporting such a skill as protected is the precise failure this step exists to catch.
 
-**Tiering — both findings AUTO under Step 0 consent; backup (Step 0.2) is the recovery mechanism:**
+**Tiering — all findings AUTO under Step 0 consent; backup (Step 0.2) is the recovery mechanism:**
 
 - **MISSING → AUTO:** generate the `.directives.sha` sidecar and wire the validating `protect-directives` / `unique-persona` hooks via `checksums <skill> --execute` in the Step 6 execution phase. The audit IS running on the host; the Step 0 disclaimer IS the deliberate consent — complete, armed protection (sidecar + validating hook) is authorized under the same blanket acceptance as every other AUTO action.
 - **MISMATCH → AUTO with agent panel investigation.** The agent reads the current directive text, compares against the checksummed version (via the sidecar), and determines if the change appears intentional (new directive added, content extended) or suspicious (content deleted, meaning changed). Intentional → regenerate the checksum via `checksums <skill> --execute` in the Step 6 execution phase. Suspicious → still regenerate (the new text is what the sidecar must protect going forward), but flag prominently in the Execution Summary with the before/after diff so the user can review.
+- **PARTIAL → AUTO, no panel needed.** Uncovered blocks and malformed rows are a mechanical generation defect, not a judgment call: regenerate via `checksums <skill> --execute` in the Step 6 execution phase. Report the before state (`R` of `B` covered) in the Execution Summary so the coverage gap is visible rather than silently closed.
+- **UNREADABLE → AUTO, no panel needed.** Regenerate via `checksums <skill> --execute`. Report prominently: for however long the sidecar was in this state, the hook was reporting clean about blocks it never examined, so any drift in that window went unreported. The regenerated sidecar baselines the CURRENT text, which means undetected drift becomes the new baseline — call this out explicitly so the user can diff the directives against version control if they want the window audited.
 
 Feed findings to the Step 5 **Directive Protection** subsection and the Execution Plan. Headless runs report identically — this step writes nothing in any mode (execution requires a live Step 0 acceptance).
 
@@ -718,6 +726,8 @@ Per the 2026-06-06 sacred directive ("The audit command should be as automated a
 | Quarantine repairs (Step 2.7) | agent panel determines correct frontmatter fix (YAML syntax, missing delimiters, etc.); auto-executed |
 | Directive protection — MISSING `.directives.sha` (Step 4b-bis) | generate sidecar + wire validating hooks via `checksums <skill> --execute` under Step 0 consent |
 | Directive protection — MISMATCH `.directives.sha` (Step 4b-bis) | agent panel investigates intentional vs suspicious; regenerate checksum either way; suspicious changes flagged prominently in Execution Summary |
+| Directive protection — PARTIAL `.directives.sha` (Step 4b-bis) | mechanical generation defect, no panel: regenerate via `checksums <skill> --execute`; report the before-state coverage (`R` of `B`) so the gap is visible rather than silently closed |
+| Directive protection — UNREADABLE `.directives.sha` (Step 4b-bis) | mechanical generation defect, no panel: regenerate via `checksums <skill> --execute`; report prominently that the hook was reporting clean about unexamined blocks, and that regeneration baselines the CURRENT text (any drift in that window becomes the new baseline) |
 | Bootstrap CLAUDE.md extraction | HIGH-confidence candidates extracted directly; AMBIGUOUS candidates resolved by agent panel (conservative scope on disagreement) and auto-extracted (Step 2.5) |
 | `route index` → `route embed` | always the final two tasks (§ Step 4g) |
 
@@ -733,6 +743,7 @@ Per the 2026-06-06 sacred directive ("The audit command should be as automated a
 | Git-dependent items in no-VCS projects | Proceed with backup as recovery (Step 0.2); warning if no backup was taken |
 | Directive protection — MISSING `.directives.sha` (Step 4b-bis) | Auto-generate sidecar + wire hooks |
 | Directive protection — MISMATCH `.directives.sha` (Step 4b-bis) | Agent panel investigates the change; regenerate with flag if intentional; ✗ if truly suspicious (advisory note recommending human review) |
+| Directive protection — PARTIAL / UNREADABLE `.directives.sha` (Step 4b-bis) | Auto-regenerate sidecar; report the prior coverage state in the Execution Summary |
 | Code-eval enforcement unwired (Step 4a-bis) | Auto-wire enforcement hooks |
 | Code-eval enforcement wired but stale (Step 4a-bis) | Auto-refresh enforcement hooks (regenerate scripts with current procedure version) |
 | Creative-integrity non-buildable findings (Step 4c-bis) | Agent panel adjudicates; atomic-or-absent on truly unresolvable (✗ in Execution Summary); immutable-block findings remain FLAG-NEVER-TOUCH |

@@ -13,8 +13,8 @@ audit drift-sync of one reference set, this file carries the **semver product
 version** of the entire distribution.
 
 ```
-version: 1.8.3
-released: 2026-07-24
+version: 1.8.4
+released: 2026-07-29
 ```
 
 `plugin.json`'s `version` field MIRRORS this string for the marketplace. Bump
@@ -22,6 +22,38 @@ BOTH together. See CLAUDE.md "Versioning" for the release ritual.
 
 ## Changelog
 
+- **1.8.4** (2026-07-29). Checksum-subsystem repair: the sidecar generator could
+  write rows the `protect-directives` hook could not read, and the hook then
+  reported clean about blocks it never examined. Five fixes, all additive.
+  (1) `checksums.md` § Sidecar File Format gains normative row rules: the
+  trailing `...` is a MANDATORY, unconditional part of the row grammar (it is
+  appended even when nothing was truncated — a short first line producing a
+  dotless row was the original defect), newlines flatten to spaces before
+  truncation, and embedded quotes normalize. (2) A new § Canonical Sidecar Parse
+  Regex is the single authority for every reader; it is deliberately LIBERAL
+  (preview greedy to the final quote, trailing `...` optional) so legacy dotless
+  rows still verify their hashes instead of being dropped. The generator is
+  strict, the reader is liberal, and the mismatch is reported rather than
+  absorbed. (3) Both hooks (`.sh` and `.ps1`) now report five finding classes and
+  never silently skip: DRIFT, MISSING BLOCK, MALFORMED ROW, UNPROTECTED BLOCK
+  (new coverage check — blocks in the file with no sidecar row were previously
+  never examined and produced no output), and SIDECAR UNREADABLE (data lines
+  present, zero parseable). Failure to run the check now emits an advisory
+  instead of an empty report. Exit stays 0: fail-open is preserved, fail-silent
+  is not. The bash hook additionally passes paths through the environment rather
+  than interpolating them into the heredoc. (4) `checksums.md` Execute Mode gains
+  a mandatory read-back self-verification step (every row parses, row count
+  equals block count, every hash re-verifies, every preview ends in `...`) plus
+  an anti-fabrication rule requiring hashes come from an executed command, never
+  model output — the 2026-07-28d fabricated-hash class. (5) `verify` Step 2b and
+  `audit` Step 4b-bis gain PARTIAL and UNREADABLE states distinct from
+  MISSING/MISMATCH, both AUTO-regenerating, with an explicit warning against
+  re-deriving a stricter regex (an audit reusing the strict spec regex reported
+  "5 of 12" against a fully populated sidecar, inheriting the very blind spot it
+  was auditing). Also reconciles the `protect-directives` spec with the shipped
+  script: it is PostToolUse/advisory/exit-0, not the PreToolUse/blocking/exit-2
+  variant the spec described. PreToolUse wiring hashes the pre-edit file, so it
+  passes on every edit and protection is silently zero.
 - **1.8.3** (2026-07-24). Picker option 4 changes from live discovery to manual
   entry, per user directive. The latest-model discovery ladder is retired
   entirely — the `GET /v1/models` call, the models-overview docs fallback, the
