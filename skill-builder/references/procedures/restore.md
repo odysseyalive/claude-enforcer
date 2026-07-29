@@ -102,6 +102,39 @@ Expand-Archive -Path (Join-Path $root '.claude-backups\<chosen>.zip') -Destinati
 After extract, confirm `CLAUDE.md` and `.claude/` are present and parseable. Report what was restored,
 from which snapshot, and where the pre-restore undo snapshot lives.
 
+## Step 7 — Symlink replay and verification (never skipped)
+
+`.claude/agents/` is commonly a farm of symlinks into skill directories (see
+[backup.md](backup.md) § Step 2c). `unzip` restores stored links correctly; **`Expand-Archive` cannot
+represent links at all**, and an older snapshot taken before the `-y` fix stored them as file
+contents. In both cases the extracted tree *looks* right while every registration has been forked
+from its source — later edits to the skill-directory original never reach the registered copy.
+
+Replay the manifest the snapshot carries at `.claude/.symlink-manifest.txt`:
+
+```bash
+MAN="$ROOT/.claude/.symlink-manifest.txt"
+OK=0; FIXED=0; SKIPPED=0
+[ -f "$MAN" ] && while IFS=$'\t' read -r link raw target; do
+  case "$link" in ''|\#*) continue ;; esac
+  full="$ROOT/$link"
+  if [ -L "$full" ]; then OK=$((OK+1)); continue; fi          # already a link — nothing to do
+  if [ "$target" = "MISSING" ]; then SKIPPED=$((SKIPPED+1)); continue; fi  # was dangling at backup time
+  # Regular file where a link belongs: the archive flattened it. Relink.
+  rm -f -- "$full" && ln -s -- "$raw" "$full" && FIXED=$((FIXED+1)) || SKIPPED=$((SKIPPED+1))
+done < "$MAN"
+echo "Symlinks: $OK intact, $FIXED relinked from manifest, $SKIPPED skipped"
+```
+
+Report this as a **first-class line** in the restore summary — e.g. `"20 of 20 agent registrations
+restored as symlinks"` or `"3 relinked from manifest"` — never as silence. A restore that cannot
+prove registration fidelity has not finished reporting.
+
+**No manifest in the snapshot** (taken before this was added): say so explicitly —
+*"snapshot predates the symlink manifest; agent registrations could not be verified. Check
+`.claude/agents/` for regular files that should be symlinks."* Do not repair what you cannot verify,
+and do not imply a clean restore you did not confirm.
+
 ---
 
 ## Restore after uninstall (no skill loaded)

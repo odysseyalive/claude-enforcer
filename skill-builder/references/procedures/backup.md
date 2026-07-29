@@ -117,6 +117,39 @@ allow a fresh baseline.
 - No valid baseline present → `OUT = claude-baseline-<date>.zip`, `IS_BASELINE=1`.
 - Valid baseline present → `OUT = claude-backup-<date>[-N].zip` (rotating), `IS_BASELINE=0`.
 
+### Step 2c — Symlink census (runs before the archive is built)
+
+**`.claude/agents/` is very often a farm of symlinks** into skill directories — that is exactly how
+`/skill-builder agents` registers an agent (`.claude/agents/satirist.md` →
+`../skills/wit/agents/satirist/AGENT.md`). An archive that stores those links as *file contents*
+produces a snapshot that looks correct and restores wrong: every registration is silently forked from
+its source, so later edits to the skill-directory original never reach the registered copy.
+
+Before archiving, write a census sidecar at `.claude/.symlink-manifest.txt` (TSV, one row per entry,
+inside `.claude/` so the archive itself carries it):
+
+```bash
+cd "$ROOT" || exit 1
+MAN=".claude/.symlink-manifest.txt"
+: > "$MAN"
+# Record every symlink anywhere under .claude/ — agents are the common case, not the only one.
+find ".claude" -type l -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r l; do
+  printf '%s\t%s\t%s\n' "$l" "$(readlink -- "$l")" "$(readlink -f -- "$l" 2>/dev/null || echo MISSING)"
+done >> "$MAN"
+printf '# entries: %s\n' "$(grep -c . "$MAN" 2>/dev/null || echo 0)" >> "$MAN"
+```
+
+Columns: `link path`, `raw link text`, `resolved target`.
+
+- **Column 2 is the one that matters** — the raw, relative link text, and the only form a replay may
+  recreate. Recreating from a resolved path would hard-code the backup machine's layout.
+- **Column 3 is diagnostic only.** It is an *absolute* path on the machine that took the backup, so
+  it is meaningless after restoring to a different root. Restore reads it solely as a `MISSING`
+  sentinel (the link was already dangling at backup time — recorded, never repaired). Never
+  reconstruct a link from column 3.
+
+The manifest is what makes `.claude/agents/` fidelity **verifiable** on restore rather than assumed.
+
 ### Step 3 — Atomic create (temp → verify → rename)
 
 Write to a temp path, verify (Step 4), and only then atomically move into the final name. An
@@ -124,11 +157,16 @@ interrupted backup leaves a `.tmp` file that the rotation glob and every restore
 truncated zip can never become a trusted restore source (atomic-or-absent, the project's ratified
 discipline).
 
+**`-y` is mandatory and load-bearing.** Without it `zip` *dereferences* symlinks and stores the
+target's bytes — silently flattening the agent-registration farm described in Step 2c. `tar`
+preserves symlinks by default and needs no flag.
+
 ```bash
 cd "$ROOT" || exit 1
 TMP="$BK_DIR/.inflight-$$.zip.tmp"
 if command -v zip >/dev/null 2>&1; then
-  zip -r -q "$TMP" "CLAUDE.md" ".claude" \
+  # -y: store symlinks AS LINKS. Never remove this flag — see Step 2c.
+  zip -r -y -q "$TMP" "CLAUDE.md" ".claude" \
       -x "*.DS_Store" -x "Thumbs.db" -x ".claude/skills/*/node_modules/*" || { rm -f -- "$TMP"; exit 1; }
 else
   tar -a -c -f "$TMP" --exclude="*.DS_Store" --exclude="Thumbs.db" "CLAUDE.md" ".claude" \
@@ -142,6 +180,9 @@ $tmp = Join-Path $bk ('.inflight-' + $PID + '.zip.tmp')
 $targets = @()
 if (Test-Path 'CLAUDE.md') { $targets += 'CLAUDE.md' }
 if (Test-Path '.claude')   { $targets += '.claude' }
+# NOTE: Compress-Archive CANNOT represent symlinks — it stores the target's contents.
+# On Windows the Step 2c manifest is the ONLY fidelity mechanism; restore replays it.
+# This limitation must be stated in RESTORE-README.md, never silently assumed.
 Compress-Archive -Path $targets -DestinationPath $tmp -Force
 ```
 
@@ -151,6 +192,22 @@ Confirm the temp archive is a readable zip whose listing is non-empty and includ
 `.claude/` (a test-list, e.g. `unzip -l "$TMP"` / `Expand-Archive`-list or `tar -tf`). On failure →
 delete the temp file and report the backup failed (do NOT rename, do NOT rotate). Only on success →
 atomically rename `"$TMP"` to `"$BK_DIR/$OUT"` (`mv -f` / `Move-Item -Force`).
+
+**Symlink fidelity check (bash, where it is representable).** If the Step 2c manifest recorded at
+least one entry, confirm the archive stored them as links rather than as file contents:
+
+```bash
+EXPECT=$(grep -cv '^#' ".claude/.symlink-manifest.txt" 2>/dev/null || echo 0)
+if [ "$EXPECT" -gt 0 ] && command -v zipinfo >/dev/null 2>&1; then
+  GOT=$(zipinfo -l "$TMP" 2>/dev/null | grep -c '^l')   # 'l' = symlink in the mode column
+  [ "$GOT" -ge "$EXPECT" ] || echo "WARNING: $EXPECT symlinks expected, $GOT stored as links — restore will need manifest replay"
+fi
+```
+
+Report the result as a first-class line in the backup summary — `"N of N symlinks stored as links"`
+— never as silence. On Windows, report `"symlinks not representable by Compress-Archive; N recorded
+in the manifest for replay on restore"`. A mismatch is a **warning, not a failure**: the manifest
+makes the snapshot recoverable either way, and blocking a backup would be worse than a lossy one.
 
 ### Step 5 — Refresh the restore kit (host-generated, never shipped)
 
@@ -164,10 +221,20 @@ are host-generated into the user's tree and never added to `manifest.txt` (No-Di
   - Windows: `Expand-Archive -Path claude-baseline-<date>.zip -DestinationPath <repo-root> -Force`
   - `tar` fallback: `tar -xf claude-baseline-<date>.zip -C <repo-root>`
   - States plainly that the baseline is the first-ever backup and is never auto-deleted by rotation.
+  - **A `## Symlinks` section is MANDATORY.** It must state: (a) `.claude/agents/` entries are often
+    symlinks into skill directories; (b) `unzip` restores them correctly, but **`Expand-Archive`
+    cannot represent symlinks and will restore them as regular files**; (c) the archive carries
+    `.claude/.symlink-manifest.txt` (link path → raw link text → resolved target), and after a
+    hand-restore on Windows — or from any snapshot predating the `-y` fix — the links must be
+    recreated from it; (d) the literal replay command. Silence here is the failure mode: a flattened
+    registration tree looks correct and behaves wrong.
 - `restore.sh` / `restore.ps1` — ~15-line helpers that pick the baseline (or a named snapshot
   argument), confirm, and extract over the repo root (`unzip -o` / `Expand-Archive -Force`, `tar`
-  fallback), shell-safety-clean. Write them idempotently each run so they track the current name
-  scheme. **Never place the kit inside the zip** — it lives beside the zips.
+  fallback), shell-safety-clean. **Both must replay `.claude/.symlink-manifest.txt` after extract**
+  and print the `N intact / N relinked / N skipped` line (restore.md § Step 7) — the kit is the path
+  used when the skill is uninstalled, so it cannot be the one that skips the check. Write them
+  idempotently each run so they track the current name scheme. **Never place the kit inside the
+  zip** — it lives beside the zips.
 
 ### Step 6 — Rotate (only after the new backup is verified)
 
