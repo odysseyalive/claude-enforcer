@@ -59,7 +59,16 @@ After ALL agents return, synthesize their findings:
 
 Agent teams use Claude Code's experimental team mode (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`). Teammates share a task list, message each other, and coordinate work. A lead agent orchestrates.
 
-**Prerequisite:** Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings. The install script sets this automatically in `.claude/settings.local.json`.
+**Prerequisite:** Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings. **The installer does NOT set this.** It is opt-in, and off unless asked for:
+
+```bash
+bash -c "$(curl -fsSL .../install)" -- --with-agent-teams          # Linux / macOS
+$env:CLAUDE_ENFORCER_AGENT_TEAMS='1'; irm .../install.ps1 | iex    # Windows
+```
+
+**If it is already set, the installer leaves it alone** — an env key it did not write is not its to remove.
+
+*Changed 2026-08-03; this line previously read "The install script sets this automatically" and that was accurate. `env` keys change how the **entire session** behaves rather than how skill-builder behaves, and the flag was landing on projects whose owners did not know it was on. It is also not free: under agent teams a named-teammate spawn **discards** a subagent definition's `disallowedTools:` and drops `skills:` and `mcpServers:` entirely, so a project also running an agent framework that rests on those fields has its guarantees weakened silently. Team routing below is unchanged and fully available — only the default moved.*
 
 **This is the collaborative model.** Teammates divide labor, share findings in real-time, and can challenge each other mid-task. Each teammate still gets a unique persona.
 

@@ -142,21 +142,33 @@ Begin with step 1 now.
     }
     $changed = $false
 
-    # Enable agent teams
-    if (-not $settings.PSObject.Properties['env']) {
-        $settings | Add-Member -NotePropertyName 'env' -NotePropertyValue (New-Object PSObject)
-    }
-    if ($settings.env.PSObject.Properties['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] -and
-        $settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS -eq '1') {
-        Write-Host '  Agent teams already enabled'
-    } else {
+    # Agent teams: OPT-IN, never a default. See the long note in `install`.
+    #
+    # `irm ... | iex` cannot take parameters, so the env var is the only gesture
+    # available here and it is the documented one:
+    #   $env:CLAUDE_ENFORCER_AGENT_TEAMS='1'; irm .../install.ps1 | iex
+    #
+    # NEVER removed if already present: an env key this installer did not set is
+    # not this installer's to delete.
+    $agentTeams = ($env:CLAUDE_ENFORCER_AGENT_TEAMS -eq '1')
+    $teamsAlreadyOn = ($settings.PSObject.Properties['env'] -and
+        $settings.env.PSObject.Properties['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] -and
+        $settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS -eq '1')
+    if ($teamsAlreadyOn) {
+        Write-Host '  Agent teams already enabled -- left as-is'
+    } elseif ($agentTeams) {
+        if (-not $settings.PSObject.Properties['env']) {
+            $settings | Add-Member -NotePropertyName 'env' -NotePropertyValue (New-Object PSObject)
+        }
         if ($settings.env.PSObject.Properties['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS']) {
             $settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = '1'
         } else {
             $settings.env | Add-Member -NotePropertyName 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS' -NotePropertyValue '1'
         }
         $changed = $true
-        Write-Host '  Agent teams enabled'
+        Write-Host '  Agent teams enabled (requested)'
+    } else {
+        Write-Host '  Agent teams NOT enabled -- set $env:CLAUDE_ENFORCER_AGENT_TEAMS=1 to turn them on'
     }
 
     # Auto-approve web research tools (belt: permissions layer)

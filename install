@@ -17,6 +17,31 @@ set -e
 REPO_URL="https://raw.githubusercontent.com/odysseyalive/claude-enforcer/main"
 SKILL_DIR=".claude/skills/skill-builder"
 
+# Agent teams: OPT-IN, never a default.
+#
+# This installer used to set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 on every
+# project, unconditionally. That is an `env` key: it changes how the WHOLE
+# session behaves, not just how skill-builder behaves, and it was landing on
+# projects whose owners did not know it was on.
+#
+# It is not free. Under agent teams a named-teammate spawn DISCARDS a subagent
+# definition's `disallowedTools:` and drops `skills:` and `mcpServers:` entirely.
+# Any project also running an agent framework that rests on those fields has its
+# guarantees quietly weakened -- measured 2026-08-03, where a sibling project's
+# per-agent tier ceilings depended on exactly the field teams discard. Teams also
+# cost 3-4x the tokens of a single session and remain experimental with no
+# announced GA date.
+#
+# skill-builder's team routing stays fully available. Turning it on is now a
+# decision someone makes, rather than one an installer makes for them.
+#
+#   bash -c "$(curl -fsSL .../install)" -- --with-agent-teams
+#   CLAUDE_ENFORCER_AGENT_TEAMS=1 bash -c "$(curl -fsSL .../install)"
+AGENT_TEAMS="${CLAUDE_ENFORCER_AGENT_TEAMS:-0}"
+for _arg in "$@"; do
+    [ "$_arg" = "--with-agent-teams" ] && AGENT_TEAMS=1
+done
+
 echo "Claude Enforcer Installer"
 echo "========================="
 echo
@@ -196,13 +221,19 @@ p = '$SETTINGS_FILE'
 d = json.load(open(p)) if os.path.exists(p) else {}
 changed = False
 
-# Enable agent teams
-if d.get('env', {}).get('CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS') != '1':
-    d.setdefault('env', {})['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] = '1'
+# Agent teams -- opt-in only (see AGENT_TEAMS above). Never enabled by default,
+# and NEVER removed if already present: an env key this installer did not set is
+# not this installer's to delete.
+_teams_key = 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'
+_teams_on = d.get('env', {}).get(_teams_key) == '1'
+if _teams_on:
+    print(f'  Agent teams already enabled ({_teams_key} is set) -- left as-is')
+elif '$AGENT_TEAMS' == '1':
+    d.setdefault('env', {})[_teams_key] = '1'
     changed = True
-    print('  Agent teams enabled')
+    print('  Agent teams enabled (requested)')
 else:
-    print('  Agent teams already enabled')
+    print('  Agent teams NOT enabled -- pass --with-agent-teams to turn them on')
 
 # Auto-approve web research tools (belt: permissions layer)
 # The suspenders (PreToolUse hook) are generated per-system by /skill-builder hooks
@@ -229,8 +260,11 @@ if changed:
 "
 else
     echo "  Warning: python3 not found. Add these to $SETTINGS_FILE manually:"
-    echo '  { "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" },'
-    echo '    "permissions": { "allow": ["WebSearch", "WebFetch", "mcp__jina__read_url", "mcp__jina__search_web", "mcp__jina__parallel_read_url", "mcp__jina__parallel_search_web"] } }'
+    echo '  { "permissions": { "allow": ["WebSearch", "WebFetch", "mcp__jina__read_url", "mcp__jina__search_web", "mcp__jina__parallel_read_url", "mcp__jina__parallel_search_web"] } }'
+    if [ "$AGENT_TEAMS" = "1" ]; then
+        echo '  ...and, since you passed --with-agent-teams:'
+        echo '  { "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }'
+    fi
 fi
 
 echo
