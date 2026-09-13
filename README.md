@@ -1,3 +1,6 @@
+> [!WARNING]
+> **This project is deprecated and no longer maintained.** It has been replaced by [Claude Workforce](https://github.com/odysseyalive/claude-workforce). New users should start there, and existing users should migrate.
+
 # Claude Enforcer
 
 > **This repo might not change, but model capabilities do.** It's a good habit to run `/skill-builder audit` after any major changes to Claude Code or available models. [Keep your skills current →](#keep-your-skills-current)
